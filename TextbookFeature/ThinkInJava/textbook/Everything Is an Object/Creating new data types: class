@@ -1,0 +1,23 @@
+  If everything is an object, what determines how a particular class of object looks and behaves? Put another way, what establishes the type of an object? You might expect there to be a keyword called “type,” and that certainly would have made sense. Historically, however, most objectoriented languages have used the keyword class to mean “I’m about to tell you what a new type of object looks like.” The class keyword (which is so common that it will not usually be boldfaced throughout this book) is followed by the name of the new type. For example: 
+  class ATypeName { /* Class body goes here */ } 
+  This introduces a new type, although the class body consists only of a comment (the stars and slashes and what is inside, which will be discussed later in this chapter), so there is not too much that you can do with it. However, you can create an object of this type using new: 
+  ATypeName a = new ATypeName(); 
+  But you cannot tell it to do much of anything (that is, you cannot send it any interesting messages) until you define some methods for it. 
+Fields and methods
+  When you define a class (and all you do in Java is define classes, make objects of those classes, and send messages to those objects), you can put two types of elements in your class: fields (sometimes called data members), and methods (sometimes called member functions). A field is an object of any type that you can talk to via its reference, or a primitive type. If it is a reference to an object, you must initialize that reference to connect it to an actual object (using new, as seen earlier). 
+  Each object keeps its own storage for its fields; ordinary fields are not shared among objects. Here is an example of a class with some fields: 
+  class DataOnly { int i; double d; boolean b; } 
+  This class doesn’t do anything except hold data. But you can create an object like this: 
+  DataOnly data = new DataOnly(); 
+  You can assign values to the fields, but you must first know how to refer to a member of an object. This is accomplished by stating the name of the object reference, followed by a period (dot), followed by the name of the member inside the object: 
+  objectReference.member  For example: 
+  data.i = 47; data.d = 1.1; data.b = false; 
+  It is also possible that your object might contain other objects that contain data you’d like to modify. For this, you just keep “connecting the dots.” For example: 
+  myPlane.leftTank.capacity = 100; 
+  The DataOnly class cannot do much of anything except hold data, because it has no methods. To understand how those work, you must first understand arguments and return values, which will be described shortly. 
+  Default values for primitive members  When a primitive data type is a member of a class, it is guaranteed to get a default value if you do not initialize it: 
+  Primitive type Default boolean false char ‘\u0000’ (null)  Primitive type Default byte (byte)0 short (short)0 int 0 long 0L float 0.0f double 0.0d 
+  The default values are only what Java guarantees when the variable is used as a member of a class. This ensures that member variables of primitive types will always be initialized (something C++ doesn’t do), reducing a source of bugs. However, this initial value may not be correct or even legal for the program you are writing. It’s best to always explicitly initialize your variables. 
+  This guarantee doesn’t apply to local variables—those that are not fields of a class. Thus, if within a method definition you have: 
+  int x; 
+  Then x will get some arbitrary value (as in C and C++); it will not automatically be initialized to zero. You are responsible for assigning an appropriate value before you use x. If you forget, Java definitely improves on C++: You get a compile-time error telling you the variable might not have been initialized. (Many C++ compilers will warn you about uninitialized variables, but in Java these are errors.) 

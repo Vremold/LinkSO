@@ -1,0 +1,130 @@
+  In the following sections, we discuss a number of restrictions that you need to consider when working with Java generics. Most of these restrictions are a consequence of type erasure. 
+8.6.1 Type Parameters Cannot Be Instantiated with Primitive
+  Types You cannot substitute a primitive type for a type parameter. Thus, there is no Pair<double>, only Pair<Double>. The reason is, of course, type erasure. After erasure, the Pair class has fields of type Object, and you can’t use them to store double values. 
+  This is an annoyance, to be sure, but it is consistent with the separate status of primitive types in the Java language. It is not a fatal flaw—there are only eight primitive types, and you can always handle them with separate classes and methods when wrapper types are not an acceptable substitute. 
+8.6.2 Runtime Type Inquiry Only Works with Raw Types
+  Objects in the virtual machine always have a specific nongeneric type. 
+  Therefore, all type inquiries yield only the raw type. For example, if (a instanceof Pair<String>) // ERROR   could only test whether a is a Pair of any type. The same is true for the test if (a instanceof Pair<T>) // ERROR   or the cast Pair<String> p = (Pair<String>) a; // warning--can only test that a is a Pair   To remind you of the risk, you will get a compiler error (with instanceof) or warning (with casts) when you try to inquire whether an object belongs to a generic type. 
+  In the same spirit, the getClass method always returns the raw type. For example: Pair<String> stringPair = . . .; 
+  Pair<Employee> employeePair = . . .; 
+  if (stringPair.getClass() == employeePair.getClass()) // they are equal   The comparison yields true because both calls to getClass return Pair.class. 
+8.6.3 You Cannot Create Arrays of Parameterized Types
+  You cannot instantiate arrays of parameterized types, such as var table = new Pair<String>[10]; // ERROR   What’s wrong with that? After erasure, the type of table is Pair[]. You can convert it to Object[]:   Object[] objarray = table; 
+  An array remembers its component type and throws an ArrayStoreException if you try to store an element of the wrong type: objarray[0] = "Hello"; // ERROR--component type is Pair   But erasure renders this mechanism ineffective for generic types. The assignment objarray[0] = new Pair<Employee>(); 
+  would pass the array store check but still result in a type error. For this reason, arrays of parameterized types are outlawed. 
+  Note that only the creation of these arrays is outlawed. You can declare a variable of type Pair<String>[]. But you can’t initialize it with a new Pair<String>[10]. 
+  Note You can declare arrays of wildcard types and then cast them: var table = (Pair<String>[]) new Pair<?>[10]; 
+  The result is not safe. If you store a Pair<Employee> in table[0] and then call a String method on table[0].getFirst(), you get a ClassCastException. 
+  Tip If you need to collect parameterized type objects, simply use an ArrayList: ArrayList<Pair<String>> is safe and effective. 
+8.6.4 Varargs Warnings
+  In the preceding section, you saw that Java doesn’t support arrays of generic types. In this section, we discuss a related issue: passing instances of a generic type to a method with a variable number of arguments. 
+  Consider this simple method with variable arguments: public static <T> void addAll(Collection<T> coll, T... ts) { for (T t : ts) coll.add(t); 
+  } 
+  Recall that the parameter ts is actually an array that holds all supplied arguments. 
+  Now consider this call: Collection<Pair<String>> table = . . .; 
+  Pair<String> pair1 = . . .; 
+  Pair<String> pair2 = . . .; 
+  addAll(table, pair1, pair2); 
+  In order to call this method, the Java virtual machine must make an array of Pair<String>, which is against the rules. However, the rules have been relaxed for this situation, and you only get a warning, not an error. 
+  You can suppress the warning in one of two ways. You can add the annotation @SuppressWarnings("unchecked") to the method containing the call to addAll. Or, as of Java 7, you can annotate the addAll method itself with @SafeVarargs: @SafeVarargs public static <T> void addAll(Collection<T> coll, T... ts)   This method can now be called with generic types. You can use this annotation for any methods that merely read the elements of the parameter array, which is bound to be the most common use case. 
+  The @SafeVarargs can only be used with constructors and methods that are static, final, or (as of Java 9) private. Any other method could   be overridden, making the annotation meaningless. 
+  Note You can use the @SafeVarargs annotation to defeat the restriction against generic array creation, using this method: @SafeVarargs static <E> E[] array(E... array) { return array; } 
+  Now you can call Pair<String>[] table = array(pair1, pair2); 
+  This seems convenient, but there is a hidden danger. The code Object[] objarray = table; 
+  objarray[0] = new Pair<Employee>(); 
+  will run without an ArrayStoreException (because the array store only checks the erased type), and you’ll get an exception elsewhere when you work with table[0]. 
+8.6.5 You Cannot Instantiate Type Variables
+  You cannot use type variables in an expression such as new T(. . .). 
+  For example, the following Pair<T> constructor is illegal: public Pair() { first = new T(); second = new T(); } // ERROR   Type erasure would change T to Object, and surely you don’t want to call new Object(). 
+  The best workaround, available since Java 8, is to make the caller provide a constructor expression. For example:   Pair<String> p = Pair.makePair(String::new); 
+  The makePair method receives a Supplier<T>, the functional interface for a function with no arguments and a result of type T: public static <T> Pair<T> makePair(Supplier<T> constr) { return new Pair<>(constr.get(), constr.get()); 
+  } 
+  A more traditional workaround is to construct generic objects through reflection, by calling the Constructor.newInstance method. 
+  Unfortunately, the details are a bit complex. You cannot call first = T.class.getConstructor().newInstance(); // ERROR   The expression T.class is not legal because it would erase to Object.class. Instead, you must design the API so that you are handed a Class object, like this: public static <T> Pair<T> makePair(Class<T> cl) { try { return new Pair<>(cl.getConstructor().newInstance(), cl.getConstructor().newInstance()); 
+  } 
+  catch (Exception e) { return null; } 
+  } 
+  This method could be called as follows: Pair<String> p = Pair.makePair(String.class); 
+  Note that the Class class is itself generic. For example, String.class is an instance (indeed, the sole instance) of Class<String>. Therefore, the makePair method can infer the type of the pair that it is making. 
+8.6.6 You Cannot Construct a Generic Array
+  Just as you cannot instantiate a single generic instance, you cannot instantiate   an array. The reasons are different—an array is, after all, filled with null values, which would seem safe to construct. But an array also carries a type, which is used to monitor array stores in the virtual machine. That type is erased. For example, consider public static <T extends Comparable> T[] minmax(T... a) { T[] mm = new T[2]; // ERROR . . . 
+  } 
+  Type erasure would cause this method to always construct an array Comparable[2]. 
+  If the array is only used as a private instance field of a class, you can declare the element type of the array to be the erased type and use casts. For example, the ArrayList class could be implemented as follows:   public class ArrayList<E> { private Object[] elements; 
+  . . . 
+  @SuppressWarnings("unchecked") public E get(int n) { return (E) elements[n] public void set(int n, E e) { elements[n] = e; } // no cast needed } 
+  The actual implementation is not quite as clean: public class ArrayList<E> { private E[] elements; 
+  . . . 
+  public ArrayList() { elements = (E[]) new Object[10]; } 
+  } 
+  Here, the cast E[] is an outright lie, but type erasure makes it undetectable. 
+  This technique does not work for our minmax method since we are returning a T[] array, and a runtime error results if we lie about its type. Suppose we implement   public static <T extends Comparable> T[] minmax(T... a) { var result = new Comparable[2]; // array of erased type . . . 
+  return (T[]) result; // compiles with warning } 
+  The call String[] names = ArrayAlg.minmax("Tom", "Dick", "Harry"); 
+  compiles without any warning. A ClassCastException occurs when the Comparable[] reference is cast to String[] after the method returns. 
+  In this situation, it is best to ask the user to provide an array constructor expression: String[] names = ArrayAlg.minmax(String[]::new, "Tom", "Dick", "Harry"); 
+  The constructor expression String[]::new denotes a function that, given the desired length, constructs a String array of that length. 
+  The method uses that parameter to produce an array of the correct type: public static <T extends Comparable> T[] minmax(IntFunction<T[]> constr { T[] result = constr.apply(2); 
+  . . . 
+  } 
+  A more old-fashioned approach is to use reflection and call Array.newInstance: public static <T extends Comparable> T[] minmax(T... a) { var result = (T[]) Array.newInstance(a.getClass().getComponentType(), 2); 
+  . . . 
+  } 
+  The toArray method of the ArrayList class is not so lucky. It needs to produce a T[] array, but it doesn’t have the component type. Therefore,   there are two variants: Object[] toArray() T[] toArray(T[] result)   The second method receives an array parameter. If the array is large enough, it is used. Otherwise, a new array of sufficient size is created, using the component type of result. 
+8.6.7 Type Variables Are Not Valid in Static Contexts of
+  Generic Classes You cannot reference type variables in static fields or methods. For example, the following clever idea won’t work: public class Singleton<T> { private static T singleInstance; // ERROR public static T getSingleInstance() // ERROR { if (singleInstance == null) construct new instance of T return singleInstance; 
+  } 
+  } 
+  If this could be done, then a program could declare a Singleton<Random> to share a random number generator and a Singleton<JFileChooser> to share a file chooser dialog. But it can’t work. After type erasure there is only one Singleton class, and only one singleInstance field. For that reason, static fields and methods with type variables are simply outlawed. 
+8.6.8 You Cannot Throw or Catch Instances of a Generic Class
+  You can neither throw nor catch objects of a generic class. In fact, it is not even legal for a generic class to extend Throwable. For example, the following definition will not compile: public class Problem<T> extends Exception { /* . . . */ } 
+  // ERROR--can't extend Throwable   You cannot use a type variable in a catch clause. For example, the following method will not compile: public static <T extends Throwable> void doWork(Class<T> t) { try { do work } 
+  catch (T e) // ERROR--can't catch type variable { Logger.global.info(. . .); 
+  } 
+  } 
+  However, it is OK to use type variables in exception specifications. The following method is legal: public static <T extends Throwable> void d { do work } 
+  catch (Throwable realCause) { t.initCause(realCause); 
+  throw t; 
+  } 
+  } 
+8.6.9 You Can Defeat Checked Exception Checking
+  A bedrock principle of Java exception handling is that you must provide a handler for all checked exceptions. You can use generics to defeat this scheme. The key ingredient is this method: @SuppressWarnings("unchecked") static <T extends Throwable> void throwAs(Throwable t) throws T { throw (T) t; 
+  } 
+  Suppose this method is contained in an interface Task. When you have a checked exception e and call   Task.<RuntimeException>throwAs(e); 
+  then the compiler will believe that e becomes an unchecked exception. The following turns all exceptions into those that the compiler believes to be unchecked: try { do work } 
+  catch (Throwable t) { Task.<RuntimeException>throwAs(t); 
+  } 
+  Let’s use this to solve a vexing problem. To run code in a thread, you have to place it into the run method of a class that implements the Runnable interface. But that method is not allowed to throw checked exceptions. We will provide an adaptor from a Task, whose run method is allowed to throw arbitrary exceptions, to a Runnable: interface Task { void run() throws Exception; 
+  @SuppressWarnings("unchecked") static <T extends Throwable> void throwAs(Throwable t) throws T { throw (T) t; 
+  } 
+  static Runnable asRunnable(Task task) { return () -> { try { task.run(); 
+  } 
+  catch (Exception e) { Task.<RuntimeException>throwAs(e); 
+  } 
+  }; 
+  } 
+  } 
+  For example, this program runs a thread that will throw a checked exception: public class Test { public static void main(String[] args) { var thread = new Thread(Task.asRunnable(() -> { Thread.sleep(1000); 
+  System.out.println("Hello, World!"); 
+  throw new Exception("Check this out!"); 
+  })); 
+  thread.start(); 
+  } 
+  } 
+  The Thread.sleep method is declared to throw an InterruptedException, and we no longer have to catch it. Since we don’t interrupt the thread, that exception won’t be thrown. However, the program throws a checked exception. When you run the program, you will get a stack trace. 
+  What’s so remarkable about that? Normally, you have to catch all checked exceptions inside the run method of a Runnable and wrap them into unchecked exceptions—the run method is declared to throw no checked exceptions. 
+  But here, we don’t wrap. We simply throw the exception, tricking the compiler into believing that it is not a checked exception. 
+  Using generic classes, erasure, and the @SuppressWarnings annotation, we were able to defeat an essential part of the Java type system. 
+8.6.10 Beware of Clashes after Erasure
+  It is illegal to create conditions that cause clashes when generic types are erased. Here is an example. Suppose we add an equals method to the Pair class, like this:   public class Pair<T> { public boolean equals(T value) { return first.equals(value) && second.equal . . . 
+  } 
+  Consider a Pair<String>. Conceptually, it has two equals methods: boolean equals(String) // defined in Pair<T> boolean equals(Object) // inherited from Object   But the intuition leads us astray. The erasure of the method boolean equals(T)   is boolean equals(Object)   which clashes with the Object.equals method. 
+  The remedy is, of course, to rename the offending method. 
+  The generics specification cites another rule: "To support translation by erasure, we impose the restriction that a class or type variable may not at the same time be a subtype of two interface types which are different parameterizations of the same interface." For example, the following is illegal: class Employee implements Comparable<Employee> { . . . } 
+  class Manager extends Employee implements Comparable<Manager> { . 
+  . . } // ERROR   Manager would then implement both Comparable<Employee> and Comparable<Manager>, which are different parameterizations of the same interface. 
+  It is not obvious what this restriction has to do with type erasure. After all, the nongeneric version class Employee implements Comparable { . . . } 
+  class Manager extends Employee implements Comparable { . . . } 
+  is legal. The reason is far more subtle. There would be a conflict with the synthesized bridge methods. A class that implements Comparable<X> gets a bridge method public int compareTo(Object other) { return compareTo((X) other); 
+  } 
+  You cannot have two such methods for different types X. 

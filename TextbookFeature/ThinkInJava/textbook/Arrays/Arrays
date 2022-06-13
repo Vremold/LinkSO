@@ -1,0 +1,2 @@
+  At the end of the Initialization & Cleanup chapter, you learned how to define and initialize an array. 
+  The simple view of arrays is that you create and populate them, you select elements from them using int indexes, and they don’t change their size. Most of the time that’s all you need to know, but sometimes you need to perform more sophisticated operations on arrays, and you may also need to evaluate the use of an array vs. a more flexible container. This chapter will show you how to think about arrays in more depth. 

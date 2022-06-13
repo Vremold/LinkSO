@@ -1,0 +1,201 @@
+  149   have predefined meanings: the less-than, greater-than, ampersand, quotation mark, and apostrophe characters. You can define other entity references in a DTD. 
+  • CDATA sections are delimited by <![CDATA[ and ]]>. They are a special form of character data. You can use them to include strings that contain characters such as < > & without having them interpreted as markup, for example: <![CDATA[< & > are my favorite delimiters]]>   CDATA sections cannot contain the string ]]>. Use this feature with caution! 
+  It is too often used as a back door for smuggling legacy data into XML documents. 
+  • Processing instructions are instructions for applications that process XML documents. They are delimited by <? and ?>, for example <?xml-stylesheet href="mystyle.css" type="text/css"?>   Every XML document starts with a processing instruction <?xml version="1.0"?>   • Comments are delimited by <!-- and -->, for example <!-- This is a comment. -->   Comments should not contain the string --. Comments should only be information for human readers. They should never contain hidden commands; 
+  use processing instructions for commands. 
+  3.2 Parsing an XML Document To process an XML document, you need to parse it. A parser is a program that reads a file, confirms that the file has the correct format, breaks it up into the constituent elements, and lets a programmer access those elements. The Java library supplies two kinds of XML parsers: • Tree parsers, such as the Document Object Model (DOM) parser, that read an XML document into a tree structure. 
+  • Streaming parsers, such as the Simple API for XML (SAX) parser, that generate events as they read an XML document. 
+  The DOM parser is easier to use for most purposes, and we explain it first. You may consider a streaming parser if you process very long documents whose tree structures would use up a lot of memory, or if you are only interested in a few   From the Library of Hristo Dimov Hristov   150   Chapter 3   XML   elements and don’t care about their context. For more information, see Section 3.6, “Streaming Parsers,” on p. 199. 
+  The DOM parser interface is standardized by the World Wide Web Consortium (W3C). The org.w3c.dom package contains the definitions of interface types such as Document and Element. Different suppliers, such as the Apache Organization and IBM, have written DOM parsers whose classes implement these interfaces. The Java API for XML Processing (JAXP) library actually makes it possible to plug in any of these parsers. But the JDK also comes with a DOM parser that is derived from the Apache parser. 
+  To read an XML document, you need a DocumentBuilder object that you get from a DocumentBuilderFactory like this: DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance(); 
+  DocumentBuilder builder = factory.newDocumentBuilder(); 
+  You can now read a document from a file: File f = . . . 
+  Document doc = builder.parse(f); 
+  Alternatively, you can use a URL: URL u = . . . 
+  Document doc = builder.parse(u); 
+  You can even specify an arbitrary input stream: InputStream in = . . . 
+  Document doc = builder.parse(in); 
+  NOTE: If you use an input stream as an input source, the parser will not be able to locate other files that are referenced relative to the location of the document, such as a DTD in the same directory. You can install an “entity resolver” to overcome that problem. See www.xml.com/pub/a/2004/03/03/catalogs.html or www.ibm.com/ developerworks/xml/library/x-mxd3.html for more information. 
+  The Document object is an in-memory representation of the tree structure of the XML document. It is composed of objects whose classes implement the Node interface and its various subinterfaces. Figure 3.1 shows the inheritance hierarchy of the subinterfaces. 
+  Start analyzing the contents of a document by calling the getDocumentElement method. 
+  It returns the root element. 
+  Element root = doc.getDocumentElement(); 
+  From the Library of Hristo Dimov Hristov   3.2 Parsing an XML Document   151   Figure 3.1 The Node interface and its subinterfaces For example, if you are processing a document <?xml version="1.0"?> <font> ... 
+  </font>   then calling getDocumentElement returns the font element. 
+  The getTagName method returns the tag name of an element. In the preceding example, root.getTagName() returns the string "font". 
+  To get the element’s children (which may be subelements, text, comments, or other nodes), use the getChildNodes method. That method returns a collection of type NodeList. That type was standardized before the standard Java collections, so it has a different access protocol. The item method gets the item with a given index, and the getLength method gives the total count of the items. Therefore, you can enumerate all children like this: NodeList children = root.getChildNodes(); 
+  for (int i = 0; i < children.getLength(); i++) { Node child = children.item(i); 
+  ... 
+  } 
+  From the Library of Hristo Dimov Hristov   152   Chapter 3   XML   Be careful when analyzing children. Suppose, for example, that you are processing the document <font> <name>Helvetica</name> <size>36</size> </font>   You would expect the font element to have two children, but the parser reports five: • • • • •   The whitespace between <font> and <name> The name element The whitespace between </name> and <size> The size element The whitespace between </size> and </font>   Figure 3.2 shows the DOM tree. 
+  Figure 3.2 A simple DOM tree   From the Library of Hristo Dimov Hristov   3.2 Parsing an XML Document   153   If you expect only subelements, you can ignore the whitespace: for (int i = 0; i < children.getLength(); i++) { Node child = children.item(i); 
+  if (child instanceof Element) { Element childElement = (Element) child; 
+  ... 
+  } 
+  } 
+  Now you look at only two elements, with tag names name and size. 
+  As you will see in the next section, you can do even better if your document has a DTD. Then the parser knows which elements don’t have text nodes as children, and it can suppress the whitespace for you. 
+  When analyzing the name and size elements, you want to retrieve the text strings that they contain. Those text strings are themselves contained in child nodes of type Text. You know that these Text nodes are the only children, so you can use the getFirstChild method without having to traverse another NodeList. Then, use the getData method to retrieve the string stored in the Text node. 
+  for (int i = 0; i < children.getLength(); i++) { Node child = children.item(i); 
+  if (child instanceof Element) { Element childElement = (Element) child; 
+  Text textNode = (Text) childElement.getFirstChild(); 
+  String text = textNode.getData().trim(); 
+  if (childElement.getTagName().equals("name")) name = text; 
+  else if (childElement.getTagName().equals("size")) size = Integer.parseInt(text); 
+  } 
+  } 
+  TIP: It is a good idea to call trim on the return value of the getData method. If the author of an XML file puts the beginning and the ending tags on separate lines, such as <size> 36 </size>   then the parser will include all line breaks and spaces in the text node data. 
+  Calling the trim method removes the whitespace surrounding the actual data. 
+  From the Library of Hristo Dimov Hristov   154   Chapter 3   XML   You can also get the last child with the getLastChild method, and the next sibling of a node with getNextSibling. Therefore, another way of traversing a node’s children is for (Node childNode = element.getFirstChild(); 
+  childNode != null; 
+  childNode = childNode.getNextSibling()) { ... 
+  } 
+  To enumerate the attributes of a node, call the getAttributes method. It returns a NamedNodeMap object that contains Node objects describing the attributes. You can traverse the nodes in a NamedNodeMap in the same way as a NodeList. Then, call the getNodeName and getNodeValue methods to get the attribute names and values. 
+  NamedNodeMap attributes = element.getAttributes(); 
+  for (int i = 0; i < attributes.getLength(); i++) { Node attribute = attributes.item(i); 
+  String name = attribute.getNodeName(); 
+  String value = attribute.getNodeValue(); 
+  ... 
+  } 
+  Alternatively, if you know the name of an attribute, you can retrieve the corresponding value directly: String unit = element.getAttribute("unit"); 
+  You have now seen how to analyze a DOM tree. The program in Listing 3.1 puts these techniques to work. You can use the File → Open menu option to read in an XML file. A DocumentBuilder object parses the XML file and produces a Document object. The program displays the Document object as a tree (see Figure 3.3). 
+  The tree display clearly shows how child elements are surrounded by text containing whitespace and comments. For greater clarity, the program displays newline and return characters as \n and \r. (Otherwise, they would show up as hollow boxes—which is the default symbol for a character in a string that Swing cannot draw.) In Chapter 10, you will learn the techniques this program uses to display the tree and the attribute tables. The DOMTreeModel class implements the TreeModel interface. 
+  The getRoot method returns the root element of the document. The getChild method gets the node list of children and returns the item with the requested index. The tree cell renderer displays the following: • For elements, the element tag name and a table of all attributes   From the Library of Hristo Dimov Hristov   3.2 Parsing an XML Document   155   Figure 3.3 A parse tree of an XML document • For character data, the interface (Text, Comment, or CDATASection), followed by the data, with newline and return characters replaced by \n and \r • For all other node types, the class name followed by the result of toString   Listing 3.1 1   dom/TreeViewer.java   package dom; 
+  2 3 4   import java.awt.*; 
+  import java.io.*; 
+  5 6 7 8 9 10   import javax.swing.*; 
+  import javax.swing.event.*; 
+  import javax.swing.table.*; 
+  import javax.swing.tree.*; 
+  import javax.xml.parsers.*; 
+  11 12 13   import org.w3c.dom.*; 
+  import org.w3c.dom.CharacterData; 
+  14   (Continues)   From the Library of Hristo Dimov Hristov   156   Chapter 3   XML   Listing 3.1 (Continued) 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32   /** * This program displays an XML document as a tree. 
+  * @version 1.13 2016-04-27 * @author Cay Horstmann */ public class TreeViewer { public static void main(String[] args) { EventQueue.invokeLater(() -> { JFrame frame = new DOMTreeFrame(); 
+  frame.setTitle("TreeViewer"); 
+  frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
+  frame.setVisible(true); 
+  }); 
+  } 
+  } 
+  33 34 35 36 37 38 39 40   /** * This frame contains a tree that displays the contents of an XML document. 
+  */ class DOMTreeFrame extends JFrame { private static final int DEFAULT_WIDTH = 400; 
+  private static final int DEFAULT_HEIGHT = 400; 
+  41 42   private DocumentBuilder builder; 
+  43 44 45 46   public DOMTreeFrame() { setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT); 
+  47   JMenu fileMenu = new JMenu("File"); 
+  JMenuItem openItem = new JMenuItem("Open"); 
+  openItem.addActionListener(event -> openFile()); 
+  fileMenu.add(openItem); 
+  48 49 50 51 52   JMenuItem exitItem = new JMenuItem("Exit"); 
+  exitItem.addActionListener(event -> System.exit(0)); 
+  fileMenu.add(exitItem); 
+  53 54 55 56   JMenuBar menuBar = new JMenuBar(); 
+  menuBar.add(fileMenu); 
+  setJMenuBar(menuBar); 
+  57 58 59 60   } 
+  61   From the Library of Hristo Dimov Hristov   3.2 Parsing an XML Document   157   /** * Open a file and load the document. 
+  */ public void openFile() { JFileChooser chooser = new JFileChooser(); 
+  chooser.setCurrentDirectory(new File("dom")); 
+  chooser.setFileFilter( new javax.swing.filechooser.FileNameExtensionFilter("XML files", "xml")); 
+  int r = chooser.showOpenDialog(this); 
+  if (r != JFileChooser.APPROVE_OPTION) return; 
+  final File file = chooser.getSelectedFile(); 
+  62 63 64 65 66 67 68 69 70 71 72 73 74   new SwingWorker<Document, Void>() { protected Document doInBackground() throws Exception { if (builder == null) { DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance(); 
+  builder = factory.newDocumentBuilder(); 
+  } 
+  return builder.parse(file); 
+  } 
+  75 76 77 78 79 80 81 82 83 84 85 86   protected void done() { try { Document doc = get(); 
+  JTree tree = new JTree(new DOMTreeModel(doc)); 
+  tree.setCellRenderer(new DOMTreeCellRenderer()); 
+  87 88 89 90 91 92 93 94   setContentPane(new JScrollPane(tree)); 
+  validate(); 
+  95 96   } 
+  catch (Exception e) { JOptionPane.showMessageDialog(DOMTreeFrame.this, e); 
+  } 
+  97 98 99 100 101   } 
+  }.execute(); 
+  102 103   } 
+  104 105   } 
+  106 107 108 109   /** * This tree model describes the tree structure of an XML document. 
+  */ (Continues)   From the Library of Hristo Dimov Hristov   158   Chapter 3   XML   Listing 3.1 (Continued) 110 111 112   class DOMTreeModel implements TreeModel { private Document doc; 
+  113 114 115 116 117 118 119 120 121   /** * Constructs a document tree model. 
+  * @param doc the document */ public DOMTreeModel(Document doc) { this.doc = doc; 
+  } 
+  122 123 124 125 126   public Object getRoot() { return doc.getDocumentElement(); 
+  } 
+  127 128 129 130 131 132 133   public int getChildCount(Object parent) { Node node = (Node) parent; 
+  NodeList list = node.getChildNodes(); 
+  return list.getLength(); 
+  } 
+  134 135 136 137 138 139 140   public Object getChild(Object parent, int index) { Node node = (Node) parent; 
+  NodeList list = node.getChildNodes(); 
+  return list.item(index); 
+  } 
+  141 142 143 144 145 146 147 148 149   public int getIndexOfChild(Object parent, Object child) { Node node = (Node) parent; 
+  NodeList list = node.getChildNodes(); 
+  for (int i = 0; i < list.getLength(); i++) if (getChild(node, i) == child) return i; 
+  return -1; 
+  } 
+  150 151 152 153 154   public boolean isLeaf(Object node) { return getChildCount(node) == 0; 
+  } 
+  155   From the Library of Hristo Dimov Hristov   3.2 Parsing an XML Document   public void valueForPathChanged(TreePath path, Object newValue) {} 
+  public void addTreeModelListener(TreeModelListener l) {} 
+  public void removeTreeModelListener(TreeModelListener l) {} 
+  156 157 158 159   159   } 
+  160 161 162 163 164 165 166 167 168 169 170   /** * This class renders an XML node. 
+  */ class DOMTreeCellRenderer extends DefaultTreeCellRenderer { public Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus) { Node node = (Node) value; 
+  if (node instanceof Element) return elementPanel((Element) node); 
+  171   super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus); 
+  if (node instanceof CharacterData) setText(characterString((CharacterData) node)); 
+  else setText(node.getClass() + ": " + node.toString()); 
+  return this; 
+  172 173 174 175 176   } 
+  177 178 179 180 181 182 183 184 185 186 187 188   public static JPanel elementPanel(Element e) { JPanel panel = new JPanel(); 
+  panel.add(new JLabel("Element: " + e.getTagName())); 
+  final NamedNodeMap map = e.getAttributes(); 
+  panel.add(new JTable(new AbstractTableModel() { public int getRowCount() { return map.getLength(); 
+  } 
+  189   public int getColumnCount() { return 2; 
+  } 
+  190 191 192 193 194   public Object getValueAt(int r, int c) { return c == 0 ? map.item(r).getNodeName() : map.item(r).getNodeValue(); 
+  } 
+  })); 
+  return panel; 
+  195 196 197 198 199 200 201   } 
+  202 203 204   private static String characterString(CharacterData node) { (Continues)   From the Library of Hristo Dimov Hristov   160   Chapter 3   XML   Listing 3.1 (Continued) StringBuilder builder = new StringBuilder(node.getData()); 
+  for (int i = 0; i < builder.length(); i++) { if (builder.charAt(i) == '\r') { builder.replace(i, i + 1, "\\r"); 
+  i++; 
+  } 
+  else if (builder.charAt(i) == '\n') { builder.replace(i, i + 1, "\\n"); 
+  i++; 
+  } 
+  else if (builder.charAt(i) == '\t') { builder.replace(i, i + 1, "\\t"); 
+  i++; 
+  } 
+  } 
+  if (node instanceof CDATASection) builder.insert(0, "CDATASection: "); 
+  else if (node instanceof Text) builder.insert(0, "Text: "); 
+  else if (node instanceof Comment) builder.insert(0, "Comment: "); 
+  205 206 207 208 209 210 211 212 213 214 215 216 217 218 219 220 221 222 223 224 225 226 227   return builder.toString(); 
+  228   } 
+  229 230   } 
+  javax.xml.parsers.DocumentBuilderFactory 1.4   • static DocumentBuilderFactory newInstance() returns an instance of the DocumentBuilderFactory class. 
+  • DocumentBuilder newDocumentBuilder() returns an instance of the DocumentBuilder class. 
+  javax.xml.parsers.DocumentBuilder 1.4   • Document parse(File f) • Document parse(String url) • Document parse(InputStream in) parses an XML document from the given file, URL, or input stream and returns the parsed document. 
+  From the Library of Hristo Dimov Hristov   3.2 Parsing an XML Document   161   org.w3c.dom.Document 1.4   • Element getDocumentElement() returns the root element of the document. 
+  org.w3c.dom.Element 1.4   • String getTagName() returns the name of the element. 
+  • String getAttribute(String name) returns the value of the attribute with the given name, or the empty string if there is no such attribute. 
+  org.w3c.dom.Node 1.4   • NodeList getChildNodes() returns a node list that contains all children of this node. 
+  • Node getFirstChild() • Node getLastChild() gets the first or last child node of this node, or null if this node has no children. 
+  • Node getNextSibling() • Node getPreviousSibling() gets the next or previous sibling of this node, or null if this node has no siblings. 
+  • Node getParentNode() gets the parent of this node, or null if this node is the document node. 
+  • NamedNodeMap getAttributes() returns a node map that contains Attr nodes that describe all attributes of this node. 
+  • String getNodeName() returns the name of this node. If the node is an Attr node, the name is the attribute name. 
+  • String getNodeValue() returns the value of this node. If the node is an Attr node, the value is the attribute value. 
+  From the Library of Hristo Dimov Hristov   162   Chapter 3   XML   org.w3c.dom.CharacterData 1.4   • String getData() returns the text stored in this node. 
+  org.w3c.dom.NodeList 1.4   • int getLength() returns the number of nodes in this list. 
+  • Node item(int index) returns the node with the given index. The index is between 0 and getLength() - 1. 
+  org.w3c.dom.NamedNodeMap 1.4   • int getLength() returns the number of nodes in this map. 
+  • Node item(int index) returns the node with the given index. The index is between 0 and getLength() - 1. 

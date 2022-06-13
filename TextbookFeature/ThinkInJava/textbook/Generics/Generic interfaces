@@ -1,0 +1,13 @@
+  Generics also work with interfaces. For example, a generator is a class that creates objects. It’s actually a specialization of the Factory Method design pattern, but when you ask a generator for new object, you don’t pass it any arguments, whereas you typically do pass arguments to a Factory Method. The generator knows how to create new objects without any extra information. 
+  Typically, a generator just defines one method, the method that produces new objects. Here, we’ll call it next( ), and include it in the standard utilities: 
+  The return type of next( ) is parameterized to T. As you can see, using generics with interfaces is no different than using generics with classes. 
+  To demonstrate the implementation of a Generator, we’ll need some classes. Here’s a coffee hierarchy: 
+  Now we can implement a Generator < Coffee > that produces random different types of Coffee objects: 
+  The parameterized Generator interface ensures that next( ) returns the parameter type. CoffeeGenerator also implements the Iterable interface, so it can be used in a foreach statement. However, it requires an "end sentinel" to know when to stop, and this is produced using the second constructor. 
+  Here’s a second implementation of Generator<T>, this time to produce Fibonacci numbers: 
+  Although we are working with ints both inside and outside the class, the type parameter is Integer. This brings up one of the limitations of Java generics: You cannot use primitives as type parameters. However, Java SE5 conveniently added autoboxing and autounboxing to convert from primitive types to wrapper types and back. You can see the effect here because ints are seamlessly used and produced by the class. 
+  We can go one step further and make an Iterable Fibonacci generator. One option is to reimplement the class and add the Iterable interface, but you don’t always have control of the original code, and you don’t want to rewrite when you don’t have to. Instead, we can create an adapter to produce the desired interface—this design pattern was introduced earlier in the book. 
+  Adapters can be implemented in multiple ways. For example, you could use inheritance to generate the adapted class: 
+  To use IterableFibonacci in a foreach statement, you give the constructor a boundary so that hasNext( ) can know when to return false. 
+  Exercise 7: (2) Use composition instead of inheritance to adapt Fibonacci to make it Iterable. 
+  Exercise 8: (2) Following the form of the Coffee example, create a hierarchy of StoryCharacters from your favorite movie, dividing them into GoodGuys and BadGuys. Create a generator for StoryCharacters, following the form of CoffeeGenerator. 

@@ -1,0 +1,160 @@
+  In Chapter 3, you started writing simple classes. However, all those classes had just a single main method. Now the time has come to show you how to write the kind of "workhorse classes" that are needed for more sophisticated applications. These classes typically do not have a main method. Instead, they have their own instance fields and methods. To build a complete program, you combine several classes, one of which has a main method. 
+4.3.1 An Employee Class
+  The simplest form for a class definition in Java is class ClassName { field1 field2 . . . 
+  constructor1 constructor2 . . . 
+  method1 method2 . . . 
+  } 
+  Consider the following, very simplified, version of an Employee class that might be used by a business in writing a payroll system: class Employee { // instance fields private String name; 
+  private double salary; 
+  private LocalDate hireDay; 
+  // constructor public Employee(String n, double s, int year, int month, int day) { name = n; 
+  salary = s; 
+  hireDay = LocalDate.of(year, month, day); 
+  } 
+  // a method public String getName() { return name; 
+  } 
+  // more methods . . . 
+  } 
+  We break down the implementation of this class, in some detail, in the sections that follow. First, though, Listing 4.2 is a program that shows the Employee class in action. 
+  In the program, we construct an Employee array and fill it with three Employee objects: Employee[] staff = new Employee[3]; 
+  staff[0] = new Employee("Carl Cracker", . . .); 
+  staff[1] = new Employee("Harry Hacker", . . .); 
+  staff[2] = new Employee("Tony Tester", . . .); 
+  Next, we use the raiseSalary method of the Employee class to raise each employee’s salary by 5%: for (Employee e : staff) e.raiseSalary(5); 
+  Finally, we print out information about each employee, by calling the getName, for (Employee e : staff) System.out.println("name=" + e.getName() + ",salary=" + e.getSalary() + ",hireDay=" + e.getHireDay()); 
+  Note that the example program consists of two classes: the Employee class and a class EmployeeTest with the public access specifier. The main method with the instructions that we just described is contained in the EmployeeTest class. 
+  The name of the source file is EmployeeTest.java because the name of the file must match the name of the public class. You can only have one public class in a source file, but you can have any number of nonpublic classes. 
+  Next, when you compile this source code, the compiler creates two class files in the directory: EmployeeTest.class and Employee.class. 
+  You then start the program by giving the bytecode interpreter the name of the class that contains the main method of your program: java EmployeeTest   The bytecode interpreter starts running the code in the main method in the EmployeeTest class. This code in turn constructs three new Employee objects and shows you their state. 
+4.3.2 Use of Multiple Source Files
+  The program in Listing 4.2 has two classes in a single source file. Many programmers prefer to put each class into its own source file. For example, you can place the Employee class into a file Employee.java and the EmployeeTest class into EmployeeTest.java. 
+  If you like this arrangement, you have two choices for compiling the program. You can invoke the Java compiler with a wildcard:   javac Employee*.java   Then, all source files matching the wildcard will be compiled into class files. 
+  Or, you can simply type javac EmployeeTest.java   You may find it surprising that the second choice works even though the Employee.java file is never explicitly compiled. However, when the Java compiler sees the Employee class being used inside EmployeeTest.java, it will look for a file named Employee.class. 
+  If it does not find that file, it automatically searches for Employee.java and compiles it. Moreover, if the timestamp of the version of Employee.java that it finds is newer than that of the existing Employee.class file, the Java compiler will automatically recompile the file. 
+  Note If you are familiar with the make facility of UNIX (or one of its Windows cousins, such as nmake), you can think of the Java compiler as having the make functionality already built in. 
+4.3.3 Dissecting the Employee Class
+  In the sections that follow, we will dissect the Employee class. Let’s start with the methods in this class. As you can see by examining the source code, this class has one constructor and four methods: public public public public public   Employee(String n, double s, int year, int month, int day) String getName() double getSalary() LocalDate getHireDay() void raiseSalary(double byPercent)   All methods of this class are tagged as public. The keyword public means that any method in any class can call the method. (The four possible access levels are covered in this and the next chapter.)   Next, notice the three instance fields that will hold the data manipulated inside an instance of the Employee class. 
+  private String name; 
+  private double salary; 
+  private LocalDate hireDay; 
+  The private keyword makes sure that the only methods that can access these instance fields are the methods of the Employee class itself. No outside method can read or write to these fields. 
+  Note You could use the public keyword with your instance fields, but it would be a very bad idea. Having public data fields would allow any part of the program to read and modify the instance fields, completely ruining encapsulation. Any method of any class can modify public fields—and, in our experience, some code will take advantage of that access privilege when you least expect it. We strongly recommend to make all your instance fields private. 
+  Finally, notice that two of the instance fields are themselves objects: The name and hireDay fields are references to String and LocalDate objects. This is quite usual: Classes will often contain instance fields of class type. 
+4.3.4 First Steps with Constructors
+  Let’s look at the constructor listed in our Employee class. 
+  public Employee(String n, double s, int year, int month, int day) { name = n; 
+  salary = s; 
+  hireDay = LocalDate.of(year, month, day); 
+  } 
+  As you can see, the name of the constructor is the same as the name of the class. This constructor runs when you construct objects of the Employee class—giving the instance fields the initial state you want them to have. 
+  For example, when you create an instance of the Employee class with code like this: new Employee("James Bond", 100000, 1950, 1, 1)   you have set the instance fields as follows: name = "James Bond"; 
+  salary = 100000; 
+  hireDay = LocalDate.of(1950, 1, 1); // January 1, 1950   There is an important difference between constructors and other methods. A constructor can only be called in conjunction with the new operator. You can’t apply a constructor to an existing object to reset the instance fields. For example, james.Employee("James Bond", 250000, 1950, 1, 1) // ERROR   is a compile-time error. 
+  We will have more to say about constructors later in this chapter. For now, keep the following in mind: A constructor has the same name as the class. 
+  A class can have more than one constructor. 
+  A constructor can take zero, one, or more parameters. 
+  A constructor has no return value. 
+  A constructor is always called with the new operator. 
+  mind, however, that all Java objects are constructed on the heap and that a constructor must be combined with new. It is a common error of C++ programmers to forget the new operator: Employee number007("James Bond", 100000, 1950, 1, 1); // C++, not Java   That works in C++ but not in Java. 
+  Caution Be careful not to introduce local variables with the same names as the instance fields. For example, the following constructor will not set the salary: public Employee(String n, double s, . . .) { String name = n; // ERROR double salary = s; // ERROR . . . 
+  } 
+  The constructor declares local variables name and salary. These variables are only accessible inside the constructor. They shadow the instance fields with the same name. Some programmers accidentally write this kind of code when they type faster than they think, because their fingers are used to adding the data type. This is a nasty error that can be hard to track down. You just have to be careful in all of your methods to not use variable names that equal the names of instance fields. 
+4.3.5 Declaring Local Variables with var
+  As of Java 10, you can declare local variables with the var keyword instead of specifying their type, provided their type can be inferred from the initial value. For example, instead of declaring   Employee harry = new Employee("Harry Hacker", 50000, 1989, 10, 1); 
+  you simply write var harry = new Employee("Harry Hacker", 50000, 1989, 10, 1); 
+  This is nice since it avoids the repetition of the type name Employee. 
+  From now on, we will use the var notation in those cases where the type is obvious from the right-hand side without any knowledge of the Java API. But we won’t use var with numeric types such as int, long, or double so that you don’t have to look out for the difference between 0, 0L, and 0.0. 
+  Once you are more experienced with the Java API, you may want to use the var keyword more frequently. 
+  Note that the var keyword can only be used with local variables inside methods. You must always declare the types of parameters and fields. 
+4.3.6 Working with null References
+  In Section 4.2.1, "Objects and Object Variables," on p. 132, you saw that an object variable holds a reference to an object, or the special value null to indicate the absence of an object. 
+  This sounds like a convenient mechanism for dealing with special situations, such as an unknown name or hire date. But you need to be very careful with null values. 
+  If you apply a method to a null value, a NullPointerException occurs. 
+  LocalDate birthday = null; 
+  String s = birthday.toString(); // NullPointerException   This is a serious error, similar to an "index out of bounds" exception. If your program does not "catch" an exception, it is terminated. Normally, programs don’t catch these kinds of exceptions but rely on programmers not to cause them in the first place. 
+  When you define a class, it is a good idea to be clear about which fields can   be null. In our example, we don’t want the name or hireDay field to be null. (We don’t have to worry about the salary field. It has primitive type and can never be null.) The hireDay field is guaranteed to be non-null because it is initialized with a new LocalDate object. But name will be null if the constructor is called with a null argument for n. 
+  There are two solutions. The "permissive" approach is to turn a null argument into an appropriate non-null value: if (n == null) name = "unknown"; else name = n; 
+  As of Java 9, the Objects class has a convenience method for this purpose: public Employee(String n, double s, int year, int month, int day) { name = Objects.requireNonNullElse(n, "unknown"); 
+  . . . 
+  } 
+  The "tough love" approach is to reject a null argument: public Employee(String n, double s, int year, int month, int day) { Objects.requireNonNull(n, "The name cannot be null"); 
+  name = n; 
+  . . . 
+  } 
+  If someone constructs an Employee object with a null name, then a NullPointerException occurs. At first glance, that may not seem a useful remedy. But there are two advantages: 1. The exception report has a description of the problem. 
+  2. The exception report pinpoints the location of the problem. Otherwise, a NullPointerException would have occurred elsewhere, with no easy way of tracing it back to the faulty constructor argument. 
+  Note Whenever you accept an object reference as a construction parameter, ask yourself whether you really intend to model values that can be present or absent. If not, the "tough love" approach is preferred. 
+4.3.7 Implicit and Explicit Parameters
+  Methods operate on objects and access their instance fields. For example, the method public void raiseSalary(double byPercent) { double raise = salary * byPercent / 100; 
+  salary += raise; 
+  } 
+  sets a new value for the salary instance field in the object on which this method is invoked. Consider the call number007 .raiseSalary(5); 
+  The effect is to increase the value of the number007.salary field by 5%. 
+  More specifically, the call executes the following instructions: double raise = number007.salary * 5 / 100; 
+  number007.salary += raise; 
+  The raiseSalary method has two parameters. The first parameter, called the implicit parameter, is the object of type Employee that appears before the method name. The second parameter, the number inside the parentheses after the method name, is an explicit parameter. (Some people call the implicit parameter the target or receiver of the method call.) As you can see, the explicit parameters are explicitly listed in the method declaration—for example, double byPercent. The implicit parameter does not appear in the method declaration. 
+  In every method, the keyword this refers to the implicit parameter. If you like, you can write the raiseSalary method as follows: public void raiseSalary(double byPercent) { double raise = this.salary * byPercent / 100; 
+  this.salary += raise; 
+  } 
+  Some programmers prefer that style because it clearly distinguishes between instance fields and local variables. 
+  } 
+  If you define a method inside a class, then it is, automatically, an inline method. 
+  class Employee { . . . 
+  int getName() { return name; } // inline in C++ } 
+  In Java, all methods are defined inside the class itself. This does not make them inline. Finding opportunities for inline replacement is the job of the Java virtual machine. The just-in-time compiler watches for calls to methods that are short, commonly called, and not overridden, and optimizes them away. 
+4.3.8 Benefits of Encapsulation
+     Finally, let’s look more closely at the rather simple getName, getSalary, and getHireDay methods. 
+  public String getName() { return name; 
+  } 
+  public double getSalary() { return salary; 
+  } 
+  public LocalDate getHireDay() { return hireDay; 
+  } 
+  These are obvious examples of accessor methods. As they simply return the values of instance fields, they are sometimes called field accessors. 
+  Wouldn’t it be easier to make the name, salary, and hireDay fields public, instead of having separate accessor methods? 
+  However, the name field is read-only. Once you set it in the constructor, there is no method to change it. Thus, we have a guarantee that the name field will never be corrupted. 
+  The salary field is not read-only, but it can only be changed by the raiseSalary method. In particular, should the value ever turn out wrong, only that method needs to be debugged. Had the salary field been public, the culprit for messing up the value could have been anywhere. 
+  Sometimes, it happens that you want to get and set the value of an instance field. Then you need to supply three items: A private data field; 
+  A public field accessor method; and A public field mutator method. 
+  This is a lot more tedious than supplying a single public data field, but there are considerable benefits. 
+  First, you can change the internal implementation without affecting any code   other than the methods of the class. For example, if the storage of the name is changed to String firstName; 
+  String lastName; 
+  then the getName method can be changed to return firstName + " " + lastName   This change is completely invisible to the remainder of the program. 
+  Of course, the accessor and mutator methods may need to do a lot of work to convert between the old and the new data representation. That leads us to our second benefit: Mutator methods can perform error checking, whereas code that simply assigns to a field may not go into the trouble. For example, a setSalary method might check that the salary is never less than 0. 
+  Caution Be careful not to write accessor methods that return references to mutable objects. In a previous edition of this book, we violated that rule in our Employee class in which the getHireDay method returned an object of class Date: class Employee { private Date hireDay; 
+  . . . 
+  public Date getHireDay() { return hireDay; // BAD } 
+  . . . 
+  } 
+  Unlike the LocalDate class, which has no mutator methods, the Date class has a mutator method, setTime, where you can set the number of milliseconds. 
+  The fact that Date objects are mutable breaks encapsulation! 
+  Consider the following rogue code: Employee harry = . . .; 
+  Date d = harry.getHireDay(); 
+  double tenYearsInMilliSeconds = 10 * 365.25 * 24 * 60 * 60 * 1000; 
+  d.setTime(d.getTime() - (long) tenYearsInMilliSeconds); 
+  // let's give Harry ten years of added seniority   The reason is subtle. Both d and harry.hireDay refer to the same object (see Figure 4.5). Applying mutator methods to d automatically changes the private state of the Employee object! 
+  Figure 4.5 Returning a reference to a mutable data field If you need to return a reference to a mutable object, you should clone it first. A clone is an exact copy of an object stored in a new location. We discuss cloning in detail in Chapter 6. Here is the corrected code: class Employee { . . . 
+  public Date getHireDay() { return (Date) hireDay.clone(); // OK } 
+  . . . 
+  } 
+  As a rule of thumb, always use clone whenever you need to return a copy of a mutable field. 
+4.3.9 Class-Based Access Privileges
+  You know that a method can access the private data of the object on which it is invoked. What people often find surprising is that a method can access the private data of all objects of its class. For example, consider a method equals that compares two employees. 
+  class Employee { . . . 
+  public boolean equals(Employee other) { return name.equals(other.name); 
+  } 
+  } 
+  A typical call is if (harry.equals(boss)) . . . 
+  This method accesses the private fields of harry, which is not surprising. It also accesses the private fields of boss. This is legal because boss is an object of type Employee, and a method of the Employee class is permitted to access the private fields of any object of type Employee. 
+4.3.10 Private Methods
+     When implementing a class, we make all data fields private because public data are dangerous. But what about the methods? While most methods are public, private methods are useful in certain circumstances. Sometimes, you may wish to break up the code for a computation into separate helper methods. Typically, these helper methods should not be part of the public interface—they may be too close to the current implementation or require a special protocol or calling order. Such methods are best implemented as private. 
+  To implement a private method in Java, simply change the public keyword to private. 
+  By making a method private, you are under no obligation to keep it available if you change your implementation. The method may well be harder to implement or unnecessary if the data representation changes; this is irrelevant. The point is that as long as the method is private, the designers of the class can be assured that it is never used elsewhere, so they can simply drop it. If a method is public, you cannot simply drop it because other code might rely on it. 
+4.3.11 Final Instance Fields
+  You can define an instance field as final. Such a field must be initialized when the object is constructed. That is, you must guarantee that the field value has been set after the end of every constructor. Afterwards, the field may not be modified again. For example, the name field of the Employee class may be declared as final because it never changes after the object is constructed—there is no class Employee { private final String name; 
+  . . . 
+  } 
+  The final modifier is particularly useful for fields whose type is primitive or an immutable class. (A class is immutable if none of its methods ever mutate its objects. For example, the String class is immutable.)   For mutable classes, the final modifier can be confusing. For example, consider a field private final StringBuilder evaluations; 
+  that is initialized in the Employee constructor as evaluations = new StringBuilder(); 
+  The final keyword merely means that the object reference stored in the evaluations variable will never again refer to a different StringBuilder object. But the object can be mutated: public void giveGoldStar() { evaluations.append(LocalDate.now() + ": Gold star!\n"); 
+  } 

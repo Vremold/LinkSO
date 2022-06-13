@@ -1,0 +1,15 @@
+  Java goes out of its way to guarantee that variables are properly initialized before they are used. In the case of a method’s local variables, this guarantee comes in the form of a compile- time error. So if you say: 
+  void f() { int i; i++; // Error -- i not initialized } 
+  you’ll get an error message that says that i might not have been initialized. Of course, the compiler could have given i a default value, but an uninitialized local variable is probably a programmer error, and a default value would have covered that up. Forcing the programmer to provide an initialization value is more likely to catch a bug. 
+  If a primitive is a field in a class, however, things are a bit different. As you saw in the Everything Is an Object chapter, each primitive field of a class is guaranteed to get an initial value. Here’s a program that verifies this, and shows the values: 
+  You can see that even though the values are not specified, they automatically get initialized (the char value is a zero, which prints as a space). So at least there’s no threat of working with uninitialized variables. 
+  When you define an object reference inside a class without initializing it to a new object, that reference is given a special value of null. 
+Specifying initialization
+  What happens if you want to give a variable an initial value? One direct way to do this is simply to assign the value at the point you define the variable in the class. (Notice you cannot do this in C++, although C++ novices always try.) Here the field definitions in class InitialValues are changed to provide initial values: 
+  You can also initialize non-primitive objects in this same way. If Depth is a class, you can create a variable and initialize it like so: 
+  If you haven’t given d an initial value and you try to use it anyway, you’ll get a runtime error called an exception (covered in the Error Handling with Exceptions chapter). 
+  You can even call a method to provide an initialization value: 
+  This method can have arguments, of course, but those arguments cannot be other class members that haven’t been initialized yet. Thus, you can do this: 
+  But you cannot do this: 
+  This is one place in which the compiler, appropriately, does complain about forward referencing, since this has to do with the order of initialization and not the way the program is compiled. 
+  This approach to initialization is simple and straightforward. It has the limitation that every object of type InitialValues will get these same initialization values. Sometimes this is exactly what you need, but at other times you need more flexibility. 

@@ -1,0 +1,5 @@
+  An important benefit of generics is the ability to simply and safely create complex models. For example, we can easily create a List of tuples: 
+  Although it gets somewhat verbose (especially the creation of the iterator), you end up with a fairly powerful data structure without too much code. 
+  Here’s another example showing how straightforward it is to build complex models using generic types. Even though each class is created as a building block, the total has many parts. In this case, the model is a retail store with aisles, shelves and products: 
+  As you can see in Store.toString( ), the result is many layers of containers that are nonetheless type-safe and manageable. What’s impressive is that it is not intellectually prohibitive to assemble such a model. 
+  Exercise 19: (2) Following the form of Store.java, build a model of a containerized cargo ship. 

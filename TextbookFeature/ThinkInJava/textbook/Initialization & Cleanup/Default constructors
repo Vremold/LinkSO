@@ -1,0 +1,10 @@
+  As mentioned previously, a default constructor (a.k.a. a “no-arg” constructor) is one without arguments that is used to create a “default object.” If you create a class that has no constructors, the compiler will automatically create a default constructor for you. For example: 
+  The expression  new Bird() 
+  creates a new object and calls the default constructor, even though one was not explicitly defined. Without it, you would have no method to call to build the object. However, if you define any constructors (with or without arguments), the compiler will not synthesize one for you: 
+  If you say: 
+  new Bird2()  the compiler will complain that it cannot find a constructor that matches. When you don’t put in any constructors, it’s as if the compiler says, “You are bound to need some constructor, so let me make one for you.” But if you write a constructor, the compiler says, “You’ve written a constructor so you know what you’re doing; if you didn’t put in a default it’s because you meant to leave it out.” 
+  Exercise 3: (1) Create a class with a default constructor (one that takes no arguments) that prints a message. Create an object of this class. 
+  Exercise 4: (1) Add an overloaded constructor to the previous exercise that takes a String argument and prints it along with your message. 
+  Exercise 5: (2) Create a class called Dog with an overloaded bark( ) method. This method should be overloaded based on various primitive data types, and print different types of barking, howling, etc., depending on which overloaded version is called. Write a main( ) that calls all the different versions. 
+  Exercise 6: (1) Modify the previous exercise so that two of the overloaded methods have two arguments (of two different types), but in reversed order relative to each other. Verify that this works. 
+  Exercise 7: (1) Create a class without a constructor, and then create an object of that class in main( ) to verify that the default constructor is automatically synthesized. 

@@ -1,0 +1,82 @@
+
+805
+
+11.7 Clipping
+By setting a clipping shape in the graphics context, you constrain all drawing
+operations to the interior of that clipping shape.
+g2.setClip(clipShape); // but see below
+g2.draw(shape); // draws only the part that falls inside the clipping shape
+
+However, in practice, you don’t want to call the setClip operation because it replaces
+any existing clipping shape that the graphics context might have. For example,
+as you will see later in this chapter, a graphics context for printing comes with a
+clip rectangle that ensures that you don’t draw on the margins. Instead, call
+the clip method.
+g2.clip(clipShape); // better
+
+The clip method intersects the existing clipping shape with the new one that you
+supply.
+If you just want to apply a clipping area temporarily, you should first get the old
+clip, add your new clip, and finally restore the old clip when you are done:
+Shape oldClip = g2.getClip(); // save old clip
+g2.clip(clipShape); // apply temporary clip
+draw on g2
+g2.setClip(oldClip); // restore old clip
+
+In Figure 11.20, we show off the clipping capability with a rather dramatic
+drawing of a line pattern clipped by a complex shape—namely, the outline of a
+set of letters.
+
+Figure 11.20 Using letter shapes to clip a line pattern
+To obtain the character outlines, you need a font render context. Use the
+getFontRenderContext method of the Graphics2D class.
+
+From the Library of Hristo Dimov Hristov
+
+806
+
+Chapter 11
+
+Advanced AWT
+
+FontRenderContext context = g2.getFontRenderContext();
+
+Next, using a string, a font, and the font render context, create a TextLayout object:
+TextLayout layout = new TextLayout("Hello", font, context);
+
+This text layout object describes the layout of a sequence of characters, as rendered
+by a particular font render context. The layout depends on the font render
+context—the same characters will look different on a screen and on a printer.
+More important for our application, the getOutline method returns a Shape object
+that describes the shape of the outline of the characters in the text layout. The
+outline shape starts at the origin (0, 0), which might not be what you want. In
+that case, supply an affine transform to the getOutline operation to specify where
+you would like the outline to appear.
+AffineTransform transform = AffineTransform.getTranslateInstance(0, 100);
+Shape outline = layout.getOutline(transform);
+
+Then, append the outline to the clipping shape.
+GeneralPath clipShape = new GeneralPath();
+clipShape.append(outline, false);
+
+Finally, set the clipping shape and draw a set of lines. The lines appear only inside
+the character boundaries.
+g2.setClip(clipShape);
+Point2D p = new Point2D.Double(0, 0);
+for (int i = 0; i < NLINES; i++)
+{
+double x = . . .;
+double y = . . .;
+Point2D q = new Point2D.Double(x, y);
+g2.draw(new Line2D.Double(p, q)); // lines are clipped
+}
+
+java.awt.Graphics 1.0
+
+• void setClip(Shape s) 1.2
+sets the current clipping shape to the shape s.
+• Shape getClip() 1.2
+returns the current clipping shape.
+
+From the Library of Hristo Dimov Hristov
+

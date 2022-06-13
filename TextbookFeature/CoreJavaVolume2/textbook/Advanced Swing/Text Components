@@ -1,0 +1,560 @@
+  681   10.4 Text Components Figure 10.35 shows all text components that are included in the Swing library. 
+  You already saw the three most commonly used components—JTextField, JPasswordField, and JTextArea—in Volume I, Chapter 9. In the following sections, we will introduce the remaining text components. We will also discuss the JSpinner component that contains a formatted text field together with tiny “up” and “down” buttons to change its contents. 
+  Figure 10.35 The hierarchy of text components and documents All text components render and edit the data stored in a model object of a class implementing the Document interface. The JTextField and JTextArea components use a PlainDocument that simply stores a sequence of lines of plain text without any formatting. 
+  A JEditorPane can show and edit styled text (with fonts, colors, etc.) in a variety of formats, most notably HTML; see Section 10.4.4, “Displaying HTML with the JEditorPane,” on p. 712. The StyledDocument interface describes the additional requirements of styles, fonts, and colors. The HTMLDocument class implements this interface. 
+  The subclass JTextPane of JEditorPane also holds styled text as well as embedded Swing components. We do not cover the very complex JTextPane in this book but instead   From the Library of Hristo Dimov Hristov   682   Chapter 10   Advanced Swing   refer you to the detailed description in Core Swing by Kim Topley. For a typical use of the JTextPane class, have a look at the StylePad demo that is included in the JDK. 
+10.4.1 Change Tracking in Text Components
+  Most of the intricacies of the Document interface are of interest only if you implement your own text editor. There is, however, one common use of the interface: tracking changes. 
+  Sometimes, you may want to update a part of your user interface whenever a user edits text, without waiting for the user to click a button. Here is a simple example. We show three text fields for the red, blue, and green component of a color. Whenever the content of the text fields changes, the color should be updated. 
+  Figure 10.36 shows the running application of Listing 10.19. 
+  Figure 10.36 Tracking changes in a text field First of all, note that it is not a good idea to monitor keystrokes. Some keystrokes (such as the arrow keys) don’t change the text. More importantly, the text can be updated by mouse gestures (such as “middle mouse button pasting” in X11). Instead, you should ask the document (and not the text component) to notify you whenever the data have changed by installing a document listener: textField.getDocument().addDocumentListener(listener); 
+  When the text has changed, one of the following DocumentListener methods is called: void insertUpdate(DocumentEvent event) void removeUpdate(DocumentEvent event) void changedUpdate(DocumentEvent event)   The first two methods are called when characters have been inserted or removed. The third method is not called at all for text fields. For more complex document types, it would be called when some other change, such as a change in formatting, has occurred. Unfortunately, there is no single callback to tell you that the text has changed—usually you don’t much care how it has changed. 
+  There is no adapter class, either. Thus, your document listener must implement all three methods. Here is what we do in our sample program:   From the Library of Hristo Dimov Hristov   10.4 Text Components   683   DocumentListener listener = new DocumentListener() { public void insertUpdate(DocumentEvent event) { setColor(); } 
+  public void removeUpdate(DocumentEvent event) { setColor(); } 
+  public void changedUpdate(DocumentEvent event) {} 
+  } 
+  The setColor method uses the getText method to obtain the current user input strings from the text fields and sets the color. 
+  Our program has one limitation. Users can type malformed input, such as "twenty", into the text field, or leave a field blank. For now, we catch the NumberFormatException that the parseInt method throws, and we simply don’t update the color when the text field entry is not a number. In the next section, you will see how you can prevent the user from entering invalid input in the first place. 
+  NOTE: Instead of listening to document events, you can add an action event listener to a text field. The action listener is notified whenever the user presses the Enter key. We don’t recommend this approach, because users don’t always remember to press Enter when they are done entering data. If you use an action listener, you should also install a focus listener so that you can track when the user leaves the text field. 
+  Listing 10.19 1   textChange/ColorFrame.java   package textChange; 
+  2 3 4 5   import java.awt.*; 
+  import javax.swing.*; 
+  import javax.swing.event.*; 
+  6 7 8 9 10 11 12 13 14 15   /** * A frame with three text fields to set the background color. 
+  */ public class ColorFrame extends JFrame { private JPanel panel; 
+  private JTextField redField; 
+  private JTextField greenField; 
+  private JTextField blueField; 
+  16 17 18   public ColorFrame() { (Continues)   From the Library of Hristo Dimov Hristov   684   Chapter 10   Advanced Swing   Listing 10.19 (Continued) DocumentListener listener = new DocumentListener() { public void insertUpdate(DocumentEvent event) { setColor(); } 
+  public void removeUpdate(DocumentEvent event) { setColor(); } 
+  public void changedUpdate(DocumentEvent event) {} 
+  }; 
+  19 20 21 22 23 24 25   panel = new JPanel(); 
+  26 27   panel.add(new JLabel("Red:")); 
+  redField = new JTextField("255", 3); 
+  panel.add(redField); 
+  redField.getDocument().addDocumentListener(listener); 
+  28 29 30 31 32   panel.add(new JLabel("Green:")); 
+  greenField = new JTextField("255", 3); 
+  panel.add(greenField); 
+  greenField.getDocument().addDocumentListener(listener); 
+  33 34 35 36 37   panel.add(new JLabel("Blue:")); 
+  blueField = new JTextField("255", 3); 
+  panel.add(blueField); 
+  blueField.getDocument().addDocumentListener(listener); 
+  38 39 40 41 42   add(panel); 
+  pack(); 
+  43 44   } 
+  45 46   /** * Set the background color to the values stored in the text fields. 
+  */ public void setColor() { try { int red = Integer.parseInt(redField.getText().trim()); 
+  int green = Integer.parseInt(greenField.getText().trim()); 
+  int blue = Integer.parseInt(blueField.getText().trim()); 
+  panel.setBackground(new Color(red, green, blue)); 
+  } 
+  catch (NumberFormatException e) { // don't set the color if the input can't be parsed } 
+  } 
+  47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64   } 
+  From the Library of Hristo Dimov Hristov   10.4 Text Components   685   javax.swing.JComponent 1.2   • Dimension getPreferredSize() • void setPreferredSize(Dimension d) gets or sets the preferred size of this component. 
+  javax.swing.text.Document 1.2   • int getLength() returns the number of characters currently in the document. 
+  • String getText(int offset, int length) returns the text contained within the given portion of the document. 
+  Parameters:   offset   The start of the text   length   The length of the desired string   • void addDocumentListener(DocumentListener listener) registers the listener to be notified when the document changes. 
+  javax.swing.event.DocumentEvent 1.2   • Document getDocument() gets the document that is the source of the event. 
+  javax.swing.event.DocumentListener 1.2   • void changedUpdate(DocumentEvent event) is called whenever an attribute or set of attributes changes. 
+  • void insertUpdate(DocumentEvent event) is called whenever an insertion into the document occurs. 
+  • void removeUpdate(DocumentEvent event) is called whenever a portion of the document has been removed. 
+10.4.2 Formatted Input Fields
+  In the previous example program, we wanted the program user to type numbers, not arbitrary strings. That is, the user is allowed to enter only digits 0 through 9   From the Library of Hristo Dimov Hristov   686   Chapter 10   Advanced Swing   and a hyphen (-). The hyphen, if present at all, must be the first symbol of the input string. 
+  On the surface, this input validation task sounds simple. We can install a key listener to the text field and consume all key events that aren’t digits or a hyphen. 
+  Unfortunately, this simple approach, although commonly recommended for input validation, does not work well in practice. First, not every combination of the valid input characters is a valid number. For example, --3 and 3-3 aren’t valid, even though they are made up from valid input characters. But more importantly, there are other ways of changing the text that don’t involve typing character keys. 
+  Depending on the look-and-feel, certain key combinations can be used to cut, copy, and paste text. For example, in the Metal look-and-feel, the Ctrl+V key combination pastes the content of the paste buffer into the text field. That is, we also need to monitor that the user doesn’t paste in an invalid character. Filtering keystrokes to prevent invalid content begins to look like a real chore. This is certainly not something that an application programmer should have to worry about. 
+  Perhaps surprisingly, before Java SE 1.4, there were no components for entering numeric values. Starting with the first edition of Core Java, we supplied an implementation for an IntTextField—a text field for entering a properly formatted integer. 
+  In later editions, we changed the implementation to extract whatever limited advantage we could from the various half-baked validation schemes added in each version of Java. Finally, in Java SE 1.4, the Swing designers faced the issue head-on and supplied a versatile JFormattedTextField class that can be used not just for numeric input but also for dates or even more esoteric formatted values such as IP addresses. 
+  10.4.2.1 Integer Input Let’s get started with an easy case: a text field for integer input. 
+  JFormattedTextField intField = new JFormattedTextField(NumberFormat.getIntegerInstance()); 
+  The NumberFormat.getIntegerInstance returns a formatter object that formats integers using the current locale. In the U.S. locale, commas are used as decimal separators, allowing users to enter values such as 1,729. Chapter 7 explains in detail how you can select other locales. 
+  As with any text field, you can set the number of columns: intField.setColumns(6); 
+  You can set a default value with the setValue method. That method takes an Object parameter, so you’ll need to wrap the default int value in an Integer object: intField.setValue(new Integer(100)); 
+  From the Library of Hristo Dimov Hristov   10.4 Text Components   687   Typically, users will supply inputs in multiple text fields and then click a button to read all values. When the button is clicked, you can get the user-supplied value with the getValue method. That method returns an Object result, and you need to cast it into the appropriate type. The JFormattedTextField returns an object of type Long if the user edited the value. However, if the user made no changes, the original Integer object is returned. Therefore, you should cast the return value to the common superclass Number: Number value = (Number) intField.getValue(); 
+  int v = value.intValue(); 
+  The formatted text field is not very interesting until you consider what happens when a user provides illegal input. That is the topic of the next section. 
+  10.4.2.2 Behavior on Loss of Focus Consider what happens when a user supplies input to a text field. The user types input and eventually decides to leave the field, perhaps by clicking on another component with the mouse. Then the text field loses focus. The I-beam cursor is no longer visible in the text field, and keystrokes are directed toward a different component. 
+  When the formatted text field loses focus, the formatter looks at the text string that the user produced. If the formatter knows how to convert the text string to an object, the text is valid. Otherwise it is invalid. You can use the isEditValid method to check whether the current content of the text field is valid. 
+  The default behavior on loss of focus is called “commit or revert.” If the text string is valid, it is committed. The formatter converts it to an object. That object becomes the current value of the field (that is, the return value of the getValue method that you saw in the preceding section). The value is then converted back to a string, which becomes the text string visible in the field. For example, the integer formatter recognizes the input 1729 as valid, sets the current value to new Long(1729), and converts it back into a string with a decimal comma: 1,729. 
+  Conversely, if the text string is invalid, the current value is not changed and the text field reverts to the string that represents the old value. For example, if the user enters a bad value, such as x1, the old value is restored when the text field loses focus. 
+  NOTE: The integer formatter regards a text string as valid if it starts with an integer. For example, 1729x is a valid string. It is converted to the number 1729, which is then formatted as the string 1,729. 
+  From the Library of Hristo Dimov Hristov   688   Chapter 10   Advanced Swing   You can set other behaviors with the setFocusLostBehavior method. The “commit” behavior is subtly different from the default. If the text string is invalid, then both the text string and the field value stay unchanged—they are now out of sync. The “persist” behavior is even more conservative. Even if the text string is valid, neither the text field nor the current value are changed. You would need to call commitEdit, setValue, or setText to bring them back in sync. Finally, there is a “revert” behavior that doesn’t seem to be useful at all: Whenever focus is lost, the user input is disregarded, and the text string reverts to the old value. 
+  NOTE: Generally, the “commit or revert” default behavior is reasonable. There is just one potential problem. Suppose a dialog box contains a text field for an integer value. A user enters a string " 1729", with a leading space, and clicks the OK button. The leading space makes the number invalid, and the field value reverts to the old value. The action listener of the OK button retrieves the field value and closes the dialog box. The user never knows that the new value has been rejected. In this situation, it is appropriate to select the “commit” behavior and have the OK button listener check that all field edits are valid before closing the dialog box. 
+  10.4.2.3 Filters The basic functionality of formatted text fields is straightforward and sufficient for most uses. However, you can add a couple of refinements. Perhaps you want to prevent the user from entering nondigits altogether. You can achieve that behavior with a document filter. Recall that in the model-view-controller architecture, the controller translates input events into commands that modify the underlying document of the text field—that is, the text string stored in a PlainDocument object. 
+  For example, whenever the controller processes a command that causes text to be inserted into the document, it calls the “insert string” command. The string to be inserted can be either a single character or the content of the paste buffer. 
+  A document filter can intercept this command and modify the string or cancel the insertion altogether. Here is the code for the insertString method of a filter that analyzes the string to be inserted and inserts only the characters that are digits or a minus sign. (The code handles supplementary Unicode characters, as explained in Volume I, Chapter 3. See Chapter 2 for the StringBuilder class.) public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException { StringBuilder builder = new StringBuilder(string); 
+  for (int i = builder.length() - 1; i >= 0; i--) { int cp = builder.codePointAt(i); 
+  From the Library of Hristo Dimov Hristov   10.4 Text Components   689   if (!Character.isDigit(cp) && cp != '-') { builder.deleteCharAt(i); 
+  if (Character.isSupplementaryCodePoint(cp)) { i--; 
+  builder.deleteCharAt(i); 
+  } 
+  } 
+  } 
+  super.insertString(fb, offset, builder.toString(), attr); 
+  } 
+  You should also override the replace method of the DocumentFilter class—it is called when text is selected and then replaced. The implementation of the replace method is straightforward—see Listing 10.21 on p. 698. 
+  Now you need to install the document filter. Unfortunately, there is no straightforward method to do that. You need to override the getDocumentFilter method of a formatter class and pass an object of that formatter class to the JFormattedTextField. 
+  The integer text field uses an InternationalFormatter that is initialized with NumberFormat.getIntegerInstance(). Here is how you install a formatter to yield the desired filter: JFormattedTextField intField = new JFormattedTextField(new InternationalFormatter(NumberFormat.getIntegerInstance()) { private DocumentFilter filter = new IntFilter(); 
+  protected DocumentFilter getDocumentFilter() { return filter; 
+  } 
+  }); 
+  NOTE: The Java SE documentation states that the DocumentFilter class was invented to avoid subclassing. Until Java SE 1.3, filtering in a text field was achieved by extending the PlainDocument class and overriding the insertString and replace methods. Now the PlainDocument class has a pluggable filter instead. That is a splendid improvement. It would have been even more splendid if the filter had also been made pluggable in the formatter class. Alas, it was not, and we must subclass the formatter. 
+  Try out the FormatTest example program at the end of this section. The third text field has a filter installed. You can insert only digits or the minus (-) character. 
+  Note that you can still enter invalid strings such as 1-2-3. In general, it is impossible to avoid all invalid strings through filtering. For example, the string “-” is invalid,   From the Library of Hristo Dimov Hristov   690   Chapter 10   Advanced Swing   but a filter can’t reject it because it is a prefix of a legal string “-1”. Even though filters can’t give perfect protection, it makes sense to use them to reject inputs that are obviously invalid. 
+  TIP: Another use for filtering is to turn all characters of a string to upper case. 
+  Such a filter is easy to write. In the insertString and replace methods of the filter, convert the string to be inserted to upper case and then invoke the superclass method. 
+  10.4.2.4 Verifiers There is another potentially useful mechanism to alert users to invalid inputs. 
+  You can attach a verifier to any JComponent. If the component loses focus, the verifier is queried. If the verifier reports the content of the component to be invalid, the component immediately regains focus. The user is thus forced to fix the content before supplying other inputs. 
+  A verifier must extend the abstract InputVerifier class and define a verify method. It is particularly easy to define a verifier that checks formatted text fields. The isEditValid method of the JFormattedTextField class calls the formatter and returns true if the formatter can turn the text string into an object. Here is the verifier, attached to a JFormattedTextField: intField.setInputVerifier(new InputVerifier() { public boolean verify(JComponent component) { JFormattedTextField field = (JFormattedTextField) component; 
+  return field.isEditValid(); 
+  } 
+  }); 
+  The fourth text field in the example program has this verifier attached. Try entering an invalid number (such as x1729) and press the Tab key or click with the mouse on another text field. Note that the field immediately regains focus. However, if you click the OK button, the action listener calls getValue, which reports the last good value. 
+  A verifier is not entirely foolproof. If you click on a button, the button notifies its action listeners before an invalid component regains focus. The action listeners can then get an invalid result from the component that failed verification. There is a reason for this behavior: Users might want to click a Cancel button without first having to fix an invalid input. 
+  From the Library of Hristo Dimov Hristov   10.4 Text Components   691   10.4.2.5 Other Standard Formatters Besides the integer formatter, the JFormattedTextField supports several other formatters. 
+  The NumberFormat class has static methods getNumberInstance getCurrencyInstance getPercentInstance   that yield formatters of floating-point numbers, currency values, and percentages. 
+  For example, you can obtain a text field for the input of currency values by calling JFormattedTextField currencyField = new JFormattedTextField(NumberFormat.getCurrencyInstance()); 
+  To edit dates and times, call one of the static methods of the DateFormat class: getDateInstance getTimeInstance getDateTimeInstance   For example, JFormattedTextField dateField = new JFormattedTextField(DateFormat.getDateInstance()); 
+  This field edits a date in the default or “medium” format such as Aug 5, 2007   You can instead choose a “short” format such as 8/5/07   by calling DateFormat.getDateInstance(DateFormat.SHORT)   NOTE: By default, the date format is “lenient.” That is, an invalid date such as February 31, 2002, is rolled over to the next valid date, March 3, 2002. That behavior might be surprising to your users. In that case, call setLenient(false) on the DateFormat object. 
+  The DefaultFormatter can format objects of any class that has a constructor with a string parameter and a matching toString method. For example, the URL class has a URL(String) constructor that can be used to construct a URL from a string, such as URL url = new URL("http://horstmann.com"); 
+  Therefore, you can use the DefaultFormatter to format URL objects. The formatter calls toString on the field value to initialize the field text. When the field loses focus, the formatter constructs a new object of the same class as the current value, using   From the Library of Hristo Dimov Hristov   692   Chapter 10   Advanced Swing   the constructor with a String parameter. If that constructor throws an exception, the edit is not valid. You can try that out in the example program by entering a URL that does not start with a prefix such as http:. 
+  NOTE: By default, the DefaultFormatter is in overwrite mode. That is different from the other formatters and not very useful. Call setOverwriteMode(false) to turn off overwrite mode. 
+  Finally, the MaskFormatter is useful for fixed-size patterns that contain some constant and some variable characters. For example, Social Security numbers (such as 078-05-1120) can be formatted with a new MaskFormatter("###-##-####")   The # symbol denotes a single digit. Table 10.3 shows the symbols that you can use in a mask formatter. 
+  Table 10.3   MaskFormatter Symbols   Symbol   Explanation   #   A digit   ? 
+  A letter   U   A letter, converted to upper case   L   A letter, converted to lower case   A   A letter or digit   H   A hexadecimal digit [0-9A-Fa-f]   *   Any character   '   Escape character to include a symbol in the pattern   You can restrict the characters that can be typed into the field by calling one of the methods of the MaskFormatter class: setValidCharacters setInvalidCharacters   For example, to read in a letter grade (such as A+ or F), you could use MaskFormatter formatter = new MaskFormatter("U*"); 
+  formatter.setValidCharacters("ABCDF+- "); 
+  However, there is no way of specifying that the second character cannot be a letter. 
+  From the Library of Hristo Dimov Hristov   10.4 Text Components   693   Note that the string formatted by the mask formatter has exactly the same length as the pattern. If the user erases characters during editing, they are replaced with the placeholder character. The default placeholder character is space, but you can change it with the setPlaceholderCharacter method, for example, formatter.setPlaceholderCharacter('0'); 
+  By default, a mask formatter is in overtype mode, which is quite intuitive—try it out in the example program. Also, note that the caret position jumps over the fixed characters in the mask. 
+  The mask formatter is very effective for rigid patterns such as Social Security numbers or American telephone numbers. However, note that no variation at all is permitted in the mask pattern. For example, you cannot use a mask formatter for international telephone numbers that have a variable number of digits. 
+  10.4.2.6 Custom Formatters If none of the standard formatters is appropriate, it is fairly easy to define your own formatter. Consider 4-byte IP addresses such as 130.65.86.66   You can’t use a MaskFormatter because each byte might be represented by one, two, or three digits. Also, we want to check in the formatter that each byte’s value is at most 255. 
+  To define your own formatter, extend the DefaultFormatter class and override the methods String valueToString(Object value) Object stringToValue(String text)   The first method turns the field value into the string that is displayed in the text field. The second method parses the text that the user typed and turns it back into an object. If either method detects an error, it should throw a ParseException. 
+  In our example program, we store an IP address in a byte[] array of length 4. The valueToString method forms a string that separates the bytes with periods. Note that byte values are signed quantities between –128 and 127. (For example, in an IP address 130.65.86.66, the first octet is actually the byte with value –126.) To turn negative byte values into unsigned integer values, add 256. 
+  public String valueToString(Object value) throws ParseException { if (!(value instanceof byte[])) throw new ParseException("Not a byte[]", 0); 
+  byte[] a = (byte[]) value; 
+  if (a.length != 4)   From the Library of Hristo Dimov Hristov   694   Chapter 10   Advanced Swing   throw new ParseException("Length != 4", 0); 
+  StringBuilder builder = new StringBuilder(); 
+  for (int i = 0; i < 4; i++) { int b = a[i]; 
+  if (b < 0) b += 256; 
+  builder.append(String.valueOf(b)); 
+  if (i < 3) builder.append('.'); 
+  } 
+  return builder.toString(); 
+  } 
+  Conversely, the stringToValue method parses the string and produces a byte[] object if the string is valid. If not, it throws a ParseException. 
+  public Object stringToValue(String text) throws ParseException { StringTokenizer tokenizer = new StringTokenizer(text, "."); 
+  byte[] a = new byte[4]; 
+  for (int i = 0; i < 4; i++) { int b = 0; 
+  try { b = Integer.parseInt(tokenizer.nextToken()); 
+  } 
+  catch (NumberFormatException e) { throw new ParseException("Not an integer", 0); 
+  } 
+  if (b < 0 || b >= 256) throw new ParseException("Byte out of range", 0); 
+  a[i] = (byte) b; 
+  } 
+  return a; 
+  } 
+  Try out the IP address field in the sample program. If you enter an invalid address, the field reverts to the last valid address. The complete formatter is shown in Listing 10.22. 
+  The program in Listing 10.20 shows various formatted text fields in action (see Figure 10.37). Click the OK button to retrieve the current values from the fields. 
+  NOTE: The “Swing Connection” online newsletter has a short article describing a formatter that matches any regular expression. See www.oracle.com/technetwork/java/ reftf-138955.html. 
+  From the Library of Hristo Dimov Hristov   10.4 Text Components   695   Figure 10.37 The FormatTest program Listing 10.20 1   textFormat/FormatTestFrame.java   package textFormat; 
+  2 3 4 5 6   import java.awt.*; 
+  import java.net.*; 
+  import java.text.*; 
+  import java.util.*; 
+  7 8 9   import javax.swing.*; 
+  import javax.swing.text.*; 
+10
+  11 12 13 14 15 16 17 18   /** * A frame with a collection of formatted text fields and a button that displays the field values. 
+  */ public class FormatTestFrame extends JFrame { private DocumentFilter filter = new IntFilter(); 
+  private JButton okButton; 
+  private JPanel mainPanel; 
+  19 20 21 22 23 24 25   public FormatTestFrame() { JPanel buttonPanel = new JPanel(); 
+  okButton = new JButton("Ok"); 
+  buttonPanel.add(okButton); 
+  add(buttonPanel, BorderLayout.SOUTH); 
+  26 27 28   mainPanel = new JPanel(); 
+  mainPanel.setLayout(new GridLayout(0, 3)); 
+  (Continues)   From the Library of Hristo Dimov Hristov   696   Chapter 10   Advanced Swing   Listing 10.20 (Continued) 29   add(mainPanel, BorderLayout.CENTER); 
+  30 31 32 33   JFormattedTextField intField = new JFormattedTextField(NumberFormat.getIntegerInstance()); 
+  intField.setValue(new Integer(100)); 
+  addRow("Number:", intField); 
+  34 35 36 37 38   JFormattedTextField intField2 = new JFormattedTextField(NumberFormat.getIntegerInstance()); 
+  intField2.setValue(new Integer(100)); 
+  intField2.setFocusLostBehavior(JFormattedTextField.COMMIT); 
+  addRow("Number (Commit behavior):", intField2); 
+  39 40 41 42 43 44 45 46 47 48 49   JFormattedTextField intField3 = new JFormattedTextField(new InternationalFormatter( NumberFormat.getIntegerInstance()) { protected DocumentFilter getDocumentFilter() { return filter; 
+  } 
+  }); 
+  intField3.setValue(new Integer(100)); 
+  addRow("Filtered Number", intField3); 
+  50 51 52 53 54 55 56 57 58 59 60 61   JFormattedTextField intField4 = new JFormattedTextField(NumberFormat.getIntegerInstance()); 
+  intField4.setValue(new Integer(100)); 
+  intField4.setInputVerifier(new InputVerifier() { public boolean verify(JComponent component) { JFormattedTextField field = (JFormattedTextField) component; 
+  return field.isEditValid(); 
+  } 
+  }); 
+  addRow("Verified Number:", intField4); 
+  62 63 64 65 66   JFormattedTextField currencyField = new JFormattedTextField(NumberFormat .getCurrencyInstance()); 
+  currencyField.setValue(new Double(10)); 
+  addRow("Currency:", currencyField); 
+  67 68 69 70   JFormattedTextField dateField = new JFormattedTextField(DateFormat.getDateInstance()); 
+  dateField.setValue(new Date()); 
+  addRow("Date (default):", dateField); 
+  71 72   DateFormat format = DateFormat.getDateInstance(DateFormat.SHORT); 
+  From the Library of Hristo Dimov Hristov   10.4 Text Components   697   format.setLenient(false); 
+  JFormattedTextField dateField2 = new JFormattedTextField(format); 
+  dateField2.setValue(new Date()); 
+  addRow("Date (short, not lenient):", dateField2); 
+  73 74 75 76 77   try { DefaultFormatter formatter = new DefaultFormatter(); 
+  formatter.setOverwriteMode(false); 
+  JFormattedTextField urlField = new JFormattedTextField(formatter); 
+  urlField.setValue(new URL("http://java.sun.com")); 
+  addRow("URL:", urlField); 
+  } 
+  catch (MalformedURLException ex) { ex.printStackTrace(); 
+  } 
+  78 79 80 81 82 83 84 85 86 87 88 89 90   try { MaskFormatter formatter = new MaskFormatter("###-##-####"); 
+  formatter.setPlaceholderCharacter('0'); 
+  JFormattedTextField ssnField = new JFormattedTextField(formatter); 
+  ssnField.setValue("078-05-1120"); 
+  addRow("SSN Mask:", ssnField); 
+  } 
+  catch (ParseException ex) { ex.printStackTrace(); 
+  } 
+  91 92 93 94 95 96 97 98 99 100 101 102 103   JFormattedTextField ipField = new JFormattedTextField(new IPAddressFormatter()); 
+  ipField.setValue(new byte[] { (byte) 130, 65, 86, 66 }); 
+  addRow("IP Address:", ipField); 
+  pack(); 
+  104 105 106 107 108   } 
+  109 110 111 112 113 114 115 116 117 118 119 120   /** * Adds a row to the main panel. 
+  * @param labelText the label of the field * @param field the sample field */ public void addRow(String labelText, final JFormattedTextField field) { mainPanel.add(new JLabel(labelText)); 
+  mainPanel.add(field); 
+  final JLabel valueLabel = new JLabel(); 
+  mainPanel.add(valueLabel); 
+  (Continues)   From the Library of Hristo Dimov Hristov   698   Chapter 10   Advanced Swing   Listing 10.20 (Continued) okButton.addActionListener(event -> { Object value = field.getValue(); 
+  Class<?> cl = value.getClass(); 
+  String text = null; 
+  if (cl.isArray()) { if (cl.getComponentType().isPrimitive()) { try { text = Arrays.class.getMethod("toString", cl).invoke(null, value) .toString(); 
+  } 
+  catch (ReflectiveOperationException ex) { // ignore reflection exceptions } 
+  } 
+  else text = Arrays.toString((Object[]) value); 
+  } 
+  else text = value.toString(); 
+  valueLabel.setText(text); 
+  }); 
+  121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144   } 
+  145 146   } 
+  Listing 10.21 1   textFormat/IntFilter.java   package textFormat; 
+  2 3   import javax.swing.text.*; 
+  4 5 6 7 8 9 10 11 12 13 14 15 16   /** * A filter that restricts input to digits and a '-' sign. 
+  */ public class IntFilter extends DocumentFilter { public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException { StringBuilder builder = new StringBuilder(string); 
+  for (int i = builder.length() - 1; i >= 0; i--) { int cp = builder.codePointAt(i); 
+  From the Library of Hristo Dimov Hristov   10.4 Text Components   699   if (!Character.isDigit(cp) && cp != '-') { builder.deleteCharAt(i); 
+  if (Character.isSupplementaryCodePoint(cp)) { i--; 
+  builder.deleteCharAt(i); 
+  } 
+  } 
+  17 18 19 20 21 22 23 24 25   } 
+  super.insertString(fb, offset, builder.toString(), attr); 
+  26 27   } 
+  28 29   public void replace(FilterBypass fb, int offset, int length, String string, AttributeSet attr) throws BadLocationException { if (string != null) { StringBuilder builder = new StringBuilder(string); 
+  for (int i = builder.length() - 1; i >= 0; i--) { int cp = builder.codePointAt(i); 
+  if (!Character.isDigit(cp) && cp != '-') { builder.deleteCharAt(i); 
+  if (Character.isSupplementaryCodePoint(cp)) { i--; 
+  builder.deleteCharAt(i); 
+  } 
+  } 
+  } 
+  string = builder.toString(); 
+  } 
+  super.replace(fb, offset, length, string, attr); 
+  } 
+  30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53   } 
+  Listing 10.22 1   textFormat/IPAddressFormatter.java   package textFormat; 
+  2 3 4 5   import java.text.*; 
+  import java.util.*; 
+  import javax.swing.text.*; 
+  (Continues)   From the Library of Hristo Dimov Hristov   700   Chapter 10   Advanced Swing   Listing 10.22 (Continued) 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26   /** * A formatter for 4-byte IP addresses of the form a.b.c.d */ public class IPAddressFormatter extends DefaultFormatter { public String valueToString(Object value) throws ParseException { if (!(value instanceof byte[])) throw new ParseException("Not a byte[]", 0); 
+  byte[] a = (byte[]) value; 
+  if (a.length != 4) throw new ParseException("Length != 4", 0); 
+  StringBuilder builder = new StringBuilder(); 
+  for (int i = 0; i < 4; i++) { int b = a[i]; 
+  if (b < 0) b += 256; 
+  builder.append(String.valueOf(b)); 
+  if (i < 3) builder.append('.'); 
+  } 
+  return builder.toString(); 
+  } 
+  27   public Object stringToValue(String text) throws ParseException { StringTokenizer tokenizer = new StringTokenizer(text, "."); 
+  byte[] a = new byte[4]; 
+  for (int i = 0; i < 4; i++) { int b = 0; 
+  if (!tokenizer.hasMoreTokens()) throw new ParseException("Too few bytes", 0); 
+  try { b = Integer.parseInt(tokenizer.nextToken()); 
+  } 
+  catch (NumberFormatException e) { throw new ParseException("Not an integer", 0); 
+  } 
+  if (b < 0 || b >= 256) throw new ParseException("Byte out of range", 0); 
+  a[i] = (byte) b; 
+  } 
+  if (tokenizer.hasMoreTokens()) throw new ParseException("Too many bytes", 0); 
+  return a; 
+  } 
+  28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50   } 
+  From the Library of Hristo Dimov Hristov   10.4 Text Components   701   javax.swing.JFormattedTextField 1.4   • JFormattedTextField(Format fmt) constructs a text field that uses the specified format. 
+  • JFormattedTextField(JFormattedTextField.AbstractFormatter formatter) constructs a text field that uses the specified formatter. Note that DefaultFormatter and InternationalFormatter are subclasses of JFormattedTextField.AbstractFormatter. 
+  • Object getValue() returns the current valid value of the field. Note that this might not correspond to the string being edited. 
+  • void setValue(Object value) attempts to set the value of the given object.The attempt fails if the formatter cannot convert the object to a string. 
+  • void commitEdit() attempts to set the valid value of the field from the edited string. The attempt might fail if the formatter cannot convert the string. 
+  • boolean isEditValid() checks whether the edited string represents a valid value. 
+  • int getFocusLostBehavior() • void setFocusLostBehavior(int behavior) gets or sets the “focus lost” behavior. Legal values for behavior are the constants COMMIT_OR_REVERT, REVERT, COMMIT, and PERSIST of the JFormattedTextField class. 
+  javax.swing.JFormattedTextField.AbstractFormatter 1.4   • abstract String valueToString(Object value) converts a value to an editable string.Throws a ParseException if value is not appropriate for this formatter. 
+  • abstract Object stringToValue(String s) converts a string to a value. Throws a ParseException if s is not in the appropriate format. 
+  • DocumentFilter getDocumentFilter() Override this method to provide a document filter that restricts inputs into the text field. A return value of null indicates that no filtering is needed. 
+  From the Library of Hristo Dimov Hristov   702   Chapter 10   Advanced Swing   javax.swing.text.DefaultFormatter 1.3   • boolean getOverwriteMode() • void setOverwriteMode(boolean mode) gets or sets the overwrite mode. If mode is true, new characters overwrite existing characters when editing text. 
+  javax.swing.text.DocumentFilter 1.4   • void insertString(DocumentFilter.FilterBypass bypass, int offset, String text, AttributeSet attrib)   is invoked before a string is inserted into a document.You can override the method and modify the string. You can disable insertion by not calling super.insertString or by calling bypass methods to modify the document without filtering. 
+  Parameters:   bypass   An object that allows you to execute edit commands that bypass the filter   offset   The offset at which to insert the text   text   The characters to insert   attrib   The formatting attributes of the inserted text   • voidreplace(DocumentFilter.FilterBypassbypass,intoffset,intlength,Stringtext,AttributeSet attrib)   is invoked before a part of a document is replaced with a new string.You can override the method and modify the string. You can disable replacement by not calling super.replace or by calling bypass methods to modify the document without filtering. 
+  Parameters:   bypass   An object that allows you to execute edit commands that bypass the filter   offset   The offset at which to insert the text   length   The length of the part to be replaced   text   The characters to insert   attrib   The formatting attributes of the inserted text   • void remove(DocumentFilter.FilterBypass bypass, int offset, int length) is invoked before a part of a document is removed. Get the document by calling bypass.getDocument() if you need to analyze the effect of the removal. 
+  Parameters:   bypass   An object that allows you to execute edit commands that bypass the filter   offset   The offset of the part to be removed   length   The length of the part to be removed   From the Library of Hristo Dimov Hristov   10.4 Text Components   703   javax.swing.text.MaskFormatter 1.4   • MaskFormatter(String mask) constructs a mask formatter with the given mask. See Table 10.3 on p. 692 for the symbols in a mask. 
+  • String getValidCharacters() • void setValidCharacters(String characters) gets or sets the valid editing characters. Only the characters in the given string are accepted for the variable parts of the mask. 
+  • String getInvalidCharacters() • void setInvalidCharacters(String characters) gets or sets the invalid editing characters. None of the characters in the given string are accepted as input. 
+  • char getPlaceholderCharacter() • void setPlaceholderCharacter(char ch) gets or sets the placeholder character used for the mask’s variable characters that the user has not yet supplied. The default placeholder character is space. 
+  • String getPlaceholder() • void setPlaceholder(String s) gets or sets the placeholder string. Its tail end is used if the user has not supplied all variable characters in the mask. If it is null or shorter than the mask, the placeholder character fills remaining inputs. 
+  • boolean getValueContainsLiteralCharacters() • void setValueContainsLiteralCharacters(boolean b) gets or sets the “value contains literal characters” flag. If this flag is true, the field value contains the literal (nonvariable) parts of the mask. If it is false, the literal characters are removed. The default is true. 
+  10.4.3 The JSpinner Component A JSpinner is a component that contains a text field and two small buttons on the side. When the buttons are clicked, the text field value is incremented or decremented (see Figure 10.38). 
+  The values in the spinner can be numbers, dates, values from a list, or, in the most general case, any sequence of values for which predecessors and successors can be determined. The JSpinner class defines standard data models for the first three cases. You can define your own data model to describe arbitrary sequences. 
+  From the Library of Hristo Dimov Hristov   704   Chapter 10   Advanced Swing   Figure 10.38 Several variations of the JSpinner component By default, a spinner manages an integer, and the buttons increment or decrement it by 1. You can get the current value by calling the getValue method. That method returns an Object. Cast it to an Integer and retrieve the wrapped value. 
+  JSpinner defaultSpinner = new JSpinner(); 
+  ... 
+  int value = (Integer) defaultSpinner.getValue(); 
+  You can change the increment to a value other than 1, and you can supply the lower and upper bounds. Here is a spinner with the starting value of 5 and the increment of 0.5, bounded between 0 and 10: JSpinner boundedSpinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 0.5)); 
+  There are two SpinnerNumberModel constructors, one with only int parameters and one with double parameters. If any of the parameters is a floating-point number, the second constructor is used. It sets the spinner value to a Double object. 
+  Spinners aren’t restricted to numeric values. You can have a spinner iterate through any collection of values. Simply pass a SpinnerListModel to the JSpinner constructor. You can construct a SpinnerListModel from an array or a class implementing the List interface (such as an ArrayList). In our sample program, we display a spinner control with all available font names. 
+  String[] fonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames(); 
+  JSpinner listSpinner = new JSpinner(new SpinnerListModel(fonts)); 
+  However, we found that the direction of the iteration was mildly confusing because it is opposite to that of a combo box. In a combo box, higher values are below lower values, so you would expect the downward arrow to navigate toward higher values. But the spinner increments the array index so that the upward arrow   From the Library of Hristo Dimov Hristov   10.4 Text Components   705   yields higher values. There is no provision for reversing the traversal order in the SpinnerListModel, but an impromptu anonymous subclass yields the desired result: JSpinner reverseListSpinner = new JSpinner( new SpinnerListModel(fonts) { public Object getNextValue() { return super.getPreviousValue(); 
+  } 
+  public Object getPreviousValue() { return super.getNextValue(); 
+  } 
+  }); 
+  Try both versions and see which you find more intuitive. 
+  Another good use for a spinner is for a date that the user can increment or decrement. You can get such a spinner, initialized with today’s date, with the call JSpinner dateSpinner = new JSpinner(new SpinnerDateModel()); 
+  However, if you look at Figure 10.38, you will see that the spinner text shows both date and time, such as 8/05/07 9:05 PM   The time doesn’t make any sense for a date picker. It turns out to be somewhat difficult to make the spinner show just the date. Here is the magic incantation: JSpinner betterDateSpinner = new JSpinner(new SpinnerDateModel()); 
+  String pattern = ((SimpleDateFormat) DateFormat.getDateInstance()).toPattern(); 
+  betterDateSpinner.setEditor(new JSpinner.DateEditor(betterDateSpinner, pattern)); 
+  Using the same approach, you can also make a time picker: JSpinner timeSpinner = new JSpinner(new SpinnerDateModel()); 
+  pattern = ((SimpleDateFormat) DateFormat.getTimeInstance(DateFormat.SHORT)).toPattern(); 
+  timeSpinner.setEditor(new JSpinner.DateEditor(timeSpinner, pattern)); 
+  You can display arbitrary sequences in a spinner by defining your own spinner model. In our sample program, we have a spinner that iterates through all permutations of the string “meat”. You can get to “mate”, “meta”, “team”, and the rest of the 24 permutations by clicking the spinner buttons. 
+  To define your own model, extend the AbstractSpinnerModel class and define the following four methods: Object getValue() void setValue(Object value)   From the Library of Hristo Dimov Hristov   706   Chapter 10   Advanced Swing   Object getNextValue() Object getPreviousValue()   The getValue method returns the value stored by the model. The setValue method sets a new value. It should throw an IllegalArgumentException if the new value is not appropriate. 
+  CAUTION: The setValue method must call the fireStateChanged method after setting the new value. Otherwise, the spinner field won’t be updated. 
+  The getNextValue and getPreviousValue methods return the values that should come after or before the current value, or null if the end of the traversal has been reached. 
+  CAUTION: The getNextValue and getPreviousValue methods should not change the current value. When a user clicks on the upward arrow of the spinner, the getNextValue method is called. If the return value is not null, it is set by a call to setValue. 
+  In the sample program, we use a standard algorithm to determine the next and previous permutations (see Listing 10.24). The details of the algorithm are not important. 
+  Listing 10.23 shows how to generate the various spinner types. Click the OK button to see the spinner values. 
+  Listing 10.23 1   spinner/SpinnerFrame.java   package spinner; 
+  2 3 4 5 6   import java.awt.*; 
+  import java.awt.event.*; 
+  import java.text.*; 
+  import javax.swing.*; 
+  7 8 9 10 11 12 13 14 15   /** * A frame with a panel that contains several spinners and a button that displays the spinner * values. 
+  */ public class SpinnerFrame extends JFrame { private JPanel mainPanel; 
+  private JButton okButton; 
+  From the Library of Hristo Dimov Hristov   10.4 Text Components   707   16 17 18 19 20 21 22   public SpinnerFrame() { JPanel buttonPanel = new JPanel(); 
+  okButton = new JButton("Ok"); 
+  buttonPanel.add(okButton); 
+  add(buttonPanel, BorderLayout.SOUTH); 
+  23   mainPanel = new JPanel(); 
+  mainPanel.setLayout(new GridLayout(0, 3)); 
+  add(mainPanel, BorderLayout.CENTER); 
+  24 25 26 27   JSpinner defaultSpinner = new JSpinner(); 
+  addRow("Default", defaultSpinner); 
+  28 29 30   JSpinner boundedSpinner = new JSpinner(new SpinnerNumberModel(5, 0, 10, 0.5)); 
+  addRow("Bounded", boundedSpinner); 
+  31 32 33   String[] fonts = GraphicsEnvironment.getLocalGraphicsEnvironment() .getAvailableFontFamilyNames(); 
+  34 35 36   JSpinner listSpinner = new JSpinner(new SpinnerListModel(fonts)); 
+  addRow("List", listSpinner); 
+  37 38 39   JSpinner reverseListSpinner = new JSpinner(new SpinnerListModel(fonts) { public Object getNextValue() { return super.getPreviousValue(); } 
+  public Object getPreviousValue() { return super.getNextValue(); } 
+  }); 
+  addRow("Reverse List", reverseListSpinner); 
+  40 41 42 43 44 45 46   JSpinner dateSpinner = new JSpinner(new SpinnerDateModel()); 
+  addRow("Date", dateSpinner); 
+  47 48 49   JSpinner betterDateSpinner = new JSpinner(new SpinnerDateModel()); 
+  String pattern = ((SimpleDateFormat) DateFormat.getDateInstance()).toPattern(); 
+  betterDateSpinner.setEditor(new JSpinner.DateEditor(betterDateSpinner, pattern)); 
+  addRow("Better Date", betterDateSpinner); 
+  50 51 52 53 54   JSpinner timeSpinner = new JSpinner(new SpinnerDateModel()); 
+  pattern = ((SimpleDateFormat) DateFormat.getTimeInstance(DateFormat.SHORT)).toPattern(); 
+  timeSpinner.setEditor(new JSpinner.DateEditor(timeSpinner, pattern)); 
+  addRow("Time", timeSpinner); 
+  55 56 57 58 59   JSpinner permSpinner = new JSpinner(new PermutationSpinnerModel("meat")); 
+  addRow("Word permutations", permSpinner); 
+  pack(); 
+  60 61 62 63   } 
+  64   (Continues)   From the Library of Hristo Dimov Hristov   708   Chapter 10   Advanced Swing   Listing 10.23 (Continued) /** * Adds a row to the main panel. 
+  * @param labelText the label of the spinner * @param spinner the sample spinner */ public void addRow(String labelText, final JSpinner spinner) { mainPanel.add(new JLabel(labelText)); 
+  mainPanel.add(spinner); 
+  final JLabel valueLabel = new JLabel(); 
+  mainPanel.add(valueLabel); 
+  okButton.addActionListener(event -> { Object value = spinner.getValue(); 
+  valueLabel.setText(value.toString()); 
+  }); 
+  } 
+  65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82   } 
+  Listing 10.24 1   spinner/PermutationSpinnerModel.java   package spinner; 
+  2 3   import javax.swing.*; 
+  4 5 6 7 8 9 10   /** * A model that dynamically generates word permutations. 
+  */ public class PermutationSpinnerModel extends AbstractSpinnerModel { private String word; 
+  11 12 13 14 15 16 17 18 19   /** * Constructs the model. 
+  * @param w the word to permute */ public PermutationSpinnerModel(String w) { word = w; 
+  } 
+  20 21 22 23 24   public Object getValue() { return word; 
+  } 
+  25   From the Library of Hristo Dimov Hristov   10.4 Text Components   26 27 28 29 30 31   709   public void setValue(Object value) { if (!(value instanceof String)) throw new IllegalArgumentException(); 
+  word = (String) value; 
+  fireStateChanged(); 
+  } 
+  32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50   public Object getNextValue() { int[] codePoints = toCodePointArray(word); 
+  for (int i = codePoints.length - 1; i > 0; i--) { if (codePoints[i - 1] < codePoints[i]) { int j = codePoints.length - 1; 
+  while (codePoints[i - 1] > codePoints[j]) j--; 
+  swap(codePoints, i - 1, j); 
+  reverse(codePoints, i, codePoints.length - 1); 
+  return new String(codePoints, 0, codePoints.length); 
+  } 
+  } 
+  reverse(codePoints, 0, codePoints.length - 1); 
+  return new String(codePoints, 0, codePoints.length); 
+  } 
+  51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69   public Object getPreviousValue() { int[] codePoints = toCodePointArray(word); 
+  for (int i = codePoints.length - 1; i > 0; i--) { if (codePoints[i - 1] > codePoints[i]) { int j = codePoints.length - 1; 
+  while (codePoints[i - 1] < codePoints[j]) j--; 
+  swap(codePoints, i - 1, j); 
+  reverse(codePoints, i, codePoints.length - 1); 
+  return new String(codePoints, 0, codePoints.length); 
+  } 
+  } 
+  reverse(codePoints, 0, codePoints.length - 1); 
+  return new String(codePoints, 0, codePoints.length); 
+  } 
+  70 71 72 73   private static int[] toCodePointArray(String str) { int[] codePoints = new int[str.codePointCount(0, str.length())]; 
+  (Continues)   From the Library of Hristo Dimov Hristov   710   Chapter 10   Advanced Swing   Listing 10.24 (Continued) for (int i = 0, j = 0; i < str.length(); i++, j++) { int cp = str.codePointAt(i); 
+  if (Character.isSupplementaryCodePoint(cp)) i++; 
+  codePoints[j] = cp; 
+  } 
+  return codePoints; 
+  74 75 76 77 78 79 80   } 
+  81 82   private static void swap(int[] a, int i, int j) { int temp = a[i]; 
+  a[i] = a[j]; 
+  a[j] = temp; 
+  } 
+  83 84 85 86 87 88 89   private static void reverse(int[] a, int i, int j) { while (i < j) { swap(a, i, j); 
+  i++; 
+  j--; 
+  } 
+  } 
+  90 91 92 93 94 95 96 97 98 99   } 
+  javax.swing.JSpinner 1.4   • JSpinner() constructs a spinner that edits an integer with starting value 0, increment 1, and no bounds. 
+  • JSpinner(SpinnerModel model) constructs a spinner that uses the given data model. 
+  • Object getValue() gets the current value of the spinner. 
+  • void setValue(Object value) attempts to set the value of the spinner. Throws an IllegalArgumentException if the model does not accept the value. 
+  • void setEditor(JComponent editor) sets the component used for editing the spinner value. 
+  From the Library of Hristo Dimov Hristov   10.4 Text Components   711   javax.swing.SpinnerNumberModel 1.4   • SpinnerNumberModel(int initval, int minimum, int maximum, int stepSize) • SpinnerNumberModel(double initval, double minimum, double maximum, double stepSize) These constructors yield number models that manage an Integer or Double value. Use the MIN_VALUE and MAX_VALUE constants of the Integer and Double classes for unbounded values. 
+  Parameters:   initval   The initial value   minimum   The minimum valid value   maximum   The maximum valid value   stepSize   The increment or decrement of each spin   javax.swing.SpinnerListModel 1.4   • SpinnerListModel(Object[] values) • SpinnerListModel(List values) These constructors yield models that select a value from among the given values. 
+  javax.swing.SpinnerDateModel 1.4   • SpinnerDateModel() constructs a date model with today’s date as the initial value, no lower or upper bounds, and an increment of Calendar.DAY_OF_MONTH. 
+  • SpinnerDateModel(Date initval, Comparable minimum, Comparable maximum, int step) Parameters:   initval   The initial value   minimum   The minimum valid value, or null if no lower bound is desired   maximum   The maximum valid value, or null if no upper bound is desired   step   The date value to increment or decrement on each spin. One of the constants ERA, YEAR, MONTH, WEEK_OF_YEAR, WEEK_OF_MONTH, DAY_OF_MONTH, DAY_OF_YEAR, DAY_OF_WEEK, DAY_OF_WEEK_IN_MONTH, AM_PM, HOUR, HOUR_OF_DAY, MINUTE, SECOND, or MILLISECOND of the Calendar class. 
+  From the Library of Hristo Dimov Hristov   712   Chapter 10   Advanced Swing   java.text.SimpleDateFormat 1.1   • String toPattern() 1.2 gets the editing pattern for this date formatter. A typical pattern is "yyyy-MM-dd". See the Java SE documentation for more details about the pattern. 
+  javax.swing.JSpinner.DateEditor 1.4   • DateEditor(JSpinner spinner, String pattern) constructs a date editor for a spinner. 
+  Parameters:   spinner   The spinner to which this editor belongs   pattern   The format pattern for the associated SimpleDateFormat   javax.swing.AbstractSpinnerModel 1.4   • Object getValue() gets the current value of the model. 
+  • void setValue(Object value) attempts to set a new value for the model. Throws an IllegalArgumentException if the value is not acceptable.When overriding this method, you should call fireStateChanged after setting the new value. 
+  • Object getNextValue() • Object getPreviousValue() computes (but does not set) the next or previous value in the sequence that this model defines. 
+10.4.4 Displaying HTML with the JEditorPane
+  Unlike the text components discussed up to this point, the JEditorPane can display and edit styled text, in particular HTML and RTF. (RTF is the “Rich Text Format” used by a number of Microsoft applications for document interchange. It is a poorly documented format that doesn’t work well even between Microsoft’s own applications. We do not cover RTF capabilities in this book.) Frankly, the JEditorPane is not as functional as one would like it to be. The HTML renderer can display simple files, but it chokes at many complex pages that you typically find on the Web. The HTML editor is limited and unstable. 
+  From the Library of Hristo Dimov Hristov   10.4 Text Components   713   A plausible application for the JEditorPane is to display program help in HTML format. By having control over the help files you provide, you can stay away from features that the JEditorPane does not display well. 
+  NOTE: For more information on an industrial-strength help system, check out JavaHelp at http://javahelp.java.net. 
+  The program in Listing 10.25 contains an editor pane that shows the contents of an HTML page. Type a URL into the text field. The URL must start with http: or file:. Then, click the Load button. The selected HTML page is displayed in the editor pane (see Figure 10.39). 
+  Figure 10.39 The editor pane displaying an HTML page The hyperlinks are active: If you click a link, the application loads it. The Back button returns to the previous page. 
+  This program is in fact a very simple browser. Of course, it does not have any of the comfort features, such as page caching or bookmark lists, that you would expect from a real browser. The editor pane does not even display applets! 
+  From the Library of Hristo Dimov Hristov   714   Chapter 10   Advanced Swing   If you click the Editable checkbox, the editor pane becomes editable. You can type in text and use the Backspace key to delete text. The component also understands the Ctrl+X, Ctrl+C, and Ctrl+V shortcuts for cut, copy, and paste. However, you would have to do quite a bit of programming to add support for fonts and formatting. 
+  When the component is editable, hyperlinks are not active. Also, with some web pages you can see JavaScript commands, comments, and other tags when edit mode is turned on (see Figure 10.40). The example program lets you investigate the editing feature, but we recommend that you omit it in your programs. 
+  Figure 10.40 The editor pane in edit mode TIP: By default, the JEditorPane is in edit mode. Call editorPane.setEditable(false) to turn it off. 
+  The features of the editor pane that you saw in the example program are easy to use. The setPage method loads a new document. For example, JEditorPane editorPane = new JEditorPane(); 
+  editorPane.setPage(url); 
+  From the Library of Hristo Dimov Hristov   10.4 Text Components   715   The parameter is either a string or a URL object. The JEditorPane class extends the JTextComponent class. Therefore, you can call the setText method as well—it simply displays plain text. 
+  TIP: The API documentation is unclear about whether setPage loads the new document in a separate thread (which is generally what you want—the JEditorPane is no speed demon). However, you can force loading in a separate thread with the following incantation: AbstractDocument doc = (AbstractDocument) editorPane.getDocument(); 
+  doc.setAsynchronousLoadPriority(0); 
+  To listen to hyperlink clicks, add a HyperlinkListener. The HyperlinkListener interface has a single method, hyperlinkUpdate, that is called when the user moves over or clicks on a link. The method has a parameter of type HyperlinkEvent. 
+  You need to call the getEventType method to find out what kind of event occurred. 
+  There are three possible return values: HyperlinkEvent.EventType.ACTIVATED HyperlinkEvent.EventType.ENTERED HyperlinkEvent.EventType.EXITED   The first value indicates that the user clicked on the hyperlink. In that case, you typically want to open the new link. You can use the second and third values to give some visual feedback, such as a tooltip, when the mouse hovers over the link. 
+  NOTE: It is a complete mystery why there aren’t three separate methods to handle activation, entry, and exit in the HyperlinkListener interface. 
+  The getURL method of the HyperlinkEvent class returns the URL of the hyperlink. For example, here is how you can install a hyperlink listener that follows the links the user activated: editorPane.addHyperlinkListener(event -> { if (event.getEventType() == HyperlinkEvent.EventType.ACTIVATED) { try { editorPane.setPage(event.getURL()); 
+  } 
+  catch (IOException e) {   From the Library of Hristo Dimov Hristov   716   Chapter 10   Advanced Swing   editorPane.setText("Exception: " + e); 
+  } 
+  } 
+  }); 
+  The event handler simply gets the URL and updates the editor pane. The setPage method can throw an IOException. In that case, we display an error message as plain text. 
+  The program in Listing 10.25 shows all the features that you need to put together an HTML help system. Under the hood, the JEditorPane is even more complex than the tree and table components. However, if you aren’t writing a text editor or a renderer of a custom text format, that complexity is hidden from you. 
+  Listing 10.25 1   editorPane/EditorPaneFrame.java   package editorPane; 
+  2 3 4 5 6 7 8   import java.awt.*; 
+  import java.awt.event.*; 
+  import java.io.*; 
+  import java.util.*; 
+  import javax.swing.*; 
+  import javax.swing.event.*; 
+  9 10 11 12 13 14 15 16 17   /** * This frame contains an editor pane, a text field and button to enter a URL and load a document, * and a Back button to return to a previously loaded document. 
+  */ public class EditorPaneFrame extends JFrame { private static final int DEFAULT_WIDTH = 600; 
+  private static final int DEFAULT_HEIGHT = 400; 
+  18 19 20 21   public EditorPaneFrame() { setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT); 
+  22 23 24 25   final Stack<String> urlStack = new Stack<>(); 
+  final JEditorPane editorPane = new JEditorPane(); 
+  final JTextField url = new JTextField(30); 
+  26 27   // set up hyperlink listener   28 29 30 31 32 33   editorPane.setEditable(false); 
+  editorPane.addHyperlinkListener(event -> { if (event.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {   From the Library of Hristo Dimov Hristov   10.4 Text Components   try { // remember URL for back button urlStack.push(event.getURL().toString()); 
+  // show URL in text field url.setText(event.getURL().toString()); 
+  editorPane.setPage(event.getURL()); 
+  } 
+  catch (IOException e) { editorPane.setText("Exception: " + e); 
+  } 
+  34 35 36 37 38 39 40 41 42 43 44 45 46 47   717   } 
+  }); 
+  48 49   // set up checkbox for toggling edit mode   50 51 52 53   final JCheckBox editable = new JCheckBox(); 
+  editable.addActionListener(event -> editorPane.setEditable(editable.isSelected())); 
+  54 55   // set up load button for loading URL   56 57 58 59 60 61 62 63 64 65 66 67 68 69   ActionListener listener = event -> { try { // remember URL for back button urlStack.push(url.getText()); 
+  editorPane.setPage(url.getText()); 
+  } 
+  catch (IOException e) { editorPane.setText("Exception: " + e); 
+  } 
+  }; 
+  70 71 72 73   JButton loadButton = new JButton("Load"); 
+  loadButton.addActionListener(listener); 
+  url.addActionListener(listener); 
+  74 75   // set up back button and button action   76 77 78 79 80 81 82   JButton backButton = new JButton("Back"); 
+  backButton.addActionListener(event -> { if (urlStack.size() <= 1) return; 
+  try { (Continues)   From the Library of Hristo Dimov Hristov   718   Chapter 10   Advanced Swing   Listing 10.25 (Continued) // get URL from back button urlStack.pop(); 
+  // show URL in text field String urlString = urlStack.peek(); 
+  url.setText(urlString); 
+  editorPane.setPage(urlString); 
+  83 84 85 86 87 88   } 
+  catch (IOException e) { editorPane.setText("Exception: " + e); 
+  } 
+  }); 
+  89 90 91 92 93 94 95   add(new JScrollPane(editorPane), BorderLayout.CENTER); 
+  96 97   // put all control components in a panel   98 99   JPanel panel = new JPanel(); 
+  panel.add(new JLabel("URL")); 
+  panel.add(url); 
+  panel.add(loadButton); 
+  panel.add(backButton); 
+  panel.add(new JLabel("Editable")); 
+  panel.add(editable); 
+  100 101 102 103 104 105 106 107   add(panel, BorderLayout.SOUTH); 
+  108   } 
+  109 110   } 
+  javax.swing.JEditorPane 1.2   • void setPage(URL url) loads the page from url into the editor pane. 
+  • void addHyperlinkListener(HyperLinkListener listener) adds a hyperlink listener to this editor pane. 
+  javax.swing.event.HyperlinkListener 1.2   • void hyperlinkUpdate(HyperlinkEvent event) is called whenever a hyperlink was selected. 

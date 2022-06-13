@@ -1,0 +1,41 @@
+  Occasionally, you need to convert a primitive type like int to an object. All primitive types have class counterparts. For example, a class Integer corresponds to the primitive type int. These kinds of classes are usually called wrappers. The wrapper classes have obvious names: Integer, Long, Float, Double, Short, Byte, Character, and Boolean. (The first six inherit from the common superclass Number.) The wrapper classes are immutable—you cannot change a wrapped value after the wrapper has been constructed. They are also final, so you cannot subclass them. 
+  Suppose we want an array list of integers. Unfortunately, the type parameter inside the angle brackets cannot be a primitive type. It is not possible to form an ArrayList<int>. Here, the Integer wrapper class comes in. It is OK to declare an array list of Integer objects. 
+  var list = new ArrayList<Integer>(); 
+  Caution An ArrayList<Integer> is far less efficient than an int[] array because each value is separately wrapped inside an object. You would only want to use this construct for small collections when programmer convenience is more important than efficiency. 
+  Fortunately, there is a useful feature that makes it easy to add an element of type int to an ArrayList<Integer>. The call list.add(3); 
+  is automatically translated to list.add(Integer.valueOf(3)); 
+  This conversion is called autoboxing. 
+  Note You might think that autowrapping would be more consistent, but the "boxing" metaphor was taken from C#. 
+  Conversely, when you assign an Integer object to an int value, it is automatically unboxed. That is, the compiler translates int n = list.get(i); 
+  into int n = list.get(i).intValue(); 
+  Automatic boxing and unboxing even works with arithmetic expressions. For example, you can apply the increment operator to a wrapper reference: Integer n = 3; 
+  n++; 
+  The compiler automatically inserts instructions to unbox the object, increment the resulting value, and box it back. 
+  In most cases, you get the illusion that the primitive types and their wrappers are one and the same. There is just one point in which they differ considerably: identity. As you know, the == operator, applied to wrapper objects, only tests whether the objects have identical memory locations. The following comparison would therefore probably fail: Integer a = 1000; 
+  Integer b = 1000; 
+  if (a == b) . . . 
+  However, a Java implementation may, if it chooses, wrap commonly occurring values into identical objects, and thus the comparison might succeed. This ambiguity is not what you want. The remedy is to call the equals method when comparing wrapper objects. 
+  Note The autoboxing specification requires that boolean, byte, char <= 127, short, and int between -128 and 127 are wrapped into fixed objects. For example, if a and b had been initialized with 100 in the preceding example, then the comparison would have had to succeed. 
+  There are a couple of other subtleties about autoboxing. First off, since wrapper class references can be null, it is possible for autounboxing to throw a NullPointerException: Integer n = null; 
+  System.out.println(2 * n); // throws NullPointerException   Also, if you mix Integer and Double types in a conditional expression, then the Integer value is unboxed, promoted to double, and boxed into a Double:   Integer n = 1; 
+  Double x = 2.0; 
+  System.out.println(true ? n : x); // prints 1.0   Finally, let us emphasize that boxing and unboxing is a courtesy of the compiler, not the virtual machine. The compiler inserts the necessary calls when it generates the bytecodes of a class. The virtual machine simply executes those bytecodes. 
+  You will often see the number wrappers for another reason. The designers of Java found the wrappers a convenient place to put certain basic methods, such as those for converting strings of digits to numbers. 
+  To convert a string to an integer, use the following statement: int x = Integer.parseInt(s); 
+  This has nothing to do with Integer objects—parseInt is a static method. But the Integer class was a good place to put it. 
+  The API notes show some of the more important methods of the Integer class. The other number classes implement corresponding methods. 
+  Caution Some people think that the wrapper classes can be used to implement methods that can modify numeric parameters. However, that is not correct. Recall from Chapter 4 that it is impossible to write a Java method that increments an integer parameter because parameters to Java methods are always passed by value. 
+  public static void triple(int x) // won't work { x = 3 * x; // modifies local variable } 
+  Could we overcome this by using an Integer instead of an int? 
+  public static void triple(Integer x) // won't work   { . . . 
+  } 
+  The problem is that Integer objects are immutable: The information contained inside the wrapper can’t change. You cannot use these wrapper classes to create a method that modifies numeric parameters. 
+  If you really want to write a method to change numeric parameters, you can use one of the holder types defined in the org.omg.CORBA package: IntHolder, BooleanHolder, and so on. Each holder type has a public (!) field value through which you can access the stored value. 
+  public static void triple(IntHolder x) { x.value = 3 * x.value; 
+  } 
+  java.lang.Integer 1.0 int intValue() returns the value of this Integer object as an int (overrides the intValue method in the Number class). 
+  static String toString(int i) returns a new String object representing the number i in base 10. 
+  static String toString(int i, int radix) lets you return a representation of the number i in the base specified by the radix parameter. 
+  static int parseInt(String s) static int parseInt(String s, int radix) returns the integer whose digits are contained in the string s. The string   must represent an integer in base 10 (for the first method) or in the base given by the radix parameter (for the second method). 
+  static Integer valueOf(String s) static Integer valueOf(String s, int radix) returns a new Integer object initialized to the integer whose digits are contained in the string s. The string must represent an integer in base 10 (for the first method) or in the base given by the radix parameter (for the second method). 
+  java.text.NumberFormat 1.1 Number parse(String s) returns the numeric value, assuming the specified String represents a number. 

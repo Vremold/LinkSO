@@ -1,0 +1,72 @@
+  41   java.util.Optional(Int|Long|Double) 8   • static Optional(Int|Long|Double) of((int|long|double) value) yields an optional object with the supplied primitive type value. 
+  • (int|long|double) getAs(Int|Long|Double)() yields the value of this optional object, or throws a NoSuchElementException if it is empty. 
+  • (int|long|double) orElse((int|long|double) other) • (int|long|double) orElseGet((Int|Long|Double)Supplier other) yields the value of this optional object, or the alternative value if this object is empty. 
+  • void ifPresent((Int|Long|Double)Consumer consumer) If this optional object is not empty, passes its value to consumer. 
+  java.util.(Int|Long|Double)SummaryStatistics 8   • • • • •   long getCount() (int|long|double) getSum() double getAverage() (int|long|double) getMax() (int|long|double) getMin()   yields the count, sum, average, maximum, and minimum of the collected elements. 
+  1.14 Parallel Streams Streams make it easy to parallelize bulk operations. The process is mostly automatic, but you need to follow a few rules. First of all, you must have a parallel stream. You can get a parallel stream from any collection with the Collection.parallelStream() method: Stream<String> parallelWords = words.parallelStream(); 
+  Moreover, the parallel method converts any sequential stream into a parallel one. 
+  Stream<String> parallelWords = Stream.of(wordArray).parallel(); 
+  As long as the stream is in parallel mode when the terminal method executes, all intermediate stream operations will be parallelized. 
+  When stream operations run in parallel, the intent is that the same result is returned as if they had run serially. It is important that the operations can be executed in an arbitrary order. 
+  From the Library of Hristo Dimov Hristov   42   Chapter 1   The Java SE 8 Stream Library   Here is an example of something you cannot do. Suppose you want to count all short words in a stream of strings: int[] shortWords = new int[12]; 
+  words.parallelStream().forEach( s -> { if (s.length() < 12) shortWords[s.length()]++; }); 
+  // Error—race condition! 
+  System.out.println(Arrays.toString(shortWords)); 
+  This is very, very bad code. The function passed to forEach runs concurrently in multiple threads, each updating a shared array. As we explained in Chapter 14 of Volume 1, that’s a classic race condition. If you run this program multiple times, you are quite likely to get a different sequence of counts in each run—each of them wrong. 
+  It is your responsibility to ensure that any functions you pass to parallel stream operations are safe to execute in parallel. The best way to do that is to stay away from mutable state. In this example, you can safely parallelize the computation if you group strings by length and count them. 
+  Map<Integer, Long> shortWordCounts = words.parallelStream() .filter(s -> s.length() < 10) .collect(groupingBy( String::length, counting())); 
+  CAUTION: The functions that you pass to parallel stream operations should not block. Parallel streams use a fork-join pool for operating on segments of the stream. If multiple stream operations block, the pool may not be able to do any work. 
+  By default, streams that arise from ordered collections (arrays and lists), from ranges, generators, and iterators, or from calling Stream.sorted, are ordered. Results are accumulated in the order of the original elements, and are entirely predictable. 
+  If you run the same operations twice, you will get exactly the same results. 
+  Ordering does not preclude efficient parallelization. For example, when computing stream.map(fun), the stream can be partitioned into n segments, each of which is concurrently processed. Then the results are reassembled in order. 
+  Some operations can be more effectively parallelized when the ordering requirement is dropped. By calling the unordered method on a stream, you indicate that you are not interested in ordering. One operation that can benefit from this is Stream.distinct. On an ordered stream, distinct retains the first of all equal elements. 
+  That impedes parallelization—the thread processing a segment can’t know which   From the Library of Hristo Dimov Hristov   1.14 Parallel Streams   43   elements to discard until the preceding segment has been processed. If it is acceptable to retain any of the unique elements, all segments can be processed concurrently (using a shared set to track duplicates). 
+  You can also speed up the limit method by dropping ordering. If you just want any n elements from a stream and you don’t care which ones you get, call Stream<String> sample = words.parallelStream().unordered().limit(n); 
+  As discussed in Section 1.9, “Collecting into Maps,” on p. 24, merging maps is expensive. For that reason, the Collectors.groupingByConcurrent method uses a shared concurrent map. To benefit from parallelism, the order of the map values will not be the same as the stream order. 
+  Map<Integer, List<String>> result = words.parallelStream().collect( Collectors.groupingByConcurrent(String::length)); 
+  // Values aren’t collected in stream order   Of course, you won’t care if you use a downstream collector that is independent of the ordering, such as Map<Integer, Long> wordCounts = words.parallelStream() .collect( groupingByConcurrent( String::length, counting())); 
+  CAUTION: It is very important that you don’t modify the collection that is backing a stream while carrying out a stream operation (even if the modification is threadsafe). Remember that streams don’t collect their data—that data is always in a separate collection. If you were to modify that collection, the outcome of the stream operations would be undefined. The JDK documentation refers to this requirement as noninterference. It applies both to sequential and parallel streams. 
+  To be exact, since intermediate stream operations are lazy, it is possible to mutate the collection up to the point when the terminal operation executes. For example, the following, while certainly not recommended, will work: List<String> wordList = . . .; 
+  Stream<String> words = wordList.stream(); 
+  wordList.add("END"); 
+  long n = words.distinct().count(); 
+  But this code is wrong: Stream<String> words = wordList.stream(); 
+  words.forEach(s -> if (s.length() < 12) wordList.remove(s)); 
+  // Error—interference   From the Library of Hristo Dimov Hristov   44   Chapter 1   The Java SE 8 Stream Library   For parallel streams to work well, a number of conditions need to be fulfilled: • The data should be in memory. It would be inefficient to have to wait for the data to arrive. 
+  • The stream should be efficiently splittable into subregions. A stream backed by an array or a balanced binary tree works well, but the result of Stream.iterate does not. 
+  • The stream operations should do a substantial amount of work. If the total work load is not large, it does not make sense to pay for the cost of setting up the parallel computation. 
+  • The stream operations should not block. 
+  In other words, don’t turn all your streams into parallel streams. Use parallel streams only when you do a substantial amount of sustained computational work on data that is already in memory. 
+  The example program in Listing 1.8 demonstrates how to work with parallel streams. 
+  Listing 1.8 1   parallel/ParallelStreams.java   package parallel; 
+  2 3   import static java.util.stream.Collectors.*; 
+  4 5 6 7 8 9   import java.io.*; 
+  import java.nio.charset.*; 
+  import java.nio.file.*; 
+  import java.util.*; 
+  import java.util.stream.*; 
+  10 11 12 13 14 15 16 17   public class ParallelStreams { public static void main(String[] args) throws IOException { String contents = new String(Files.readAllBytes( Paths.get("../gutenberg/alice30.txt")), StandardCharsets.UTF_8); 
+  List<String> wordList = Arrays.asList(contents.split("\\PL+")); 
+  18 19 20 21 22 23 24   // Very bad code ahead int[] shortWords = new int[10]; 
+  wordList.parallelStream().forEach(s -> { if (s.length() < 10) shortWords[s.length()]++; 
+  }); 
+  From the Library of Hristo Dimov Hristov   1.14 Parallel Streams   45   System.out.println(Arrays.toString(shortWords)); 
+  25 26   // Try again--the result will likely be different (and also wrong) Arrays.fill(shortWords, 0); 
+  wordList.parallelStream().forEach(s -> { if (s.length() < 10) shortWords[s.length()]++; 
+  }); 
+  System.out.println(Arrays.toString(shortWords)); 
+  27 28 29 30 31 32 33 34   // Remedy: Group and count Map<Integer, Long> shortWordCounts = wordList.parallelStream() .filter(s -> s.length() < 10) .collect(groupingBy(String::length, counting())); 
+  35 36 37 38 39   System.out.println(shortWordCounts); 
+  40 41   // Downstream order not deterministic Map<Integer, List<String>> result = wordList.parallelStream().collect( Collectors.groupingByConcurrent(String::length)); 
+  42 43 44 45   System.out.println(result.get(14)); 
+  46 47   result = wordList.parallelStream().collect( Collectors.groupingByConcurrent(String::length)); 
+  48 49 50   System.out.println(result.get(14)); 
+  51 52   Map<Integer, Long> wordCounts = wordList.parallelStream().collect( groupingByConcurrent(String::length, counting())); 
+  53 54 55   System.out.println(wordCounts); 
+  56   } 
+  57 58   } 
+  java.util.stream.BaseStream<T,S extends BaseStream<T,S>> 8   • S parallel() yields a parallel stream with the same elements as this stream. 
+  • S unordered() yields an unordered stream with the same elements as this stream. 
+  From the Library of Hristo Dimov Hristov   46   Chapter 1   The Java SE 8 Stream Library   java.util.Collection<E> 1.2   • Stream<E> parallelStream() 8 yields a parallel stream with the elements of this collection. 
+  In this chapter, you have learned how to put the stream library of Java 8 to use. 
+  The next chapter covers another important topic: processing input and output. 

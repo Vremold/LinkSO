@@ -1,0 +1,54 @@
+  The JDK contains a very useful tool, called javadoc, that generates HTML documentation from your source files. In fact, the online API documentation   that we described in Chapter 3 is simply the result of running javadoc on the source code of the standard Java library. 
+  If you add comments that start with the special delimiter /** to your source code, you too can easily produce professional-looking documentation. This is a very nice approach because it lets you keep your code and documentation in one place. If you put your documentation into a separate file, then, as you probably know, the code and comments tend to diverge over time. When documentation comments are in the same file as the source code, it is an easy matter to update both and run javadoc again. 
+4.9.1 Comment Insertion
+  The javadoc utility extracts information for the following items: Modules Packages Public classes and interfaces Public and protected fields Public and protected constructors and methods Protected features are introduced in Chapter 5, interfaces in Chapter 6, and modules in Chapter 9 of Volume II. 
+  You can (and should) supply a comment for each of these features. Each comment is placed immediately above the feature it describes. A comment starts with a /** and ends with a */. 
+  Each /** . . . */ documentation comment contains free-form text followed by tags. A tag starts with an @, such as @since or @param. 
+  The first sentence of the free-form text should be a summary statement. The javadoc utility automatically generates summary pages that extract these sentences. 
+  In the free-form text, you can use HTML modifiers such as <em>. . . 
+  </em> for emphasis, <strong>. . .</strong> for strong emphasis, <ul>/<li> for bulleted lists, and <img . . ./> to include an image. To   type monospaced code, use {@code . . . } instead of <code>. . . 
+  </code>—then you don’t have to worry about escaping < characters inside the code. 
+  Note If your comments contain links to other files such as images (for example, diagrams or images of user interface components), place those files into a subdirectory, named doc-files, of the directory containing the source file. The javadoc utility will copy the docfiles directories and their contents from the source directory to the documentation directory. You need to use the doc-files directory in your link, for example <img src="doc-files/uml.png" 
+  alt="UML diagram"/>. 
+4.9.2 Class Comments
+  The class comment must be placed after any import statements, directly before the class definition. 
+  Here is an example of a class comment: /** * A {@code Card} object represents a playing card, such * as "Queen of Hearts". A card has a suit (Diamond, Heart, * Spade or Club) and a value (1 = Ace, 2 . . . 10, 11 = Jack, * 12 = Queen, 13 = King) */ public class Card { . . . 
+  } 
+  Note There is no need to add an * in front of every line. For example, the   following comment is equally valid: /** A <code>Card</code> object represents a playing card, such as "Queen of Hearts". A card has a suit (Diamond, Heart, Spade or Club) and a value (1 = Ace, 2 . . . 10, 11 = Jack, 12 = Queen, 13 = King). 
+  */   However, most IDEs supply the asterisks automatically and rearrange them when the line breaks change. 
+4.9.3 Method Comments
+  Each method comment must immediately precede the method that it describes. In addition to the general-purpose tags, you can use the following tags: @param variable description This tag adds an entry to the "parameters" section of the current method. 
+  The description can span multiple lines and can use HTML tags. All @param tags for one method must be kept together. 
+  @return description This tag adds a "returns" section to the current method. The description can span multiple lines and can use HTML tags. 
+  @throws class description This tag adds a note that this method may throw an exception. 
+  Exceptions are the topic of Chapter 7. 
+  Here is an example of a method comment:   /** * Raises the salary of an employee. 
+  * @param byPercent the percentage by which to raise the salary (e.g., 10 mea * @return the amount of the raise */ public double raiseSalary(double byPercent)   { double raise = salary * byPercent / 100; 
+  salary += raise; 
+  return raise; 
+  } 
+4.9.4 Field Comments
+  You only need to document public fields—generally that means static constants. For example: /** * The "Hearts" card suit */ public static final int HEARTS = 1; 
+4.9.5 General Comments
+  The tag @since text makes a "since" entry. The text can be any description of the version that introduced this feature. For example, @since 1.7.1. 
+  The following tags can be used in class documentation comments: @author name This tag makes an "author" entry. You can have multiple @author tags, one for each author. Don’t feel compelled to use this tag—your version control system does a more thorough job tracking authorship. 
+  @version text This tag makes a "version" entry. The text can be any description of the current version. 
+  You can use hyperlinks to other relevant parts of the javadoc documentation, or to external documents, with the @see and @link tags. 
+  The tag @see reference adds a hyperlink in the "see also" section. It can be used with both classes and methods. Here, reference can be one of the following: package.class#feature label   <a href=". . .">label</a> "text" 
+  The first case is the most useful. You supply the name of a class, method, or variable, and javadoc inserts a hyperlink to the documentation. For example, @see com.horstmann.corejava.Employee#raiseSalary(double)   makes a link to the raiseSalary(double) method in the com.horstmann.corejava.Employee class. You can omit the name of the package, or both the package and class names. Then, the feature will be located in the current package or class. 
+  Note that you must use a #, not a period, to separate the class from the method or variable name. The Java compiler itself is highly skilled in determining the various meanings of the period character as separator between packages, subpackages, classes, inner classes, and methods and variables. But the javadoc utility isn’t quite as clever, so you have to help it along. 
+  If the @see tag is followed by a < character, then you need to specify a hyperlink. You can link to any URL you like. For example: @see <a href="www.horstmann.com/corejava.html">The Core Java home page</a>   In each of these cases, you can specify an optional label that will appear as the link anchor. If you omit the label, the user will see the target code name or URL as the anchor. 
+  If the @see tag is followed by a " character, then the text is displayed in the "see also" section. For example: @see "Core Java 2 volume 2" 
+  You can add multiple @see tags for one feature, but you must keep them all together. 
+  If you like, you can place hyperlinks to other classes or methods anywhere in any of your documentation comments. Insert a special tag of the form   {@link package.class#feature label} 
+  anywhere in a comment. The feature description follows the same rules as for the @see tag. 
+  Finally, as of Java 9, you can use the {@index entry} tag to add an entry to the search box. 
+4.9.6 Package Comments
+  Place the class, method, and variable comments directly into the Java source files, delimited by /** . . . */ documentation comments. However, to generate package comments, you need to add a separate file in each package directory. You have two choices: 1. Supply a Java file named package-info.java. The file must contain an initial Javadoc comment, delimited with /** and */, followed by a package statement. It should contain no further code or comments. 
+  2. Supply an HTML file named package.html. All text between the tags <body>. . .</body> is extracted. 
+4.9.7 Comment Extraction
+  Here, docDirectory is the name of the directory where you want the HTML files to go. Follow these steps: 1. Change to the directory that contains the source files you want to document. If you have nested packages to document, such as com.horstmann.corejava, you must be working in the directory that contains the subdirectory com. (This is the directory that contains the overview.html file, if you supplied one.) 2. Run the command javadoc -d docDirectory nameOfPackage   for a single package. Or, run   javadoc -d docDirectory nameOfPackage1 nameOfPackage2. . . 
+  to document multiple packages. If your files are in the unnamed package, run instead javadoc -d docDirectory *.java   If you omit the -d docDirectory option, the HTML files are extracted to the current directory. That can get messy, and we don’t recommend it. 
+  The javadoc program can be fine-tuned by numerous command-line options. For example, you can use the -author and -version options to include the @author and @version tags in the documentation. (By default, they are omitted.) Another useful option is -link, to include hyperlinks to standard classes. For example, if you use the command javadoc -link http://docs.oracle.com/javase/9/docs/api *.java   all standard library classes are automatically linked to the documentation on the Oracle web site. 
+  If you use the -linksource option, each source file is converted to HTML (without color coding, but with line numbers), and each class and method name turns into a hyperlink to the source. 
+  You can also supply an overview comment for all source files. Place it in a file such as overview.html and run the javadoc tool with the command line option -overview filename. All text between the tags <body>. . .</body> is extracted. The content is displayed when the user selects "Overview" from the navigation bar. 

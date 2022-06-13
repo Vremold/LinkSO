@@ -1,0 +1,816 @@
+You have learned how to read and write data from a file. However, there is more
+to file management than reading and writing. The Path interface and Files class
+
+From the Library of Hristo Dimov Hristov
+
+2.5 Working with Files
+
+101
+
+encapsulate the functionality required to work with the file system on the user’s
+machine. For example, the Files class can be used to remove or rename the file,
+or to find out when a file was last modified. In other words, the input/output
+stream classes are concerned with the contents of files, whereas the classes that
+we discuss here are concerned with the storage of files on a disk.
+The Path interface and Files class were added in Java SE 7. They are much more
+convenient to use than the File class which dates back all the way to JDK 1.0. We
+expect them to be very popular with Java programmers and discuss them in
+depth.
+
+2.5.1 Paths
+A Path is a sequence of directory names, optionally followed by a file name. The
+first component of a path may be a root component such as / or C:\. The permissible
+root components depend on the file system. A path that starts with a root component is absolute. Otherwise, it is relative. For example, here we construct an absolute
+and a relative path. For the absolute path, we assume a UNIX-like file system.
+Path absolute = Paths.get("/home", "harry");
+Path relative = Paths.get("myprog", "conf", "user.properties");
+
+The static Paths.get method receives one or more strings, which it joins with the
+path separator of the default file system (/ for a UNIX-like file system, \ for
+Windows). It then parses the result, throwing an InvalidPathException if the result is
+not a valid path in the given file system. The result is a Path object.
+The get method can get a single string containing multiple components. For
+example, you can read a path from a configuration file like this:
+String baseDir = props.getProperty("base.dir");
+// May be a string such as /opt/myprog or c:\Program Files\myprog
+Path basePath = Paths.get(baseDir); // OK that baseDir has separators
+
+NOTE: A path does not have to correspond to a file that actually exists. It is
+merely an abstract sequence of names. As you will see in the next section, when
+you want to create a file, you first make a path and then call a method to create
+the corresponding file.
+
+It is very common to combine or resolve paths. The call p.resolve(q) returns a path
+according to these rules:
+• If q is absolute, then the result is q.
+• Otherwise, the result is “p then q,” according to the rules of the file system.
+
+From the Library of Hristo Dimov Hristov
+
+102
+
+Chapter 2
+
+Input and Output
+
+For example, suppose your application needs to find its working directory relative
+to a given base directory that is read from a configuration file, as in the preceding
+example.
+Path workRelative = Paths.get("work");
+Path workPath = basePath.resolve(workRelative);
+
+There is a shortcut for the resolve method that takes a string instead of a path:
+Path workPath = basePath.resolve("work");
+
+There is a convenience method resolveSibling that resolves against a path’s parent,
+yielding a sibling path. For example, if workPath is /opt/myapp/work, the call
+Path tempPath = workPath.resolveSibling("temp");
+
+creates /opt/myXapp/temp.
+The opposite of resolve is relativize. The call p.relativize(r) yields the path q which,
+when resolved with p, yields r. For example, relativizing "/home/harry" against
+"/home/fred/input.txt" yields "../fred/input.txt". Here, we assume that .. denotes the
+parent directory in the file system.
+The normalize method removes any redundant . and .. components (or whatever
+the file system may deem redundant). For example, normalizing the path
+/home/harry/../fred/./input.txt yields /home/fred/input.txt.
+The toAbsolutePath method yields the absolute path of a given path, starting at a root
+component, such as /home/fred/input.txt or c:\Users\fred\input.txt.
+The Path interface has many useful methods for taking paths apart. This code
+sample shows some of the most useful ones:
+Path p = Paths.get("/home", "fred", "myprog.properties");
+Path parent = p.getParent(); // the path /home/fred
+Path file = p.getFileName(); // the path myprog.properties
+Path root = p.getRoot(); // the path /
+
+As you have already seen in Volume I, you can construct a Scanner from a Path object:
+Scanner in = new Scanner(Paths.get("/home/fred/input.txt"));
+
+NOTE: Occasionally, you may need to interoperate with legacy APIs that use
+the File class instead of the Path interface.The Path interface has a toFile method,
+and the File class has a toPath method.
+
+From the Library of Hristo Dimov Hristov
+
+2.5 Working with Files
+
+103
+
+java.nio.file.Paths 7
+
+• static Path get(String first, String... more)
+makes a path by joining the given strings.
+
+java.nio.file.Path 7
+
+• Path resolve(Path other)
+• Path resolve(String other)
+if other is absolute, returns other; otherwise, returns the path obtained by joining
+this and other.
+• Path resolveSibling(Path other)
+• Path resolveSibling(String other)
+if other is absolute, returns other; otherwise, returns the path obtained by joining
+the parent of this and other.
+• Path relativize(Path other)
+returns the relative path that, when resolved with this, yields other.
+• Path normalize()
+removes redundant path elements such as . and ..
+• Path toAbsolutePath()
+returns an absolute path that is equivalent to this path.
+• Path getParent()
+returns the parent, or null if this path has no parent.
+• Path getFileName()
+returns the last component of this path, or null if this path has no components.
+• Path getRoot()
+returns the root component of this path, or null if this path has no root components.
+• toFile()
+makes a File from this path.
+
+java.io.File 1.0
+
+• Path toPath() 7
+makes a Path from this file.
+
+From the Library of Hristo Dimov Hristov
+
+104
+
+Chapter 2
+
+Input and Output
+
+2.5.2 Reading and Writing Files
+The Files class makes quick work of common file operations. For example, you
+can easily read the entire contents of a file:
+byte[] bytes = Files.readAllBytes(path);
+
+If you want to read the file as a string, call readAllBytes followed by
+String content = new String(bytes, charset);
+
+But if you want the file as a sequence of lines, call
+List<String> lines = Files.readAllLines(path, charset);
+
+Conversely, if you want to write a string, call
+Files.write(path, content.getBytes(charset));
+
+To append to a given file, use
+Files.write(path, content.getBytes(charset), StandardOpenOption.APPEND);
+
+You can also write a collection of lines with
+Files.write(path, lines);
+
+These simple methods are intended for dealing with text files of moderate length.
+If your files are large or binary, you can still use the familiar input/output streams
+or readers/writers:
+InputStream in = Files.newInputStream(path);
+OutputStream out = Files.newOutputStream(path);
+Reader in = Files.newBufferedReader(path, charset);
+Writer out = Files.newBufferedWriter(path, charset);
+
+These convenience methods save you from dealing with FileInputStream, FileOutputStream,
+BufferedReader, or BufferedWriter.
+java.nio.file.Files 7
+
+• static byte[] readAllBytes(Path path)
+• static List<String> readAllLines(Path path, Charset charset)
+reads the contents of a file.
+• static Path write(Path path, byte[] contents, OpenOption... options)
+• static Path write(Path path, Iterable<? extends CharSequence> contents, OpenOption options)
+writes the given contents to a file and returns path.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+2.5 Working with Files
+
+105
+
+java.nio.file.Files 7 (Continued)
+
+•
+•
+•
+•
+
+static InputStream newInputStream(Path path, OpenOption... options)
+static OutputStream newOutputStream(Path path, OpenOption... options)
+static BufferedReader newBufferedReader(Path path, Charset charset)
+static BufferedWriter newBufferedWriter(Path path, Charset charset, OpenOption... options)
+
+opens a file for reading or writing.
+
+2.5.3 Creating Files and Directories
+To create a new directory, call
+Files.createDirectory(path);
+
+All but the last component in the path must already exist. To create intermediate
+directories as well, use
+Files.createDirectories(path);
+
+You can create an empty file with
+Files.createFile(path);
+
+The call throws an exception if the file already exists. The check for existence and
+creation are atomic. If the file doesn’t exist, it is created before anyone else has
+a chance to do the same.
+There are convenience methods for creating a temporary file or directory in a
+given or system-specific location.
+Path newPath = Files.createTempFile(dir, prefix, suffix);
+Path newPath = Files.createTempFile(prefix, suffix);
+Path newPath = Files.createTempDirectory(dir, prefix);
+Path newPath = Files.createTempDirectory(prefix);
+
+Here, dir is a Path, and prefix/suffix are strings which may be null. For example, the
+call Files.createTempFile(null, ".txt") might return a path such as /tmp/1234405522364837194.txt.
+When you create a file or directory, you can specify attributes, such as owners or
+permissions. However, the details depend on the file system, and we won’t cover
+them here.
+
+From the Library of Hristo Dimov Hristov
+
+106
+
+Chapter 2
+
+Input and Output
+
+java.nio.file.Files 7
+
+• static Path createFile(Path path, FileAttribute<?>... attrs)
+• static Path createDirectory(Path path, FileAttribute<?>... attrs)
+• static Path createDirectories(Path path, FileAttribute<?>... attrs)
+creates a file or directory. The createDirectories method creates any intermediate
+directories as well.
+• static Path createTempFile(String prefix, String suffix, FileAttribute<?>... attrs)
+• static Path createTempFile(Path parentDir, String prefix, String suffix, FileAttribute<?>...
+attrs)
+
+• static Path createTempDirectory(String prefix, FileAttribute<?>... attrs)
+• static Path createTempDirectory(Path parentDir, String prefix, FileAttribute<?>... attrs)
+creates a temporary file or directory, in a location suitable for temporary files or in
+the given parent directory. Returns the path to the created file or directory.
+
+2.5.4 Copying, Moving, and Deleting Files
+To copy a file from one location to another, simply call
+Files.copy(fromPath, toPath);
+
+To move the file (that is, copy and delete the original), call
+Files.move(fromPath, toPath);
+
+The copy or move will fail if the target exists. If you want to overwrite an existing
+target, use the REPLACE_EXISTING option. If you want to copy all file attributes, use the
+COPY_ATTRIBUTES option. You can supply both like this:
+Files.copy(fromPath, toPath, StandardCopyOption.REPLACE_EXISTING,
+StandardCopyOption.COPY_ATTRIBUTES);
+
+You can specify that a move should be atomic. Then you are assured that either
+the move completed successfully, or the source continues to be present. Use the
+ATOMIC_MOVE option:
+Files.move(fromPath, toPath, StandardCopyOption.ATOMIC_MOVE);
+
+You can also copy an input stream to a Path, which just means saving the input
+stream to disk. Similarly, you can copy a Path to an output stream. Use the
+following calls:
+Files.copy(inputStream, toPath);
+Files.copy(fromPath, outputStream);
+
+As with the other calls to copy, you can supply copy options as needed.
+
+From the Library of Hristo Dimov Hristov
+
+2.5 Working with Files
+
+107
+
+Finally, to delete a file, simply call
+Files.delete(path);
+
+This method throws an exception if the file doesn’t exist, so instead you may want
+to use
+boolean deleted = Files.deleteIfExists(path);
+
+The deletion methods can also be used to remove an empty directory.
+See Table 2.3 for a summary of the options that are available for file operations.
+
+Table 2.3 Standard Options for File Operations
+Option
+
+Description
+
+StandardOpenOption; use with newBufferedWriter, newInputStream, newOutputStream, write
+READ
+
+Open for reading
+
+WRITE
+
+Open for writing
+
+APPEND
+
+If opened for writing, append to the end of the file
+
+TRUNCATE_EXISTING
+
+If opened for writing, remove existing contents
+
+CREATE_NEW
+
+Create a new file and fail if it exists
+
+CREATE
+
+Atomically create a new file if it doesn’t exist
+
+DELETE_ON_CLOSE
+
+Make a “best effort” to delete the file when it is closed
+
+SPARSE
+
+A hint to the file system that this file will be sparse
+
+DSYNC|SYNC
+
+Requires that each update to the file data|data and metadata
+be written synchronously to the storage device
+
+StandardCopyOption; use with copy, move
+ATOMIC_MOVE
+
+Move the file atomically
+
+COPY_ATTRIBUTES
+
+Copy the file attributes
+
+REPLACE_EXISTING
+
+Replace the target if it exists
+
+LinkOption; use with all of the above methods and exists, isDirectory, isRegularFile
+NOFOLLOW_LINKS
+
+Do not follow symbolic links
+
+FileVisitOption; use with find, walk, walkFileTree
+FOLLOW_LINKS
+
+Follow symbolic links
+
+From the Library of Hristo Dimov Hristov
+
+108
+
+Chapter 2
+
+Input and Output
+
+java.nio.file.Files 7
+
+• static Path copy(Path from, Path to, CopyOption... options)
+• static Path move(Path from, Path to, CopyOption... options)
+copies or moves from to the given target location and returns to.
+• static long copy(InputStream from, Path to, CopyOption... options)
+• static long copy(Path from, OutputStream to, CopyOption... options)
+copies from an input stream to a file, or from a file to an output stream, returning
+the number of bytes copied.
+• static void delete(Path path)
+• static boolean deleteIfExists(Path path)
+deletes the given file or empty directory. The first method throws an exception if
+the file or directory doesn’t exist. The second method returns false in that case.
+
+2.5.5 Getting File Information
+The following static methods return a boolean value to check a property of a path:
+•
+•
+•
+•
+
+exists
+isHidden
+isReadable, isWritable, isExecutable
+isRegularFile, isDirectory, isSymbolicLink
+
+The size method returns the number of bytes in a file.
+long fileSize = Files.size(path);
+
+The getOwner method returns the owner of the file, as an instance of
+java.nio.file.attribute.UserPrincipal.
+All file systems report a set of basic attributes, encapsulated by the BasicFileAttributes
+interface, which partially overlaps with that information. The basic file
+attributes are
+• The times at which the file was created, last accessed, and last modified, as
+instances of the class java.nio.file.attribute.FileTime
+• Whether the file is a regular file, a directory, a symbolic link, or none of these
+• The file size
+• The file key—an object of some class, specific to the file system, that may or
+may not uniquely identify a file
+
+From the Library of Hristo Dimov Hristov
+
+2.5 Working with Files
+
+109
+
+To get these attributes, call
+BasicFileAttributes attributes = Files.readAttributes(path, BasicFileAttributes.class);
+
+If you know that the user’s file system is POSIX-compliant, you can instead get
+an instance of PosixFileAttributes:
+PosixFileAttributes attributes = Files.readAttributes(path, PosixFileAttributes.class);
+
+Then you can find out the group owner and the owner, group, and world access
+permissions of the file. We won’t dwell on the details since so much of this
+information is not portable across operating systems.
+java.nio.file.Files 7
+
+•
+•
+•
+•
+•
+•
+•
+•
+
+static boolean exists(Path path)
+static boolean isHidden(Path path)
+static boolean isReadable(Path path)
+static boolean isWritable(Path path)
+static boolean isExecutable(Path path)
+static boolean isRegularFile(Path path)
+static boolean isDirectory(Path path)
+static boolean isSymbolicLink(Path path)
+
+checks for the given property of the file given by the path.
+• static long size(Path path)
+gets the size of the file in bytes.
+• A readAttributes(Path path, Class<A> type, LinkOption... options)
+reads the file attributes of type A.
+
+java.nio.file.attribute.BasicFileAttributes 7
+
+•
+•
+•
+•
+•
+•
+•
+•
+
+FileTime creationTime()
+FileTime lastAccessTime()
+FileTime lastModifiedTime()
+boolean isRegularFile()
+boolean isDirectory()
+boolean isSymbolicLink()
+long size()
+Object fileKey()
+
+gets the requested attribute.
+
+From the Library of Hristo Dimov Hristov
+
+110
+
+Chapter 2
+
+Input and Output
+
+2.5.6 Visiting Directory Entries
+The static Files.list method returns a Stream<Path> that reads the entries of a directory.
+The directory is read lazily, making it possible to efficiently process directories
+with huge numbers of entries.
+Since reading a directory involves a system resource that needs to be closed, you
+should use a try block:
+try (Stream<Path> entries = Files.list(pathToDirectory))
+{
+...
+}
+
+The list method does not enter subdirectories. To process all descendants of a
+directory, use the Files.walk method instead.
+try (Stream<Path> entries = Files.walk(pathToRoot))
+{
+// Contains all descendants, visited in depth-first order
+}
+
+Here is a sample traversal of the unzipped src.zip tree:
+java
+java/nio
+java/nio/DirectCharBufferU.java
+java/nio/ByteBufferAsShortBufferRL.java
+java/nio/MappedByteBuffer.java
+...
+java/nio/ByteBufferAsDoubleBufferB.java
+java/nio/charset
+java/nio/charset/CoderMalfunctionError.java
+java/nio/charset/CharsetDecoder.java
+java/nio/charset/UnsupportedCharsetException.java
+java/nio/charset/spi
+java/nio/charset/spi/CharsetProvider.java
+java/nio/charset/StandardCharsets.java
+java/nio/charset/Charset.java
+...
+java/nio/charset/CoderResult.java
+java/nio/HeapFloatBufferR.java
+...
+
+As you can see, whenever the traversal yields a directory, it is entered before
+continuing with its siblings.
+You can limit the depth of the tree that you want to visit by calling
+Files.walk(pathToRoot, depth). Both walk methods have a varargs parameter of type
+
+From the Library of Hristo Dimov Hristov
+
+2.5 Working with Files
+
+111
+
+FileVisitOption..., but there is only one option you can supply: FOLLOW_LINKS to follow
+
+symbolic links.
+NOTE: If you filter the paths returned by walk and your filter criterion involves
+the file attributes stored with a directory, such as size, creation time, or type (file,
+directory, symbolic link), then use the find method instead of walk. Call that
+method with a predicate function that accepts a path and a BasicFileAttributes
+object. The only advantage is efficiency. Since the directory is being read anyway,
+the attributes are readily available.
+
+This code fragment uses the Files.walk method to copy one directory to another:
+Files.walk(source).forEach(p ->
+{
+try
+{
+Path q = target.resolve(source.relativize(p));
+if (Files.isDirectory(p))
+Files.createDirectory(q);
+else
+Files.copy(p, q);
+}
+catch (IOException ex)
+{
+throw new UncheckedIOException(ex);
+}
+});
+
+Unfortunately, you cannot easily use the Files.walk method to delete a tree of directories since you need to first delete the children before deleting the parent. The
+next section shows you how to overcome that problem.
+
+2.5.7 Using Directory Streams
+As you saw in the preceding section, the Files.walk method produces a Stream<Path>
+that traverses the descendants of a directory. Sometimes, you need more finegrained control over the traversal process. In that case, use the Files.newDirectoryStream
+object instead. It yields a DirectoryStream. Note that this is not a subinterface of
+java.util.stream.Stream but an interface that is specialized for directory traversal. It is
+a subinterface of Iterable so that you can use directory stream in an enhanced for
+loop. Here is the usage pattern:
+try (DirectoryStream<Path> entries = Files.newDirectoryStream(dir))
+{
+
+From the Library of Hristo Dimov Hristov
+
+112
+
+Chapter 2
+
+Input and Output
+
+for (Path entry : entries)
+Process entries
+}
+
+The try-with-resources block ensures that the directory stream is properly closed.
+There is no specific order in which the directory entries are visited.
+You can filter the files with a glob pattern:
+try (DirectoryStream<Path> entries = Files.newDirectoryStream(dir, "*.java"))
+
+Table 2.4 shows all glob patterns.
+
+Table 2.4 Glob Patterns
+Pattern
+
+Description
+
+Example
+
+*
+
+Matches zero or more characters
+of a path component
+
+*.java matches all Java files in the
+
+Matches zero or more characters,
+crossing directory boundaries
+
+**.java matches all Java files in any
+
+Matches one character
+
+????.java matches all four-character
+
+**
+
+?
+
+current directory
+
+subdirectory
+
+Java files (not counting the extension)
+[. . .]
+
+{. . .}
+
+\
+
+Matches a set of characters. You
+can use hyphens [0-9] and negation
+[!0-9].
+
+Test[0-9A-F].java matches Testx.java,
+
+Matches alternatives, separated by
+commas
+
+*.{java,class} matches all Java and
+
+Escapes any of the above as well
+as \
+
+*\** matches all files with a * in their
+
+where x is one hexadecimal digit
+
+class files
+
+name
+
+CAUTION: If you use the glob syntax on Windows, you have to escape backslashes twice: once for the glob syntax, and once for the Java string syntax:
+Files.newDirectoryStream(dir, "C:\\\\").
+
+If you want to visit all descendants of a directory, call the walkFileTree method instead
+and supply an object of type FileVisitor. That object gets notified
+• When a file is encountered: FileVisitResult visitFile(T path, BasicFileAttributes attrs)
+• Before a directory is processed: FileVisitResult preVisitDirectory(T dir, IOException ex)
+• After a directory is processed: FileVisitResult postVisitDirectory(T dir, IOException ex)
+
+From the Library of Hristo Dimov Hristov
+
+2.5 Working with Files
+
+113
+
+• When an error occurred trying to visit a file or directory, such as trying to
+open a directory without the necessary permissions: FileVisitResult visitFileFailed(T
+path, IOException ex)
+
+In each case, you can specify whether you want to
+• Continue visiting the next file: FileVisitResult.CONTINUE
+• Continue the walk, but without visiting the entries in this directory:
+FileVisitResult.SKIP_SUBTREE
+
+• Continue the walk, but without visiting the siblings of this file:
+FileVisitResult.SKIP_SIBLINGS
+
+• Terminate the walk: FileVisitResult.TERMINATE
+If any of the methods throws an exception, the walk is also terminated, and that
+exception is thrown from the walkFileTree method.
+NOTE: The FileVisitor interface is a generic type, but it isn’t likely that you’ll ever
+want something other than a FileVisitor<Path>. The walkFileTree method is willing
+to accept a FileVisitor<? super Path>, but Path does not have an abundance of
+supertypes.
+
+A convenience class SimpleFileVisitor implements the FileVisitor interface. All but the
+visitFileFailed method do nothing and continue. The visitFileFailed method throws
+the exception that caused the failure, thereby terminating the visit.
+For example, here is how you can print out all subdirectories of a given directory:
+Files.walkFileTree(Paths.get("/"), new SimpleFileVisitor<Path>()
+{
+public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs)
+throws IOException
+{
+System.out.println(path);
+return FileVisitResult.CONTINUE;
+}
+public FileVisitResult postVisitDirectory(Path dir, IOException exc)
+{
+return FileVisitResult.CONTINUE;
+}
+public FileVisitResult visitFileFailed(Path path, IOException exc) throws IOException
+{
+return FileVisitResult.SKIP_SUBTREE;
+}
+});
+
+From the Library of Hristo Dimov Hristov
+
+114
+
+Chapter 2
+
+Input and Output
+
+Note that we need to override postVisitDirectory and visitFileFailed. Otherwise, the
+visit would fail as soon as it encounters a directory that it’s not allowed to open
+or a file that it’s not allowed to access.
+Also note that the attributes of the path are passed as a parameter to the
+preVisitDirectory and visitFile method. The visitor already had to make an OS call to
+get the attributes, since it needs to distinguish between files and directories. This
+way, you don’t need to make another call.
+The other methods of the FileVisitor interface are useful if you need to do some
+work when entering or leaving a directory. For example, when you delete a directory tree, you need to remove the current directory after you have removed all
+of its files. Here is the complete code for deleting a directory tree:
+// Delete the directory tree starting at root
+Files.walkFileTree(root, new SimpleFileVisitor<Path>()
+{
+public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException
+{
+Files.delete(file);
+return FileVisitResult.CONTINUE;
+}
+public FileVisitResult postVisitDirectory(Path dir, IOException e) throws IOException
+{
+if (e != null) throw e;
+Files.delete(dir);
+return FileVisitResult.CONTINUE;
+}
+});
+
+java.nio.file.Files 7
+
+• static DirectoryStream<Path> newDirectoryStream(Path path)
+• static DirectoryStream<Path> newDirectoryStream(Path path, String glob)
+gets an iterator over the files and directories in a given directory.The second method
+only accepts those entries matching the given glob pattern.
+• static Path walkFileTree(Path start, FileVisitor<? super Path> visitor)
+walks all descendants of the given path, applying the visitor to all descendants.
+
+From the Library of Hristo Dimov Hristov
+
+2.5 Working with Files
+
+115
+
+java.nio.file.SimpleFileVisitor<T> 7
+
+• static FileVisitResult visitFile(T path, BasicFileAttributes attrs)
+is called when a file or directory is visited, returns one of CONTINUE, SKIP_SUBTREE,
+SKIP_SIBLINGS, or TERMINATE. The default implementation does nothing and continues.
+• static FileVisitResult preVisitDirectory(T dir, BasicFileAttributes attrs)
+• static FileVisitResult postVisitDirectory(T dir, BasicFileAttributes attrs)
+are called before and after visiting a directory. The default implementation does
+nothing and continues.
+• static FileVisitResult visitFileFailed(T path, IOException exc)
+is called if an exception was thrown in an attempt to get information about the given
+file. The default implementation rethrows the exception, which causes the visit to
+terminate with that exception. Override the method if you want to continue.
+
+2.5.8 ZIP File Systems
+The Paths class looks up paths in the default file system—the files on the user’s
+local disk. You can have other file systems. One of the more useful ones is a ZIP
+file system. If zipname is the name of a ZIP file, then the call
+FileSystem fs = FileSystems.newFileSystem(Paths.get(zipname), null);
+
+establishes a file system that contains all files in the ZIP archive. It’s an easy
+matter to copy a file out of that archive if you know its name:
+Files.copy(fs.getPath(sourceName), targetPath);
+
+Here, fs.getPath is the analog of Paths.get for an arbitrary file system.
+To list all files in a ZIP archive, walk the file tree:
+FileSystem fs = FileSystems.newFileSystem(Paths.get(zipname), null);
+Files.walkFileTree(fs.getPath("/"), new SimpleFileVisitor<Path>()
+{
+public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException
+{
+System.out.println(file);
+return FileVisitResult.CONTINUE;
+}
+});
+
+That is nicer than the API described in Section 2.3.3, “ZIP Archives,” on p. 77
+which required a set of new classes just to deal with ZIP archives.
+
+From the Library of Hristo Dimov Hristov
+
+116
+
+Chapter 2
+
+Input and Output
+
+java.nio.file.FileSystems 7
+
+• static FileSystem newFileSystem(Path path, ClassLoader loader)
+iterates over the installed file system providers and, provided that loader is not null,
+the file systems that the given class loader can load. Returns the file system created
+by the first file system provider that accepts the given path. By default, there is a
+provider for ZIP file systems that accepts files whose names end in .zip or .jar.
+
+java.nio.file.FileSystem 7
+
+• static Path getPath(String first, String... more)
+makes a path by joining the given strings.
+

@@ -1,0 +1,10 @@
+  A LocalTime represents a time of day, such as 15:30:00. You can create an instance with the now or of methods: LocalTime rightNow = LocalTime.now(); 
+  LocalTime bedtime = LocalTime.of(22, 30); // or LocalTime.of(22, 30, 0)   Table 6.4 shows common operations with local times. The plus and minus operations wrap around a 24-hour day. For example, LocalTime wakeup = bedtime.plusHours(8); // wakeup is 6:30:00   NOTE: LocalTime doesn’t concern itself with AM/PM. That silliness is left to a formatter—see Section 6.6, “Formatting and Parsing,” on p. 365. 
+  Table 6.4   LocalTime Methods   Method   Description   now, of   These static methods construct a LocalTime, either from the current time or from the given hours, minutes, and, optionally, seconds and nanoseconds. 
+  plusHours, plusMinutes, plusSeconds, plusNanos   Adds a number of hours, minutes, seconds, or nanoseconds to this LocalTime. 
+  minusHours, minusMinutes, minusSeconds, minusNanos   Subtracts a number of hours, minutes, seconds, or nanoseconds from this LocalTime. 
+  plus, minus   Adds or subtracts a Duration. 
+  withHour, withMinute, withSecond, withNano   Returns a new LocalTime with the hour, minute, second, or nanosecond changed to the given value. 
+  getHour, getMinute, getSecond, getNano   Gets the hour, minute, second, or nanosecond of this LocalTime. 
+  toSecondOfDay, toNanoOfDay   Returns the number of seconds or nanoseconds between midnight and this LocalTime. 
+  isBefore, isAfter   Compares this LocalTime with another. 

@@ -1,0 +1,289 @@
+
+475
+
+@Inherited @interface Persistent { }
+@Persistent class Employee { . . . }
+class Manager extends Employee { . . . } // also @Persistent
+
+When the persistence mechanism searches for objects to store in the database, it
+will detect both Employee and Manager objects.
+As of Java SE 8, it is legal to apply the same annotation type multiple times to
+an item. For backward compatibility, the implementor of a repeatable annotation
+needs to provide a container annotation that holds the repeated annotations in an
+array.
+Here is how to define the @TestCase annotation and its container:
+@Repeatable(TestCases.class)
+@interface TestCase
+{
+String params();
+String expected();
+}
+@interface TestCases
+{
+TestCase[] value();
+}
+
+Whenever the user supplies two or more @TestCase annotations, they are
+automatically wrapped into a @TestCases annotation.
+CAUTION: You have to be careful when processing repeatable annotations. If
+you call getAnnotation to look up a repeatable annotation, and the annotation was
+actually repeated, then you get null. That is because the repeated annotations
+were wrapped into the container annotation.
+In that case, you should call getAnnotationsByType. That call “looks through” the
+container and gives you an array of the repeated annotations. If there was just
+one annotation, you get it in an array of length 1. With this method, you don’t
+have to worry about the container annotation.
+
+8.6 Source-Level Annotation Processing
+In the preceding section, you saw how to analyze annotations in a running program. Another use for annotation is the automatic processing of source files to
+produce more source code, configuration files, scripts, or whatever else one might
+want to generate.
+
+From the Library of Hristo Dimov Hristov
+
+476
+
+Chapter 8
+
+Scripting, Compiling, and Annotation Processing
+
+8.6.1 Annotation Processors
+Annotation processing is integrated into the Java compiler. During compilation,
+you can invoke annotation processors by running
+javac -processor ProcessorClassName1,ProcessorClassName2,. . . sourceFiles
+
+The compiler locates the annotations of the source files. Each annotation processor
+is executed in turn and given the annotations in which it expressed an interest.
+If an annotation processor creates a new source file, the process is repeated. Once
+a processing round yields no further source files, all source files are compiled.
+
+NOTE: An annotation processor can only generate new source files. It cannot
+modify an existing source file.
+
+An annotation processor implements the Processor interface, generally by extending
+the AbstractProcessor class. You need to specify which annotations your processor
+supports. In our case:
+@SupportedAnnotationTypes("com.horstmann.annotations.ToString")
+@SupportedSourceVersion(SourceVersion.RELEASE_8)
+public class ToStringAnnotationProcessor extends AbstractProcessor
+{
+public boolean process(Set<? extends TypeElement> annotations,
+RoundEnvironment currentRound)
+{
+...
+}
+}
+
+A processor can claim specific annotation types, wildcards such as "com.horstmann.*“
+(all annotations in the com.horstmann package or any subpackage), or even "*" (all
+annotations).
+The process method is called once for each round, with the set of all annotations
+that were found in any files during this round, and a RoundEnvironment reference that
+contains information about the current processing round.
+
+8.6.2 The Language Model API
+Use the language model API for analyzing source-level annotations. Unlike the
+reflection API, which presents the virtual machine representation of classes and
+methods, the language model API lets you analyze a Java program according to
+the rules of the Java language.
+
+From the Library of Hristo Dimov Hristov
+
+8.6 Source-Level Annotation Processing
+
+477
+
+The compiler produces a tree whose nodes are instances of classes that implement
+the javax.lang.model.element.Element interface and its subinterfaces: TypeElement, VariableElement,
+ExecutableElement, and so on. These are the compile-time analogs to the Class, Field/
+Parameter, Method/Constructor reflection classes.
+I do not want to cover the API in detail, but here are the highlights that you need
+to know for processing annotations:
+• The RoundEnvironment gives you a set of all elements annotated with a particular
+annotation, by calling the method
+Set<? extends Element> getElementsAnnotatedWith(Class<? extends Annotation> a)
+
+• The source-level equivalent of the AnnotateElement interface is AnnotatedConstruct. Use
+the methods
+A getAnnotation(Class<A> annotationType)
+A[] getAnnotationsByType(Class<A> annotationType)
+
+to get the annotation or repeated annotations for a given annotation class.
+• A TypeElement represents a class or interface. The getEnclosedElements method yields
+a list of its fields and methods.
+• Calling getSimpleName on an Element or getQualifiedName on a TypeElement yields a Name
+object that can be converted to a string with toString.
+
+8.6.3 Using Annotations to Generate Source Code
+As an example, we will use annotations to reduce the tedium of implementing
+toString methods. We can’t put these methods into the original classes—annotation
+processors can only produce new classes, not modify existing ones.
+Therefore, we’ll add all methods into a utility class ToStrings:
+public class ToStrings
+{
+public static String toString(Point obj)
+{
+Generated code
+}
+public static String toString(Rectangle obj)
+{
+Generated code
+}
+...
+
+From the Library of Hristo Dimov Hristov
+
+478
+
+Chapter 8
+
+Scripting, Compiling, and Annotation Processing
+
+public static String toString(Object obj)
+{
+return Objects.toString(obj);
+}
+}
+
+We don’t want to use reflection, so we annotate accessor methods, not fields:
+@ToString
+public class Rectangle
+{
+...
+@ToString(includeName=false) public Point getTopLeft() { return topLeft; }
+@ToString public int getWidth() { return width; }
+@ToString public int getHeight() { return height; }
+}
+
+The annotation processor should then generate the following source code:
+public static String toString(Rectangle obj)
+{
+StringBuilder result = new StringBuilder();
+result.append("Rectangle");
+result.append("[");
+result.append(toString(obj.getTopLeft()));
+result.append(",");
+result.append("width=");
+result.append(toString(obj.getWidth()));
+result.append(",");
+result.append("height=");
+result.append(toString(obj.getHeight()));
+result.append("]");
+return result.toString();
+}
+
+The “boilerplate” code is in gray. Here is an outline of the method that produces
+the toString method for a class with given TypeElement:
+private void writeToStringMethod(PrintWriter out, TypeElement te)
+{
+String className = te.getQualifiedName().toString();
+Print method header and declaration of string builder
+ToString ann = te.getAnnotation(ToString.class);
+if (ann.includeName())
+Print code to add class name
+for (Element c : te.getEnclosedElements())
+{
+ann = c.getAnnotation(ToString.class);
+if (ann != null)
+{
+
+From the Library of Hristo Dimov Hristov
+
+8.6 Source-Level Annotation Processing
+
+479
+
+if (ann.includeName()) Print code to add field name
+Print code to append toString(obj.methodName())
+}
+}
+Print code to return string
+}
+
+And here is an outline of the process method of the annotation processor. It creates
+a source file for the helper class and writes the class header and one method for
+each annotated class.
+public boolean process(Set<? extends TypeElement> annotations,
+RoundEnvironment currentRound)
+{
+if (annotations.size() == 0) return true;
+try
+{
+JavaFileObject sourceFile = processingEnv.getFiler().createSourceFile(
+"com.horstmann.annotations.ToStrings");
+try (PrintWriter out = new PrintWriter(sourceFile.openWriter()))
+{
+Print code for package and class
+for (Element e : currentRound.getElementsAnnotatedWith(ToString.class))
+{
+if (e instanceof TypeElement)
+{
+TypeElement te = (TypeElement) e;
+writeToStringMethod(out, te);
+}
+}
+Print code for toString(Object)
+}
+catch (IOException ex)
+{
+processingEnv.getMessager().printMessage(
+Kind.ERROR, ex.getMessage());
+}
+}
+return true;
+}
+
+For the tedious details, check the book’s companion code.
+Note that the process method is called in subsequent rounds with an empty list of
+annotations. It then returns immediately so it doesn’t create the source file twice.
+First compile the annotation processor, and then compile and run the test program
+as follows:
+
+From the Library of Hristo Dimov Hristov
+
+480
+
+Chapter 8
+
+Scripting, Compiling, and Annotation Processing
+
+javac sourceAnnotations/ToStringAnnotationProcessor.java
+javac -processor sourceAnnotations.ToStringAnnotationProcessor rect/*.java
+java rect.SourceLevelAnnotationDemo
+
+TIP: To see the rounds, run the javac command with the -XprintRounds flag:
+Round 1:
+input files: {rect.Point, rect.Rectangle,
+rect.SourceLevelAnnotationDemo}
+annotations: [sourceAnnotations.ToString]
+last round: false
+Round 2:
+input files: {sourceAnnotations.ToStrings}
+annotations: []
+last round: false
+Round 3:
+input files: {}
+annotations: []
+last round: true
+
+This example demonstrates how tools can harvest source file annotations to produce other files. The generated files don’t have to be source files. Annotation
+processors may choose to generate XML descriptors, property files, shell scripts,
+HTML documentation, and so on.
+
+NOTE: Some people have suggested using annotations to remove an even
+bigger drudgery. Wouldn’t it be nice if trivial getters and setters were generated
+automatically? For example, the annotation
+@Property private String title;
+
+could produce the methods
+public String getTitle() { return title; }
+public void setTitle(String title) { this.title = title; }
+
+However, those methods need to be added to the same class. This requires
+editing a source file, not just generating another file, and is beyond the capabilities
+of annotation processors. It would be possible to build another tool for this purpose, but such a tool would go beyond the mission of annotations. An annotation
+is intended as a description about a code item, not a directive for adding or
+changing code.
+
+From the Library of Hristo Dimov Hristov
+

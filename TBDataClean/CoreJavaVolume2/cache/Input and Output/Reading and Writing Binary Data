@@ -1,0 +1,731 @@
+
+69
+
+The StandardCharsets class has static variables of type Charset for the character encodings
+that every Java virtual machine must support:
+StandardCharsets.UTF_8
+StandardCharsets.UTF_16
+StandardCharsets.UTF_16BE
+StandardCharsets.UTF_16LE
+StandardCharsets.ISO_8859_1
+StandardCharsets.US_ASCII
+
+To obtain the Charset for another encoding, use the static forName method:
+Charset shiftJIS = Charset.forName("Shift-JIS");
+
+Use the Charset object when reading or writing text. For example, you can turn an
+array of bytes into a string as
+String str = new String(bytes, StandardCharsets.UTF_8);
+
+TIP: Some methods allow you to specify a character encoding with a Charset
+object or a string. Choose the StandardCharsets constants, so you don’t have to
+worry about the correct spelling. For example, new String(bytes, "UTF 8") is not
+acceptable and will cause a runtime error.
+
+CAUTION: Some methods (such as the String(byte[]) constructor) use the default
+platform encoding if you don’t specify any; others (such as Files.readAllLines) use
+UTF-8.
+
+2.3 Reading and Writing Binary Data
+Text format is convenient for testing and debugging because it is humanly readable, but it is not as efficient as transmitting data in binary format. In the following
+sections, you will learn how to perform input and output with binary data.
+
+2.3.1 The DataInput and DataOutput interfaces
+The DataOutput interface defines the following methods for writing a number, a
+character, a boolean value, or a string in binary format:
+writeChars
+writeByte
+writeInt
+writeShort
+writeLong
+writeFloat
+
+From the Library of Hristo Dimov Hristov
+
+70
+
+Chapter 2
+
+Input and Output
+
+writeDouble
+writeChar
+writeBoolean
+writeUTF
+
+For example, writeInt always writes an integer as a 4-byte binary quantity regardless
+of the number of digits, and writeDouble always writes a double as an 8-byte binary
+quantity. The resulting output is not human-readable, but the space needed will
+be the same for each value of a given type and reading it back in will be faster
+than parsing text.
+
+NOTE: There are two different methods of storing integers and floating-point
+numbers in memory, depending on the processor you are using. Suppose, for
+example, you are working with a 4-byte int, say the decimal number 1234, or
+4D2 in hexadecimal (1234 = 4 × 256 + 13 × 16 + 2). This value can be stored
+in such a way that the first of the four bytes in memory holds the most significant
+byte (MSB) of the value: 00 00 04 D2. This is the so-called big-endian method. Or,
+we can start with the least significant byte (LSB) first: D2 04 00 00. This is called,
+naturally enough, the little-endian method. For example, the SPARC uses bigendian; the Pentium, little-endian. This can lead to problems. When a file is
+saved from C or C++ file, the data are saved exactly as the processor stores
+them. That makes it challenging to move even the simplest data files from one
+platform to another. In Java, all values are written in the big-endian fashion,
+regardless of the processor. That makes Java data files platform-independent.
+
+The writeUTF method writes string data using a modified version of 8-bit Unicode
+Transformation Format. Instead of simply using the standard UTF-8 encoding,
+sequences of Unicode code units are first represented in UTF-16, and then the
+result is encoded using the UTF-8 rules. This modified encoding is different for
+characters with codes higher than 0xFFFF. It is used for backward compatibility
+with virtual machines that were built when Unicode had not yet grown beyond
+16 bits.
+Since nobody else uses this modification of UTF-8, you should only use the writeUTF
+method to write strings intended for a Java virtual machine—for example, in a
+program that generates bytecodes. Use the writeChars method for other purposes.
+To read the data back in, use the following methods defined in the DataInput
+interface:
+readInt
+readShort
+readLong
+readFloat
+
+From the Library of Hristo Dimov Hristov
+
+2.3 Reading and Writing Binary Data
+
+71
+
+readDouble
+readChar
+readBoolean
+readUTF
+
+The DataInputStream class implements the DataInput interface. To read binary data from
+a file, combine a DataInputStream with a source of bytes such as a FileInputStream:
+DataInputStream in = new DataInputStream(new FileInputStream("employee.dat"));
+
+Similarly, to write binary data, use the DataOutputStream class that implements the
+DataOutput interface:
+DataOutputStream out = new DataOutputStream(new FileOutputStream("employee.dat"));
+
+java.io.DataInput 1.0
+
+•
+•
+•
+•
+•
+•
+•
+•
+
+boolean readBoolean()
+byte readByte()
+char readChar()
+double readDouble()
+float readFloat()
+int readInt()
+long readLong()
+short readShort()
+
+reads in a value of the given type.
+• void readFully(byte[] b)
+reads bytes into the array b, blocking until all bytes are read.
+Parameters:
+
+b
+
+The buffer into which the data are read
+
+• void readFully(byte[] b, int off, int len)
+reads bytes into the array b, blocking until all bytes are read.
+Parameters:
+
+b
+
+The buffer into which the data are read
+
+off
+
+The start offset of the data
+
+len
+
+The maximum number of bytes to read
+
+• String readUTF()
+reads a string of characters in the “modified UTF-8” format.
+• int skipBytes(int n)
+skips n bytes, blocking until all bytes are skipped.
+Parameters:
+
+n
+
+The number of bytes to be skipped
+
+From the Library of Hristo Dimov Hristov
+
+72
+
+Chapter 2
+
+Input and Output
+
+java.io.DataOutput 1.0
+
+•
+•
+•
+•
+•
+•
+•
+•
+
+void writeBoolean(boolean b)
+void writeByte(int b)
+void writeChar(int c)
+void writeDouble(double d)
+void writeFloat(float f)
+void writeInt(int i)
+void writeLong(long l)
+void writeShort(int s)
+
+writes a value of the given type.
+• void writeChars(String s)
+writes all characters in the string.
+• void writeUTF(String s)
+writes a string of characters in the “modified UTF-8” format.
+
+2.3.2 Random-Access Files
+The RandomAccessFile class lets you read or write data anywhere in a file. Disk files
+are random-access, but input/output streams that communicate with a network
+socket are not. You can open a random-access file either for reading only or for
+both reading and writing; specify the option by using the string "r" (for read access)
+or "rw" (for read/write access) as the second argument in the constructor.
+RandomAccessFile in = new RandomAccessFile("employee.dat", "r");
+RandomAccessFile inOut = new RandomAccessFile("employee.dat", "rw");
+
+When you open an existing file as a RandomAccessFile, it does not get deleted.
+A random-access file has a file pointer that indicates the position of the next byte
+to be read or written. The seek method can be used to set the file pointer to an arbitrary byte position within the file. The argument to seek is a long integer between
+zero and the length of the file in bytes.
+The getFilePointer method returns the current position of the file pointer.
+The RandomAccessFile class implements both the DataInput and DataOutput interfaces. To
+read and write from a random-access file, use methods such as readInt/writeInt and
+readChar/writeChar that we discussed in the preceding section.
+Let’s walk through an example program that stores employee records in a randomaccess file. Each record will have the same size. This makes it easy to read an
+
+From the Library of Hristo Dimov Hristov
+
+2.3 Reading and Writing Binary Data
+
+73
+
+arbitrary record. Suppose you want to position the file pointer to the third record.
+Simply set the file pointer to the appropriate byte position and start reading.
+long n = 3;
+in.seek((n - 1) * RECORD_SIZE);
+Employee e = new Employee();
+e.readData(in);
+
+If you want to modify the record and save it back into the same location, remember
+to set the file pointer back to the beginning of the record:
+in.seek((n - 1) * RECORD_SIZE);
+e.writeData(out);
+
+To determine the total number of bytes in a file, use the length method. The total
+number of records is the length divided by the size of each record.
+long nbytes = in.length(); // length in bytes
+int nrecords = (int) (nbytes / RECORD_SIZE);
+
+Integers and floating-point values have a fixed size in binary format, but we have
+to work harder for strings. We provide two helper methods to write and read
+strings of a fixed size.
+The writeFixedString writes the specified number of code units, starting at the beginning of the string. If there are too few code units, the method pads the string,
+using zero values.
+public static void writeFixedString(String s, int size, DataOutput out)
+throws IOException
+{
+for (int i = 0; i < size; i++)
+{
+char ch = 0;
+if (i < s.length()) ch = s.charAt(i);
+out.writeChar(ch);
+}
+}
+
+The readFixedString method reads characters from the input stream until it has consumed size code units or until it encounters a character with a zero value. Then,
+it skips past the remaining zero values in the input field. For added efficiency,
+this method uses the StringBuilder class to read in a string.
+public static String readFixedString(int size, DataInput in)
+throws IOException
+{
+StringBuilder b = new StringBuilder(size);
+int i = 0;
+boolean more = true;
+
+From the Library of Hristo Dimov Hristov
+
+74
+
+Chapter 2
+
+Input and Output
+
+while (more && i < size)
+{
+char ch = in.readChar();
+i++;
+if (ch == 0) more = false;
+else b.append(ch);
+}
+in.skipBytes(2 * (size - i));
+return b.toString();
+}
+
+We placed the writeFixedString and readFixedString methods inside the DataIO helper
+class.
+To write a fixed-size record, we simply write all fields in binary.
+DataIO.writeFixedString(e.getName(), Employee.NAME_SIZE, out);
+out.writeDouble(e.getSalary());
+LocalDate hireDay = e.getHireDay();
+out.writeInt(hireDay.getYear());
+out.writeInt(hireDay.getMonthValue());
+out.writeInt(hireDay.getDayOfMonth());
+
+Reading the data back is just as simple.
+String name = DataIO.readFixedString(Employee.NAME_SIZE, in);
+double salary = in.readDouble();
+int y = in.readInt();
+int m = in.readInt();
+int d = in.readInt();
+
+Let us compute the size of each record. We will use 40 characters for the name
+strings. Therefore, each record contains 100 bytes:
+• 40 characters = 80 bytes for the name
+• 1 double = 8 bytes for the salary
+• 3 int = 12 bytes for the date
+The program shown in Listing 2.2 writes three records into a data file and then
+reads them from the file in reverse order. To do this efficiently requires random
+access—we need to get at the last record first.
+
+Listing 2.2
+1
+
+randomAccess/RandomAccessTest.java
+
+package randomAccess;
+
+2
+3
+4
+5
+
+import java.io.*;
+import java.util.*;
+import java.time.*;
+
+From the Library of Hristo Dimov Hristov
+
+2.3 Reading and Writing Binary Data
+
+75
+
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+
+/**
+* @version 1.13 2016-07-11
+* @author Cay Horstmann
+*/
+public class RandomAccessTest
+{
+public static void main(String[] args) throws IOException
+{
+Employee[] staff = new Employee[3];
+
+16
+
+staff[0] = new Employee("Carl Cracker", 75000, 1987, 12, 15);
+staff[1] = new Employee("Harry Hacker", 50000, 1989, 10, 1);
+staff[2] = new Employee("Tony Tester", 40000, 1990, 3, 15);
+
+17
+18
+19
+20
+
+try (DataOutputStream out = new DataOutputStream(new FileOutputStream("employee.dat")))
+{
+// save all employee records to the file employee.dat
+for (Employee e : staff)
+writeData(out, e);
+}
+
+21
+22
+23
+24
+25
+26
+27
+
+try (RandomAccessFile in = new RandomAccessFile("employee.dat", "r"))
+{
+// retrieve all records into a new array
+
+28
+29
+30
+31
+
+// compute the array size
+int n = (int)(in.length() / Employee.RECORD_SIZE);
+Employee[] newStaff = new Employee[n];
+
+32
+33
+34
+35
+
+// read employees in reverse order
+for (int i = n - 1; i >= 0; i--)
+{
+newStaff[i] = new Employee();
+in.seek(i * Employee.RECORD_SIZE);
+newStaff[i] = readData(in);
+}
+
+36
+37
+38
+39
+40
+41
+42
+43
+
+// print the newly read employee records
+for (Employee e : newStaff)
+System.out.println(e);
+
+44
+45
+46
+
+}
+
+47
+48
+
+}
+
+49
+50
+51
+52
+53
+54
+
+/**
+* Writes employee data to a data output
+* @param out the data output
+* @param e the employee
+*/
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+76
+
+Chapter 2
+
+Input and Output
+
+Listing 2.2 (Continued)
+public static void writeData(DataOutput out, Employee e) throws IOException
+{
+DataIO.writeFixedString(e.getName(), Employee.NAME_SIZE, out);
+out.writeDouble(e.getSalary());
+
+55
+56
+57
+58
+59
+
+LocalDate hireDay = e.getHireDay();
+out.writeInt(hireDay.getYear());
+out.writeInt(hireDay.getMonthValue());
+out.writeInt(hireDay.getDayOfMonth());
+
+60
+61
+62
+63
+
+}
+
+64
+65
+
+/**
+* Reads employee data from a data input
+* @param in the data input
+* @return the employee
+*/
+public static Employee readData(DataInput in) throws IOException
+{
+String name = DataIO.readFixedString(Employee.NAME_SIZE, in);
+double salary = in.readDouble();
+int y = in.readInt();
+int m = in.readInt();
+int d = in.readInt();
+return new Employee(name, salary, y, m - 1, d);
+}
+
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+
+}
+
+java.io.RandomAccessFile 1.0
+
+• RandomAccessFile(String file, String mode)
+• RandomAccessFile(File file, String mode)
+Parameters:
+
+file
+
+The file to be opened
+
+mode
+
+"r" for read-only mode, "rw" for read/write mode, "rws" for
+read/write mode with synchronous disk writes of data and
+metadata for every update, and "rwd" for read/write mode
+with synchronous disk writes of data only
+
+• long getFilePointer()
+returns the current location of the file pointer.
+• void seek(long pos)
+sets the file pointer to pos bytes from the beginning of the file.
+• long length()
+returns the length of the file in bytes.
+
+From the Library of Hristo Dimov Hristov
+
+2.3 Reading and Writing Binary Data
+
+77
+
+2.3.3 ZIP Archives
+ZIP archives store one or more files in a (usually) compressed format. Each ZIP
+archive has a header with information such as the name of each file and the
+compression method that was used. In Java, you can use a ZipInputStream to read a
+ZIP archive. You need to look at the individual entries in the archive. The getNextEntry
+method returns an object of type ZipEntry that describes the entry. Pass the entry
+to the getInputStream method of the ZipInputStream to obtain an input stream for reading
+the entry. Then call closeEntry to read the next entry. Here is a typical code sequence
+to read through a ZIP file:
+ZipInputStream zin = new ZipInputStream(new FileInputStream(zipname));
+ZipEntry entry;
+while ((entry = zin.getNextEntry()) != null)
+{
+InputStream in = zin.getInputStream(entry);
+read the contents of in
+zin.closeEntry();
+}
+zin.close();
+
+To write a ZIP file, use a ZipOutputStream. For each entry that you want to place into
+the ZIP file, create a ZipEntry object. Pass the file name to the ZipEntry constructor; it
+sets the other parameters such as file date and decompression method. You can
+override these settings if you like. Then, call the putNextEntry method of the
+ZipOutputStream to begin writing a new file. Send the file data to the ZIP output stream.
+When you are done, call closeEntry. Repeat for all the files you want to store. Here
+is a code skeleton:
+FileOutputStream fout = new FileOutputStream("test.zip");
+ZipOutputStream zout = new ZipOutputStream(fout);
+for all files
+{
+ZipEntry ze = new ZipEntry(filename);
+zout.putNextEntry(ze);
+send data to zout
+zout.closeEntry();
+}
+zout.close();
+
+NOTE: JAR files (which were discussed in Volume I, Chapter 13) are simply
+ZIP files with a special entry—the so-called manifest. Use the JarInputStream and
+JarOutputStream classes to read and write the manifest entry.
+
+ZIP input streams are a good example of the power of the stream abstraction.
+When you read data stored in compressed form, you don’t need to worry that
+
+From the Library of Hristo Dimov Hristov
+
+78
+
+Chapter 2
+
+Input and Output
+
+the data are being decompressed as they are being requested. Moreover, the
+source of the bytes in a ZIP stream need not be a file—the ZIP data can come from
+a network connection. In fact, whenever the class loader of an applet reads a JAR
+file, it reads and decompresses data from the network.
+
+NOTE: Section 2.5.8, “ZIP File Systems,” on p. 115 shows how to access a ZIP
+archive without a special API, using the FileSystem class of Java SE 7.
+
+java.util.zip.ZipInputStream 1.1
+
+• ZipInputStream(InputStream in)
+creates a ZipInputStream that allows you to inflate data from the given InputStream.
+• ZipEntry getNextEntry()
+returns a ZipEntry object for the next entry, or null if there are no more entries.
+• void closeEntry()
+closes the current open entry in the ZIP file. You can then read the next entry by
+using getNextEntry().
+
+java.util.zip.ZipOutputStream 1.1
+
+• ZipOutputStream(OutputStream out)
+creates a ZipOutputStream that you can use to write compressed data to the specified
+OutputStream.
+• void putNextEntry(ZipEntry ze)
+writes the information in the given ZipEntry to the output stream and positions the
+stream for the data. The data can then be written by calling the write() method.
+• void closeEntry()
+closes the currently open entry in the ZIP file. Use the putNextEntry method to start
+the next entry.
+• void setLevel(int level)
+sets the default compression level of subsequent DEFLATED entries. The default value
+is Deflater.DEFAULT_COMPRESSION.Throws an IllegalArgumentException if the level is not valid.
+Parameters:
+
+level
+
+A compression level, from 0 (NO_COMPRESSION) to 9
+(BEST_COMPRESSION)
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+2.3 Reading and Writing Binary Data
+
+79
+
+java.util.zip.ZipOutputStream 1.1 (Continued)
+
+• void setMethod(int method)
+sets the default compression method for this ZipOutputStream for any entries that do
+not specify a method.
+Parameters:
+
+method
+
+The compression method, either DEFLATED or STORED
+
+java.util.zip.ZipEntry 1.1
+
+• ZipEntry(String name)
+constructs a zip entry with a given name.
+Parameters:
+
+name
+
+The name of the entry
+
+• long getCrc()
+returns the CRC32 checksum value for this ZipEntry.
+• String getName()
+returns the name of this entry.
+• long getSize()
+returns the uncompressed size of this entry, or -1 if the uncompressed size is not
+known.
+• boolean isDirectory()
+returns true if this entry is a directory.
+• void setMethod(int method)
+Parameters:
+
+method
+
+The compression method for the entry; must be either
+DEFLATED or STORED
+
+• void setSize(long size)
+sets the size of this entry. Only required if the compression method is STORED.
+Parameters:
+
+size
+
+The uncompressed size of this entry
+
+• void setCrc(long crc)
+sets the CRC32 checksum of this entry. Use the CRC32 class to compute this checksum.
+Only required if the compression method is STORED.
+Parameters:
+
+crc
+
+The checksum of this entry
+
+From the Library of Hristo Dimov Hristov
+
+80
+
+Chapter 2
+
+Input and Output
+
+java.util.zip.ZipFile 1.1
+
+• ZipFile(String name)
+• ZipFile(File file)
+creates a ZipFile for reading from the given string or File object.
+• Enumeration entries()
+returns an Enumeration object that enumerates the ZipEntry objects that describe the
+entries of the ZipFile.
+• ZipEntry getEntry(String name)
+returns the entry corresponding to the given name, or null if there is no such entry.
+Parameters:
+
+name
+
+The entry name
+
+• InputStream getInputStream(ZipEntry ze)
+returns an InputStream for the given entry.
+Parameters:
+
+ze
+
+A ZipEntry in the ZIP file
+
+• String getName()
+returns the path of this ZIP file.
+

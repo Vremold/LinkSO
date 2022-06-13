@@ -1,0 +1,116 @@
+  When saving data, you have the choice between binary and text formats. For example, if the integer 1234 is saved in binary, it is written as the sequence of bytes 00 00 04 D2 (in hexadecimal notation). In text format, it is saved as the string "1234". 
+  Although binary I/O is fast and efficient, it is not easily readable by humans. We first discuss text I/O and cover binary I/O in Section 2.3, “Reading and Writing Binary Data,” on p. 69. 
+  When saving text strings, you need to consider the character encoding. In the UTF-16 encoding that Java uses internally, the string "José" is encoded as 00 4A 00 6F 00 73 00 E9 (in hex). However, many programs expect that text files are encoded in a different encoding. In UTF-8, the encoding most commonly used on the Internet, the string would be written as 4A 6F 73 C3 A9, without the zero bytes for the first three letters and with two bytes for the é character. 
+  The OutputStreamWriter class turns an output stream of Unicode code units into a stream of bytes, using a chosen character encoding. Conversely, the InputStreamReader class turns an input stream that contains bytes (specifying characters in some character encoding) into a reader that emits Unicode code units. 
+  For example, here is how you make an input reader that reads keystrokes from the console and converts them to Unicode: Reader in = new InputStreamReader(System.in); 
+  This input stream reader assumes the default character encoding used by the host system. On desktop operating systems, that can be an archaic encoding such as Windows 1252 or MacRoman. You should always choose a specific encoding in the constructor for the InputStreamReader, for example: Reader in = new InputStreamReader(new FileInputStream("data.txt"), StandardCharsets.UTF_8); 
+  See Section 2.2.4, “Character Encodings,” on p. 67 for more information on character encodings. 
+2.2.1 How to Write Text Output
+  For text output, use a PrintWriter. That class has methods to print strings and numbers in text format. There is a convenience constructor for printing to a file. 
+  The statement PrintWriter out = new PrintWriter("employee.txt", "UTF-8"); 
+  is equivalent to PrintWriter out = new PrintWriter( new FileOutputStream("employee.txt"), "UTF-8"); 
+  From the Library of Hristo Dimov Hristov   2.2 Text Input and Output   61   To write to a print writer, use the same print, println, and printf methods that you used with System.out. You can use these methods to print numbers (int, short, long, float, double), characters, boolean values, strings, and objects. 
+  For example, consider this code: String name = "Harry Hacker"; 
+  double salary = 75000; 
+  out.print(name); 
+  out.print(' '); 
+  out.println(salary); 
+  This writes the characters Harry Hacker 75000.0   to the writer out. The characters are then converted to bytes and end up in the file employee.txt. 
+  The println method adds the correct end-of-line character for the target system ("\r\n" on Windows, "\n" on UNIX) to the line. This is the string obtained by the call System.getProperty("line.separator"). 
+  If the writer is set to autoflush mode, all characters in the buffer are sent to their destination whenever println is called. (Print writers are always buffered.) By default, autoflushing is not enabled. You can enable or disable autoflushing by using the PrintWriter(Writer writer, boolean autoFlush) constructor: PrintWriter out = new PrintWriter( new OutputStreamWriter( new FileOutputStream("employee.txt"), "UTF-8"), true); // autoflush   The print methods don’t throw exceptions. You can call the checkError method to see if something went wrong with the output stream. 
+  NOTE: Java veterans might wonder whatever happened to the PrintStream class and to System.out. In Java 1.0, the PrintStream class simply truncated all Unicode characters to ASCII characters by dropping the top byte. (At the time, Unicode was still a 16-bit encoding.) Clearly, that was not a clean or portable approach, and it was fixed with the introduction of readers and writers in Java 1.1. For compatibility with existing code, System.in, System.out, and System.err are still input/output streams, not readers and writers. But now the PrintStream class internally converts Unicode characters to the default host encoding in the same way the PrintWriter does. Objects of type PrintStream act exactly like print writers when you use the print and println methods, but unlike print writers they allow you to output raw bytes with the write(int) and write(byte[]) methods. 
+  From the Library of Hristo Dimov Hristov   62   Chapter 2   Input and Output   java.io.PrintWriter 1.1   • PrintWriter(Writer out) • PrintWriter(Writer writer) creates a new PrintWriter that writes to the given writer. 
+  • PrintWriter(String filename, String encoding) • PrintWriter(File file, String encoding) creates a new PrintWriter that writes to the given file, using the given character encoding. 
+  • void print(Object obj) prints an object by printing the string resulting from toString. 
+  • void print(String s) prints a string containing Unicode code units. 
+  • void println(String s) prints a string followed by a line terminator. Flushes the output stream if it is in autoflush mode. 
+  • void print(char[] s) prints all Unicode code units in the given array. 
+  • void print(char c) prints a Unicode code unit. 
+  • • • • •   void print(int i) void print(long l) void print(float f) void print(double d) void print(boolean b)   prints the given value in text format. 
+  • void printf(String format, Object... args) prints the given values as specified by the format string. See Volume I, Chapter 3 for the specification of the format string. 
+  • boolean checkError() returns true if a formatting or output error occurred. Once the output stream has encountered an error, it is tainted and all calls to checkError return true. 
+2.2.2 How to Read Text Input
+  The easiest way to process arbitrary text is the Scanner class that we used extensively in Volume I. You can construct a Scanner from any input stream. 
+  From the Library of Hristo Dimov Hristov   2.2 Text Input and Output   63   Alternatively, you can read a short text file into a string like this: String content = new String(Files.readAllBytes(path), charset); 
+  But if you want the file as a sequence of lines, call List<String> lines = Files.readAllLines(path, charset); 
+  If the file is large, process the lines lazily as a Stream<String>: try (Stream<String> lines = Files.lines(path, charset)) { ... 
+  } 
+  In early versions of Java, the only game in town for processing text input was the BufferedReader class. Its readLine method yields a line of text, or null when no more input is available. A typical input loop looks like this: InputStream inputStream = . . .; 
+  try (BufferedReader in = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) { String line; 
+  while ((line = in.readLine()) != null) { do something with line } 
+  } 
+  Nowadays, the BufferedReader class also has a lines method that yields a Stream<String>. 
+  However, unlike a Scanner, a BufferedReader has no methods for reading numbers. 
+2.2.3 Saving Objects in Text Format
+  In this section, we walk you through an example program that stores an array of Employee records in a text file. Each record is stored in a separate line. Instance fields are separated from each other by delimiters. We use a vertical bar (|) as our delimiter. (A colon (:) is another popular choice. Part of the fun is that everyone uses a different delimiter.) Naturally, we punt on the issue of what might happen if a | actually occurs in one of the strings we save. 
+  Here is a sample set of records: Harry Hacker|35500|1989-10-01 Carl Cracker|75000|1987-12-15 Tony Tester|38000|1990-03-15   From the Library of Hristo Dimov Hristov   64   Chapter 2   Input and Output   Writing records is simple. Since we write to a text file, we use the PrintWriter class. 
+  We simply write all fields, followed by either a | or, for the last field, a \n. This work is done in the following writeData method that we add to our Employee class: public static void writeEmployee(PrintWriter out, Employee e) { out.println(e.getName() + "|" + e.getSalary() + "|" + e.getHireDay()); 
+  } 
+  To read records, we read in a line at a time and separate the fields. We use a scanner to read each line and then split the line into tokens with the String.split method. 
+  public static Employee readEmployee(Scanner in) { String line = in.nextLine(); 
+  String[] tokens = line.split("\\|"); 
+  String name = tokens[0]; 
+  double salary = Double.parseDouble(tokens[1]); 
+  LocalDate hireDate = LocalDate.parse(tokens[2]); 
+  int year = hireDate.getYear(); 
+  int month = hireDate.getMonthValue(); 
+  int day = hireDate.getDayOfMonth(); 
+  return new Employee(name, salary, year, month, day); 
+  } 
+  The parameter of the split method is a regular expression describing the separator. 
+  We discuss regular expressions in more detail at the end of this chapter. As it happens, the vertical bar character has a special meaning in regular expressions, so it needs to be escaped with a \ character. That character needs to be escaped by another \, yielding the "\\|" expression. 
+  The complete program is in Listing 2.1. The static method void writeData(Employee[] e, PrintWriter out)   first writes the length of the array, then writes each record. The static method Employee[] readData(BufferedReader in)   first reads in the length of the array, then reads in each record. This turns out to be a bit tricky: int n = in.nextInt(); 
+  in.nextLine(); // consume newline Employee[] employees = new Employee[n]; 
+  for (int i = 0; i < n; i++) { employees[i] = new Employee(); 
+  employees[i].readData(in); 
+  } 
+  From the Library of Hristo Dimov Hristov   2.2 Text Input and Output   65   The call to nextInt reads the array length but not the trailing newline character. 
+  We must consume the newline so that the readData method can get the next input line when it calls the nextLine method. 
+  Listing 2.1 1   textFile/TextFileTest.java   package textFile; 
+2
+  3 4 5   import java.io.*; 
+  import java.time.*; 
+  import java.util.*; 
+  6 7 8 9 10 11 12 13 14 15   /** * @version 1.14 2016-07-11 * @author Cay Horstmann */ public class TextFileTest { public static void main(String[] args) throws IOException { Employee[] staff = new Employee[3]; 
+  16   staff[0] = new Employee("Carl Cracker", 75000, 1987, 12, 15); 
+  staff[1] = new Employee("Harry Hacker", 50000, 1989, 10, 1); 
+  staff[2] = new Employee("Tony Tester", 40000, 1990, 3, 15); 
+  17 18 19 20   // save all employee records to the file employee.dat try (PrintWriter out = new PrintWriter("employee.dat", "UTF-8")) { writeData(staff, out); 
+  } 
+  21 22 23 24 25 26   // retrieve all records into a new array try (Scanner in = new Scanner( new FileInputStream("employee.dat"), "UTF-8")) { Employee[] newStaff = readData(in); 
+  27 28 29 30 31 32   // print the newly read employee records for (Employee e : newStaff) System.out.println(e); 
+  33 34 35   } 
+  36 37   } 
+  38 39 40 41   /** * Writes all employees in an array to a print writer * @param employees an array of employees (Continues)   From the Library of Hristo Dimov Hristov   66   Chapter 2   Input and Output   Listing 2.1 (Continued) 42 43 44 45 46 47   * @param out a print writer */ private static void writeData(Employee[] employees, PrintWriter out) throws IOException { // write number of employees out.println(employees.length); 
+  48   for (Employee e : employees) writeEmployee(out, e); 
+  49 50 51   } 
+  52 53 54 55 56 57 58 59 60 61 62   /** * Reads an array of employees from a scanner * @param in the scanner * @return the array of employees */ private static Employee[] readData(Scanner in) { // retrieve the array size int n = in.nextInt(); 
+  in.nextLine(); // consume newline   63   Employee[] employees = new Employee[n]; 
+  for (int i = 0; i < n; i++) { employees[i] = readEmployee(in); 
+  } 
+  return employees; 
+  64 65 66 67 68 69 70   } 
+  71 72 73 74 75 76 77 78 79   /** * Writes employee data to a print writer * @param out the print writer */ public static void writeEmployee(PrintWriter out, Employee e) { out.println(e.getName() + "|" + e.getSalary() + "|" + e.getHireDay()); 
+  } 
+  80 81 82 83 84 85 86   /** * Reads employee data from a buffered reader * @param in the scanner */ public static Employee readEmployee(Scanner in) {   From the Library of Hristo Dimov Hristov   2.2 Text Input and Output   String line = in.nextLine(); 
+  String[] tokens = line.split("\\|"); 
+  String name = tokens[0]; 
+  double salary = Double.parseDouble(tokens[1]); 
+  LocalDate hireDate = LocalDate.parse(tokens[2]); 
+  int year = hireDate.getYear(); 
+  int month = hireDate.getMonthValue(); 
+  int day = hireDate.getDayOfMonth(); 
+  return new Employee(name, salary, year, month, day); 
+  87 88 89 90 91 92 93 94 95   } 
+  96 97   67   } 
+  2.2.4 Character Encodings Input and output streams are for sequences of bytes, but in many cases you will work with texts—that is, sequences of characters. It then matters how characters are encoded into bytes. 
+  Java uses the Unicode standard for characters. Each character or “code point” has a 21-bit integer number. There are different character encodings—methods for packaging those 21-bit numbers into bytes. 
+  The most common encoding is UTF-8, which encodes each Unicode code point into a sequence of one to four bytes (see Table 2.1). UTF-8 has the advantage that the characters of the traditional ASCII character set, which contains all characters used in English, only take up one byte each. 
+  Table 2.1 UTF-8 Encoding Character Range   Encoding   0...7F   0a6a5a4a3a2a1a0   80...7FF   110a10a9a8a7a6 10a5a4a3a2a1a0   800...FFFF   1110a15a14a13a12 10a11a10a9a8a7a6 10a5a4a3a2a1a0   10000...10FFFF   11110a20a19a18 10a17a16a15a14a13a12 10a11a10a9a8a7a6 10a5a4a3a2a1a0   Another common encoding is UTF-16, which encodes each Unicode code point into one or two 16-bit values (see Table 2.2). This is the encoding used in Java strings. Actually, there are two forms of UTF-16, called “big-endian” and “littleendian.” Consider the 16-bit value 0x2122. In big-endian format, the more significant byte comes first: 0x21 followed by 0x22. In little-endian format, it is the other way around: 0x22 0x21. To indicate which of the two is used, a file can start with the “byte order mark,” the 16-bit quantity 0xFEFF. A reader can use this value to determine the byte order and discard it. 
+  From the Library of Hristo Dimov Hristov   68   Chapter 2   Input and Output   Table 2.2 UTF-16 Encoding Character Range   Encoding   0...FFFF   a15a14a13a12a11a10a9a8 a7a6a5a4a3a2a1a0   10000...10FFFF   110110b19b18 b17b16a15a14a13a12a11a10 110111a9a8 a7a6a5a4a3a2a1a0   where b19b18b17b16 = a20a19a18a17a16 - 1   CAUTION: Some programs, including Microsoft Notepad, add a byte order mark at the beginning of UTF-8 encoded files. Clearly, this is unnecessary since there are no byte ordering issues in UTF-8. But the Unicode standard allows it, and even suggests that it’s a pretty good idea since it leaves little doubt about the encoding. It is supposed to be removed when reading a UTF-8 encoded file. 
+  Sadly, Java does not do that, and bug reports against this issue are closed as “will not fix.” Your best bet is to strip out any leading \uFEFF that you find in your input. 
+  In addition to the UTF encodings, there are partial encodings that cover a character range suitable for a given user population. For example, ISO 8859-1 is a one-byte code that includes accented characters used in Western European languages. 
+  Shift-JIS is a variable-length code for Japanese characters. A large number of these encodings are still in widespread use. 
+  There is no reliable way to automatically detect the character encoding from a stream of bytes. Some API methods let you use the “default charset”—the character encoding preferred by the operating system of the computer. Is that the same encoding that is used by your source of bytes? These bytes may well originate from a different part of the world. Therefore, you should always explicitly specify the encoding. For example, when reading a web page, check the Content-Type header. 
+  NOTE: The platform encoding is returned by the static method Charset.defaultCharset.The static method Charset.availableCharsets returns all available Charset instances, as a map from canonical names to Charset objects. 
+  CAUTION: The Oracle implementation of Java has a system property file.encoding for overriding the platform default. This is not an officially supported property, and it is not consistently followed by all parts of Oracle’s implementation of the Java library. You should not set it. 

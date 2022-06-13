@@ -1,0 +1,4 @@
+  You create an inner class just as you’d expect—by placing the class definition inside a surrounding class: 
+  The inner classes used inside ship( ) look just like ordinary classes. Here, the only practical difference is that the names are nested within Parceli. You’ll see in a while that this isn’t the only difference. More typically, an outer class will have a method that returns a reference to an inner class, as you can see in the to( ) and contents( ) methods: 
+  If you want to make an object of the inner class anywhere except from within a non-static method of the outer class, you must specify the type of that object as OuterClassName.InnerClassName, as seen in main( ). 
+  Exercise 1: (1) Write a class named Outer that contains an inner class named Inner. Add a method to Outer that returns an object of type Inner. In main( ), create and initialize a reference to an Inner. 

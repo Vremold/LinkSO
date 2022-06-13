@@ -1,0 +1,1078 @@
+
+887
+
+This concludes our discussion of printing. You now know how to print 2D
+graphics and other document types, how to enumerate printers and stream print
+services, and how to set and retrieve attributes. Next, we turn to two important
+user interface issues: the clipboard and the drag-and-drop mechanism.
+
+11.13 The Clipboard
+One of the most useful and convenient user interface mechanisms of GUI environments (such as Windows and the X Window System) is cut and paste. You select
+some data in one program and cut or copy them to the clipboard. Then, you
+switch to another program and paste the clipboard contents into that application.
+Using the clipboard, you can transfer text, images, or other data from one document to another or, of course, from one place in a document to another in the
+same document. Cut and paste is so natural that most computer users never think
+about it.
+Even though the clipboard is conceptually simple, implementing clipboard services
+is actually harder than you might think. Suppose you copy text from a word
+processor to the clipboard. If you paste that text into another word processor,
+you expect the fonts and formatting to stay intact. That is, the text in the clipboard
+needs to retain the formatting information. However, if you paste the text into a
+plain text field, you expect that just the characters are pasted in, without additional
+formatting codes. To support this flexibility, the data provider must be able offer
+the clipboard data in multiple formats, so the data consumer can pick one of them.
+The system clipboard implementations of Microsoft Windows and the Macintosh
+are similar, but, of course, there are slight differences. However, the X Window
+System clipboard mechanism is much more limited—cutting and pasting of
+anything but plain text is only sporadically supported. You should consider these
+limitations when trying out the programs in this section.
+
+NOTE: Check out the file jre/lib/flavormap.properties on your platform to get an
+idea of what kinds of objects can be transferred between Java programs and
+the system clipboard.
+
+Often, programs need to support cut and paste of data types that the system
+clipboard cannot handle. The data transfer API supports the transfer of arbitrary
+local object references in the same virtual machine. Between different virtual
+machines, you can transfer serialized objects and references to remote objects.
+Table 11.5 summarizes the data transfer capabilities of the clipboard mechanism.
+
+From the Library of Hristo Dimov Hristov
+
+888
+
+Chapter 11
+
+Advanced AWT
+
+Table 11.5 Capabilities of the Java Data Transfer Mechanism
+Transfer
+
+Format
+
+Between a Java program and a native
+program
+
+Text, images, file lists, . . . (depending
+on the host platform)
+
+Between two cooperating Java programs
+
+Serialized and remote objects
+
+Within one Java program
+
+Any object
+
+11.13.1 Classes and Interfaces for Data Transfer
+Data transfer in Java is implemented in a package called java.awt.datatransfer. Here
+is an overview of the most important classes and interfaces of that package:
+• Objects that can be transferred via a clipboard must implement the Transferable
+interface.
+• The Clipboard class describes a clipboard. Transferable objects are the only items
+that can be put on or taken off a clipboard. The system clipboard is a concrete
+example of a Clipboard.
+• The DataFlavor class describes data flavors that can be placed on the clipboard.
+• The StringSelection class is a concrete class that implements the Transferable
+interface. It transfers text strings.
+• A class must implement the ClipboardOwner interface if it wants to be notified
+when the clipboard contents have been overwritten by someone else. Clipboard
+ownership enables “delayed formatting” of complex data. If a program
+transfers simple data (such as a string), it simply sets the clipboard contents
+and moves on. However, if a program places onto the clipboard complex data
+that can be formatted in multiple flavors, then it might not actually want to
+prepare all the flavors, because there is a good chance that most of them will
+never be needed. However, it then needs to hang on to the clipboard data so
+it can create the flavors later when they are requested. The clipboard owner
+is notified (by a call to its lostOwnership method) when the contents of the clipboard change. That tells it that the information is no longer needed. In our
+sample programs, we don’t worry about clipboard ownership.
+
+11.13.2 Transferring Text
+The best way to get comfortable with the data transfer classes is to start with the
+simplest situation: transferring text to and from the system clipboard. First, get
+a reference to the system clipboard:
+
+From the Library of Hristo Dimov Hristov
+
+11.13 The Clipboard
+
+889
+
+Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+
+For strings to be transferred to the clipboard, they must be wrapped into
+StringSelection objects.
+String text = . . .;
+StringSelection selection = new StringSelection(text);
+
+The actual transfer is done by a call to setContents, which takes a StringSelection object
+and a ClipBoardOwner as parameters. If you are not interested in designating a
+clipboard owner, set the second parameter to null.
+clipboard.setContents(selection, null);
+
+Here is the reverse operation—reading a string from the clipboard:
+DataFlavor flavor = DataFlavor.stringFlavor;
+if (clipboard.isDataFlavorAvailable(flavor)
+String text = (String) clipboard.getData(flavor);
+
+Listing 11.17 is a program that demonstrates cutting and pasting between a Java
+application and the system clipboard. If you select some text in the text area and
+click Copy, the selection is copied to the system clipboard. You can then paste it
+into any text editor (see Figure 11.40). Conversely, when you copy text from the
+text editor, you can paste it into our sample program.
+
+Figure 11.40 The TextTransferTest program
+
+From the Library of Hristo Dimov Hristov
+
+890
+
+Chapter 11
+
+Advanced AWT
+
+Listing 11.17
+1
+
+transferText/TextTransferFrame.java
+
+package transferText;
+
+2
+3
+4
+5
+6
+7
+
+import java.awt.*;
+import java.awt.datatransfer.*;
+import java.awt.event.*;
+import java.io.*;
+import javax.swing.*;
+
+8
+9
+10
+11
+12
+13
+14
+15
+16
+
+/**
+* This frame has a text area and buttons for copying and pasting text.
+*/
+public class TextTransferFrame extends JFrame
+{
+private JTextArea textArea;
+private static final int TEXT_ROWS = 20;
+private static final int TEXT_COLUMNS = 60;
+
+17
+18
+19
+20
+21
+22
+
+public TextTransferFrame()
+{
+textArea = new JTextArea(TEXT_ROWS, TEXT_COLUMNS);
+add(new JScrollPane(textArea), BorderLayout.CENTER);
+JPanel panel = new JPanel();
+
+23
+
+JButton copyButton = new JButton("Copy");
+panel.add(copyButton);
+copyButton.addActionListener(event -> copy());
+
+24
+25
+26
+27
+
+JButton pasteButton = new JButton("Paste");
+panel.add(pasteButton);
+pasteButton.addActionListener(event -> paste());
+
+28
+29
+30
+31
+
+add(panel, BorderLayout.SOUTH);
+pack();
+
+32
+33
+34
+
+}
+
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+
+/**
+* Copies the selected text to the system clipboard.
+*/
+private void copy()
+{
+Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+String text = textArea.getSelectedText();
+if (text == null) text = textArea.getText();
+StringSelection selection = new StringSelection(text);
+clipboard.setContents(selection, null);
+}
+
+47
+
+From the Library of Hristo Dimov Hristov
+
+11.13 The Clipboard
+
+/**
+* Pastes the text from the system clipboard into the text area.
+*/
+private void paste()
+{
+Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+DataFlavor flavor = DataFlavor.stringFlavor;
+if (clipboard.isDataFlavorAvailable(flavor))
+{
+try
+{
+String text = (String) clipboard.getData(flavor);
+textArea.replaceSelection(text);
+}
+catch (UnsupportedFlavorException e | IOException ex)
+{
+JOptionPane.showMessageDialog(this, ex);
+}
+}
+}
+
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+
+891
+
+}
+
+java.awt.Toolkit 1.0
+
+• Clipboard getSystemClipboard() 1.1
+gets the system clipboard.
+
+java.awt.datatransfer.Clipboard 1.1
+
+• Transferable getContents(Object requester)
+gets the clipboard contents.
+Parameters:
+
+requester
+
+The object requesting the clipboard contents; this
+value is not actually used.
+
+• void setContents(Transferable contents, ClipboardOwner owner)
+puts contents on the clipboard.
+Parameters:
+
+contents
+
+The Transferable encapsulating the contents
+
+owner
+
+The object to be notified (via its lostOwnership
+method) when new information is placed on the
+clipboard, or null if no notification is desired
+
+• boolean isDataFlavorAvailable(DataFlavor flavor) 5.0
+returns true if the clipboard has data in the given flavor.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+892
+
+Chapter 11
+
+Advanced AWT
+
+java.awt.datatransfer.Clipboard 1.1 (Continued)
+
+• Object getData(DataFlavor flavor) 5.0
+gets the data in the given flavor, or throws an UnsupportedFlavorException if no data are
+available in the given flavor.
+
+java.awt.datatransfer.ClipboardOwner 1.1
+
+• void lostOwnership(Clipboard clipboard, Transferable contents)
+notifies this object that it is no longer the owner of the contents of the clipboard.
+Parameters:
+
+clipboard
+
+The clipboard onto which the contents were placed
+
+contents
+
+The item that this owner had placed onto the
+clipboard
+
+java.awt.datatransfer.Transferable 1.1
+
+• boolean isDataFlavorSupported(DataFlavor flavor)
+returns true if the specified flavor is one of the supported data flavors, false
+otherwise.
+• Object getTransferData(DataFlavor flavor)
+returns the data, formatted in the requested flavor.Throws an UnsupportedFlavorException
+if the flavor requested is not supported.
+
+11.13.3 The Transferable Interface and Data Flavors
+A DataFlavor is defined by two characteristics:
+• A MIME type name (such as "image/gif")
+• A representation class for accessing the data (such as java.awt.Image)
+In addition, every data flavor has a human-readable name (such as "GIF Image").
+The representation class can be specified with a class parameter in the MIME type,
+for example:
+image/gif;class=java.awt.Image
+
+NOTE: This is just an example to show the syntax. There is no standard data
+flavor for transferring GIF image data.
+
+From the Library of Hristo Dimov Hristov
+
+11.13 The Clipboard
+
+893
+
+If no class parameter is given, the representation class is InputStream.
+Three MIME types are defined for transferring local, serialized, and remote Java
+objects:
+application/x-java-jvm-local-objectref
+application/x-java-serialized-object
+application/x-java-remote-object
+
+NOTE: The x- prefix indicates that this is an experimental name and not one
+that is sanctioned by IANA, the organization that assigns standard MIME type
+names.
+
+For example, the standard stringFlavor data flavor is described by the MIME type
+application/x-java-serialized-object;class=java.lang.String
+
+You can ask the clipboard to list all available flavors:
+DataFlavor[] flavors = clipboard.getAvailableDataFlavors();
+
+You can also install a FlavorListener onto the clipboard. The listener is notified when
+the collection of data flavors on the clipboard changes. See the API notes for details.
+java.awt.datatransfer.DataFlavor 1.1
+
+• DataFlavor(String mimeType, String humanPresentableName)
+creates a data flavor that describes stream data in a format described by a MIME
+type.
+Parameters:
+
+mimeType
+
+A MIME type string
+
+humanPresentableName
+
+A more readable version of the name
+
+• DataFlavor(Class class, String humanPresentableName)
+creates a data flavor that describes a Java platform class. Its MIME type is
+application/x-java-serialized-object;class=className .
+Parameters:
+
+class
+
+The class that is retrieved from the
+Transferable
+
+humanPresentableName
+
+A readable version of the name
+
+• String getMimeType()
+returns the MIME type string for this data flavor.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+894
+
+Chapter 11
+
+Advanced AWT
+
+java.awt.datatransfer.DataFlavor 1.1 (Continued)
+
+• boolean isMimeTypeEqual(String mimeType)
+tests whether this data flavor has the given MIME type.
+• String getHumanPresentableName()
+returns the human-presentable name for the data format of this data flavor.
+• Class getRepresentationClass()
+returns a Class object that represents the class of the object that a Transferable object
+will return when called with this data flavor. This is either the class parameter of
+the MIME type or InputStream.
+
+java.awt.datatransfer.Clipboard 1.1
+
+• DataFlavor[] getAvailableDataFlavors() 5.0
+returns an array of the available flavors.
+• void addFlavorListener(FlavorListener listener) 5.0
+adds a listener that is notified when the set of available flavors changes.
+
+java.awt.datatransfer.Transferable 1.1
+
+• DataFlavor[] getTransferDataFlavors()
+returns an array of the supported flavors.
+
+java.awt.datatransfer.FlavorListener 5.0
+
+• void flavorsChanged(FlavorEvent event)
+is called when a clipboard’s set of available flavors changes.
+
+11.13.4 Building an Image Transferable
+Objects that you want to transfer via the clipboard must implement the Transferable
+interface. The StringSelection class is currently the only public class in the Java
+standard library that implements the Transferable interface. In this section, you will
+see how to transfer images into the clipboard. Since Java does not supply a class
+for image transfer, you must implement it yourself.
+
+From the Library of Hristo Dimov Hristov
+
+11.13 The Clipboard
+
+895
+
+The class is completely trivial. It simply reports that the only available data format
+is DataFlavor.imageFlavor, and it holds an image object.
+class ImageTransferable implements Transferable
+{
+private Image theImage;
+public ImageTransferable(Image image)
+{
+theImage = image;
+}
+public DataFlavor[] getTransferDataFlavors()
+{
+return new DataFlavor[] { DataFlavor.imageFlavor };
+}
+public boolean isDataFlavorSupported(DataFlavor flavor)
+{
+return flavor.equals(DataFlavor.imageFlavor);
+}
+public Object getTransferData(DataFlavor flavor)
+throws UnsupportedFlavorException
+{
+if(flavor.equals(DataFlavor.imageFlavor))
+{
+return theImage;
+}
+else
+{
+throw new UnsupportedFlavorException(flavor);
+}
+}
+}
+
+NOTE: Java SE supplies the DataFlavor.imageFlavor constant and does all the heavy
+lifting to convert between Java images and native clipboard images. Curiously,
+however, it does not supply the wrapper class that is necessary to place images
+onto the clipboard.
+
+The program in Listing 11.18 demonstrates the transfer of images between a Java
+application and the system clipboard. When the program starts, it generates an
+image containing a red circle. Click the Copy button to copy the image to the
+clipboard and then paste it into another application (see Figure 11.41). From another application, copy an image into the system clipboard. Then click the Paste
+button and see the image being pasted into the example program (see Figure 11.42).
+
+From the Library of Hristo Dimov Hristov
+
+896
+
+Chapter 11
+
+Advanced AWT
+
+Figure 11.41 Copying from a Java program to a native program
+
+Figure 11.42 Copying from a native program to a Java program
+The program is a straightforward modification of the text transfer program. The
+data flavor is now DataFlavor.imageFlavor, and we use the ImageTransferable class to
+transfer an image to the system clipboard.
+
+From the Library of Hristo Dimov Hristov
+
+11.13 The Clipboard
+
+Listing 11.18
+1
+
+897
+
+imageTransfer/ImageTransferFrame.java
+
+package imageTransfer;
+
+2
+3
+4
+5
+6
+
+import java.awt.*;
+import java.awt.datatransfer.*;
+import java.awt.image.*;
+import java.io.*;
+
+7
+8
+
+import javax.swing.*;
+
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+
+/**
+* This frame has an image label and buttons for copying and pasting an image.
+*/
+class ImageTransferFrame extends JFrame
+{
+private JLabel label;
+private Image image;
+private static final int IMAGE_WIDTH = 300;
+private static final int IMAGE_HEIGHT = 300;
+
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+
+public ImageTransferFrame()
+{
+label = new JLabel();
+image = new BufferedImage(IMAGE_WIDTH, IMAGE_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+Graphics g = image.getGraphics();
+g.setColor(Color.WHITE);
+g.fillRect(0, 0, IMAGE_WIDTH, IMAGE_HEIGHT);
+g.setColor(Color.RED);
+g.fillOval(IMAGE_WIDTH / 4, IMAGE_WIDTH / 4, IMAGE_WIDTH / 2, IMAGE_HEIGHT / 2);
+
+29
+
+label.setIcon(new ImageIcon(image));
+add(new JScrollPane(label), BorderLayout.CENTER);
+JPanel panel = new JPanel();
+
+30
+31
+32
+33
+
+JButton copyButton = new JButton("Copy");
+panel.add(copyButton);
+copyButton.addActionListener(event -> copy());
+
+34
+35
+36
+37
+
+JButton pasteButton = new JButton("Paste");
+panel.add(pasteButton);
+pasteButton.addActionListener(event -> paste());
+
+38
+39
+40
+41
+
+add(panel, BorderLayout.SOUTH);
+pack();
+
+42
+43
+44
+
+}
+
+45
+
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+898
+
+Chapter 11
+
+Advanced AWT
+
+Listing 11.18 (Continued)
+/**
+* Copies the current image to the system clipboard.
+*/
+private void copy()
+{
+Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+ImageTransferable selection = new ImageTransferable(image);
+clipboard.setContents(selection, null);
+}
+
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+
+/**
+* Pastes the image from the system clipboard into the image label.
+*/
+private void paste()
+{
+Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+DataFlavor flavor = DataFlavor.imageFlavor;
+if (clipboard.isDataFlavorAvailable(flavor))
+{
+try
+{
+image = (Image) clipboard.getData(flavor);
+label.setIcon(new ImageIcon(image));
+}
+catch (UnsupportedFlavorException | IOException ex)
+{
+JOptionPane.showMessageDialog(this, ex);
+}
+}
+}
+
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+
+}
+
+11.13.5 Transferring Java Objects via the System Clipboard
+Suppose you want to copy and paste objects from one Java application to another.
+You can accomplish this task by placing serialized Java objects onto the system
+clipboard.
+The program in Listing 11.19 demonstrates this capability. The program shows
+a color chooser. The Copy button copies the current color to the system clipboard
+as a serialized Color object. The Paste button checks whether the system
+clipboard contains a serialized Color object. If so, it fetches the color and sets it as
+the current choice of the color chooser.
+You can transfer the serialized object between two Java applications (see
+Figure 11.43). Run two copies of the SerialTransferTest program. Click Copy in the
+
+From the Library of Hristo Dimov Hristov
+
+11.13 The Clipboard
+
+899
+
+first program, then click Paste in the second program. The Color object is transferred
+from one virtual machine to the other.
+
+Figure 11.43 Data are copied between two instances of a Java application.
+To enable data transfer, the Java platform places the binary data of the serialized
+object on the system clipboard. Another Java program—not necessarily of the
+same type as the one that generated the clipboard data—can retrieve the clipboard
+data and deserialize the object.
+Of course, a non-Java application will not know what to do with the clipboard
+data. For that reason, the example program offers the clipboard data in a second
+flavor—as text. The text is simply the result of the toString method, applied to the
+transferred object. To see the second flavor, run the program, click on a color, and
+then select the Paste command in your text editor. A string such as
+java.awt.Color[r=255,g=0,b=51]
+
+will be inserted into your document.
+Essentially no additional programming is required to transfer a serializable object.
+Use the MIME type
+application/x-java-serialized-object;class=className
+
+As before, you have to build your own transfer wrapper—see the example code
+for details.
+
+From the Library of Hristo Dimov Hristov
+
+900
+
+Chapter 11
+
+Advanced AWT
+
+Listing 11.19
+1
+
+serialTransfer/SerialTransferFrame.java
+
+package serialTransfer;
+
+2
+3
+4
+5
+6
+7
+
+import java.awt.*;
+import java.awt.datatransfer.*;
+import java.awt.event.*;
+import java.io.*;
+import javax.swing.*;
+
+8
+9
+10
+11
+12
+13
+14
+
+/**
+* This frame contains a color chooser, and copy and paste buttons.
+*/
+class SerialTransferFrame extends JFrame
+{
+private JColorChooser chooser;
+
+15
+16
+17
+18
+19
+20
+
+public SerialTransferFrame()
+{
+chooser = new JColorChooser();
+add(chooser, BorderLayout.CENTER);
+JPanel panel = new JPanel();
+
+21
+
+JButton copyButton = new JButton("Copy");
+panel.add(copyButton);
+copyButton.addActionListener(event -> copy());
+
+22
+23
+24
+25
+
+JButton pasteButton = new JButton("Paste");
+panel.add(pasteButton);
+pasteButton.addActionListener(event -> paste());
+
+26
+27
+28
+29
+
+add(panel, BorderLayout.SOUTH);
+pack();
+
+30
+31
+32
+
+}
+
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+
+/**
+* Copies the chooser's color into the system clipboard.
+*/
+private void copy()
+{
+Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+Color color = chooser.getColor();
+SerialTransferable selection = new SerialTransferable(color);
+clipboard.setContents(selection, null);
+}
+
+44
+45
+46
+47
+
+/**
+* Pastes the color from the system clipboard into the chooser.
+*/
+
+From the Library of Hristo Dimov Hristov
+
+11.13 The Clipboard
+
+private void paste()
+{
+Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+try
+{
+DataFlavor flavor = new DataFlavor(
+"application/x-java-serialized-object;class=java.awt.Color");
+if (clipboard.isDataFlavorAvailable(flavor))
+{
+Color color = (Color) clipboard.getData(flavor);
+chooser.setColor(color);
+}
+}
+catch (ClassNotFoundException | UnsupportedFlavorException | IOException ex)
+{
+JOptionPane.showMessageDialog(this, ex);
+}
+}
+
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+
+901
+
+}
+
+67
+68
+69
+70
+71
+72
+73
+
+/**
+* This class is a wrapper for the data transfer of serialized objects.
+*/
+class SerialTransferable implements Transferable
+{
+private Serializable obj;
+
+74
+75
+76
+77
+78
+79
+80
+81
+82
+
+/**
+* Constructs the selection.
+* @param o any serializable object
+*/
+SerialTransferable(Serializable o)
+{
+obj = o;
+}
+
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+
+public DataFlavor[] getTransferDataFlavors()
+{
+DataFlavor[] flavors = new DataFlavor[2];
+Class<?> type = obj.getClass();
+String mimeType = "application/x-java-serialized-object;class=" + type.getName();
+try
+{
+flavors[0] = new DataFlavor(mimeType);
+flavors[1] = DataFlavor.stringFlavor;
+return flavors;
+}
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+902
+
+Chapter 11
+
+Advanced AWT
+
+Listing 11.19 (Continued)
+catch (ClassNotFoundException e)
+{
+return new DataFlavor[0];
+}
+
+95
+96
+97
+98
+
+}
+
+99
+100
+
+public boolean isDataFlavorSupported(DataFlavor flavor)
+{
+return DataFlavor.stringFlavor.equals(flavor)
+|| "application".equals(flavor.getPrimaryType())
+&& "x-java-serialized-object".equals(flavor.getSubType())
+&& flavor.getRepresentationClass().isAssignableFrom(obj.getClass());
+}
+
+101
+102
+103
+104
+105
+106
+107
+108
+
+public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException
+{
+if (!isDataFlavorSupported(flavor)) throw new UnsupportedFlavorException(flavor);
+
+109
+110
+111
+112
+
+if (DataFlavor.stringFlavor.equals(flavor)) return obj.toString();
+
+113
+114
+
+return obj;
+
+115
+
+}
+
+116
+117
+
+}
+
+11.13.6 Using a Local Clipboard to Transfer Object References
+Occasionally, you might need to copy and paste a data type that isn’t one of the
+data types supported by the system clipboard and that isn’t serializable. To
+transfer an arbitrary Java object reference within the same JVM, use the MIME type
+application/x-java-jvm-local-objectref;class=className
+
+You need to define a Transferable wrapper for this type. The process is entirely
+analogous to the SerialTransferable wrapper of the preceding example.
+An object reference is only meaningful within a single virtual machine. For that
+reason, you cannot copy the shape object to the system clipboard. Instead, use a
+local clipboard:
+Clipboard clipboard = new Clipboard("local");
+
+The construction parameter is the clipboard name.
+However, using a local clipboard has one major disadvantage. You need to synchronize the local and the system clipboard, so that users don’t confuse the two.
+Currently, the Java platform doesn’t do that synchronization for you.
+
+From the Library of Hristo Dimov Hristov
+

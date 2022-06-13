@@ -1,0 +1,232 @@
+  769   11.2 Shapes Here are some of the methods in the Graphics class to draw shapes: drawLine drawRectangle drawRoundRect draw3DRect drawPolygon drawPolyline drawOval drawArc   There are also corresponding fill methods. These methods have been in the Graphics class ever since JDK 1.0. The Java 2D API uses a completely different, object-oriented approach. Instead of methods, there are classes: Line2D Rectangle2D RoundRectangle2D Ellipse2D Arc2D QuadCurve2D CubicCurve2D GeneralPath   These classes all implement the Shape interface, which we will examine in the following sections. 
+11.2.1 The Shape Class Hierarchy
+  The Line2D, Rectangle2D, RoundRectangle2D, Ellipse2D, and Arc2D classes correspond to the drawLine, drawRectangle, drawRoundRect, drawOval, and drawArc methods. (The concept of a “3D rectangle” has died the death it so richly deserved—there is no analog to the draw3DRect method.) The Java 2D API supplies two additional classes, quadratic and cubic curves, that we will discuss in this section. There is no Polygon2D class; instead, the GeneralPath class describes paths made up from lines, quadratic and cubic curves. 
+  You can use a GeneralPath to describe a polygon; we’ll show you how later in this section. 
+  To draw a shape, first create an object of a class that implements the Shape interface and then call the draw method of the Graphics2D class. 
+  From the Library of Hristo Dimov Hristov   770   Chapter 11   Advanced AWT   The classes Rectangle2D RoundRectangle2D Ellipse2D Arc2D   all inherit from a common superclass RectangularShape. Admittedly, ellipses and arcs are not rectangular, but they have a bounding rectangle (see Figure 11.2). 
+  Figure 11.2 The bounding rectangle of an ellipse and an arc Each of the classes with a name ending in “2D” has two subclasses for specifying coordinates as float or double quantities. In Volume I, you already encountered Rectangle2D.Float and Rectangle2D.Double. 
+  The same scheme is used for the other classes, such as Arc2D.Float and Arc2D.Double. 
+  Internally, all graphics classes use float coordinates because float numbers use less storage space but have sufficient precision for geometric computations. 
+  However, the Java programming language makes it a bit more tedious to manipulate float numbers. For that reason, most methods of the graphics classes use double parameters and return values. Only when constructing a 2D object you need to choose between the constructors with float and double coordinates. For example, Rectangle2D floatRect = new Rectangle2D.Float(5F, 10F, 7.5F, 15F); 
+  Rectangle2D doubleRect = new Rectangle2D.Double(5, 10, 7.5, 15); 
+  The Xxx2D.Float and Xxx2D.Double classes are subclasses of the Xxx2D classes. After object construction, essentially no benefit accrues from remembering the subclass, and you can just store the constructed object in a superclass variable as in the code example above. 
+  As you can see from the curious names, the Xxx2D.Float and Xxx2D.Double classes are also inner classes of the Xxx2D classes. That is just a minor syntactical convenience to avoid inflation of outer class names. 
+  From the Library of Hristo Dimov Hristov   11.2 Shapes   771   Finally, the Point2D class describes a point with an x and a y coordinate. Points are used to define shapes, but they aren’t themselves shapes. 
+  Figure 11.3 shows the relationships between the shape classes. However, the Double and Float subclasses are omitted. Legacy classes from the pre-2D library are marked with a gray fill. 
+  Figure 11.3 Relationships between the shape classes   From the Library of Hristo Dimov Hristov   772   Chapter 11   Advanced AWT 11.2.2 Using the Shape Classes
+  You already saw how to use the Rectangle2D, Ellipse2D, and Line2D classes in Volume I, Chapter 10. In this section, you will learn how to work with the remaining 2D shapes. 
+  For the RoundRectangle2D shape, specify the top left corner, width, height, and the x and y dimensions of the corner area that should be rounded (see Figure 11.4). For example, the call RoundRectangle2D r = new RoundRectangle2D.Double(150, 200, 100, 50, 20, 20); 
+  produces a rounded rectangle with circles of radius 20 at each of the corners. 
+  Figure 11.4 Constructing a RoundRectangle2D To construct an arc, specify the bounding box, the start angle, the angle swept out by the arc (see Figure 11.5), and the closure type—one of Arc2D.OPEN, Arc2D.PIE, or Arc2D.CHORD. 
+  Arc2D a = new Arc2D(x, y, width, height, startAngle, arcAngle, closureType); 
+  Figure 11.6 illustrates the arc types. 
+  From the Library of Hristo Dimov Hristov   11.2 Shapes   773   Figure 11.5 Constructing an elliptical arc CAUTION: If the arc is elliptical, the computation of the arc angles is not at all straightforward. The API documentation states: “The angles are specified relative to the nonsquare framing rectangle such that 45 degrees always falls on the line from the center of the ellipse to the upper right corner of the framing rectangle. 
+  As a result, if the framing rectangle is noticeably longer along one axis than the other, the angles to the start and end of the arc segment will be skewed farther along the longer axis of the frame.” Unfortunately, the documentation is silent on how to compute this “skew.” Here are the details: Suppose the center of the arc is the origin and the point (x, y) lies on the arc. 
+  You can get a skewed angle with the following formula: skewedAngle = Math.toDegrees(Math.atan2(-y * height, x * width)); 
+  The result is a value between -180 and 180. Compute the skewed start and end angles in this way.Then, compute the difference between the two skewed angles. 
+  If the start angle or the difference is negative, add 360 to the start angle. Then, supply the start angle and the difference to the arc constructor. 
+  If you run the example program at the end of this section, you can visually check that this calculation yields the correct values for the arc constructor (see Figure 11.9 on p. 777). 
+  From the Library of Hristo Dimov Hristov   774   Chapter 11   Advanced AWT   Figure 11.6 Arc types The Java 2D API supports quadratic and cubic curves. In this chapter, we do not get into the mathematics of these curves. We suggest you get a feel for how the curves look by running the program in Listing 11.1. As you can see in Figures 11.7 and 11.8, quadratic and cubic curves are specified by two end points and one or two control points. Moving the control points changes the shape of the curves. 
+  To construct quadratic and cubic curves, give the coordinates of the end points and the control points. For example, QuadCurve2D q = new QuadCurve2D.Double(startX, startY, controlX, controlY, endX, endY); 
+  CubicCurve2D c = new CubicCurve2D.Double(startX, startY, control1X, control1Y, control2X, control2Y, endX, endY); 
+  Quadratic curves are not very flexible, and they are not commonly used in practice. 
+  Cubic curves (such as the Bézier curves drawn by the CubicCurve2D class) are, however, very common. By combining many cubic curves so that the slopes at the connection points match, you can create complex, smooth-looking curved shapes. 
+  From the Library of Hristo Dimov Hristov   11.2 Shapes   775   Figure 11.7 A quadratic curve   Figure 11.8 A cubic curve For more information, we refer you to Computer Graphics: Principles and Practice, Second Edition in C, by James D. Foley, Andries van Dam, Steven K. Feiner, et al. 
+  (Addison-Wesley, 1995). 
+  You can build arbitrary sequences of line segments, quadratic curves, and cubic curves, and store them in a GeneralPath object. Specify the first coordinate of the path with the moveTo method, for example: GeneralPath path = new GeneralPath(); 
+  path.moveTo(10, 20); 
+  You can then extend the path by calling one of the methods lineTo, quadTo, or curveTo. 
+  These methods extend the path by a line, a quadratic curve, or a cubic curve. To call lineTo, supply the end point. For the two curve methods, supply the control points, then the end point. For example, path.lineTo(20, 30); 
+  path.curveTo(control1X, control1Y, control2X, control2Y, endX, endY); 
+  From the Library of Hristo Dimov Hristov   776   Chapter 11   Advanced AWT   Close the path by calling the closePath method. It draws a line back to the starting point of the path. 
+  To make a polygon, simply call moveTo to go to the first corner point, followed by repeated calls to lineTo to visit the other corner points. Finally, call closePath to close the polygon. The program in Listing 11.1 shows this in more detail. 
+  A general path does not have to be connected. You can call moveTo at any time to start a new path segment. 
+  Finally, you can use the append method to add arbitrary Shape objects to a general path. The outline of the shape is added to the end to the path. The second parameter of the append method is true if the new shape should be connected to the last point on the path, false otherwise. For example, the call Rectangle2D r = . . .; 
+  path.append(r, false); 
+  appends the outline of a rectangle to the path without connecting it to the existing path. But path.append(r, true); 
+  adds a straight line from the end point of the path to the starting point of the rectangle, and then adds the rectangle outline to the path. 
+  The program in Listing 11.1 lets you create sample paths. Figures 11.7 and 11.8 show sample runs of the program. You can pick a shape maker from the combo box. The program contains shape makers for • Straight lines • Rectangles, rounded rectangles, and ellipses • Arcs (showing lines for the bounding rectangle and the start and end angles, in addition to the arc itself) • Polygons (using a GeneralPath) • Quadratic and cubic curves Use the mouse to adjust the control points. As you move them, the shape continuously repaints itself. 
+  The program is a bit complex because it handles multiple shapes and supports dragging of the control points. 
+  An abstract superclass ShapeMaker encapsulates the commonality of the shape maker classes. Each shape has a fixed number of control points that the user can move around. The getPointCount method returns that value. The abstract method Shape makeShape(Point2D[] points)   From the Library of Hristo Dimov Hristov   11.2 Shapes   777   computes the actual shape, given the current positions of the control points. The toString method returns the class name so that the ShapeMaker objects can simply be dumped into a JComboBox. 
+  To enable dragging of the control points, the ShapePanel class handles both mouse and mouse motion events. If the mouse is pressed on top of a rectangle, subsequent mouse drags move the rectangle. 
+  The majority of the shape maker classes are simple—their makeShape methods just construct and return the requested shapes. However, the ArcMaker class needs to compute the distorted start and end angles. Furthermore, to demonstrate that the computation is indeed correct, the returned shape is a GeneralPath containing the arc itself, the bounding rectangle, and the lines from the center of the arc to the angle control points (see Figure 11.9). 
+  Figure 11.9 The ShapeTest program Listing 11.1 1   shape/ShapeTest.java   package shape; 
+  2 3 4 5 6 7   import java.awt.*; 
+  import java.awt.event.*; 
+  import java.awt.geom.*; 
+  import java.util.*; 
+  import javax.swing.*; 
+  8   (Continues)   From the Library of Hristo Dimov Hristov   778   Chapter 11   Advanced AWT   Listing 11.1 (Continued) 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26   /** * This program demonstrates the various 2D shapes. 
+  * @version 1.03 2016-05-10 * @author Cay Horstmann */ public class ShapeTest { public static void main(String[] args) { EventQueue.invokeLater(() -> { JFrame frame = new ShapeTestFrame(); 
+  frame.setTitle("ShapeTest"); 
+  frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
+  frame.setVisible(true); 
+  }); 
+  } 
+  } 
+  27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55   /** * This frame contains a combo box to select a shape and a component to draw it. 
+  */ class ShapeTestFrame extends JFrame { public ShapeTestFrame() { final ShapeComponent comp = new ShapeComponent(); 
+  add(comp, BorderLayout.CENTER); 
+  final JComboBox<ShapeMaker> comboBox = new JComboBox<>(); 
+  comboBox.addItem(new LineMaker()); 
+  comboBox.addItem(new RectangleMaker()); 
+  comboBox.addItem(new RoundRectangleMaker()); 
+  comboBox.addItem(new EllipseMaker()); 
+  comboBox.addItem(new ArcMaker()); 
+  comboBox.addItem(new PolygonMaker()); 
+  comboBox.addItem(new QuadCurveMaker()); 
+  comboBox.addItem(new CubicCurveMaker()); 
+  comboBox.addActionListener(event -> { ShapeMaker shapeMaker = comboBox.getItemAt(comboBox.getSelectedIndex()); 
+  comp.setShapeMaker(shapeMaker); 
+  }); 
+  add(comboBox, BorderLayout.NORTH); 
+  comp.setShapeMaker((ShapeMaker) comboBox.getItemAt(0)); 
+  pack(); 
+  } 
+  } 
+  56   From the Library of Hristo Dimov Hristov   11.2 Shapes   57 58 59 60 61 62 63 64 65 66 67   779   /** * This component draws a shape and allows the user to move the points that define it. 
+  */ class ShapeComponent extends JComponent { private static final Dimension PREFERRED_SIZE = new Dimension(300, 200); 
+  private Point2D[] points; 
+  private static Random generator = new Random(); 
+  private static int SIZE = 10; 
+  private int current; 
+  private ShapeMaker shapeMaker; 
+  68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87   public ShapeComponent() { addMouseListener(new MouseAdapter() { public void mousePressed(MouseEvent event) { Point p = event.getPoint(); 
+  for (int i = 0; i < points.length; i++) { double x = points[i].getX() - SIZE / 2; 
+  double y = points[i].getY() - SIZE / 2; 
+  Rectangle2D r = new Rectangle2D.Double(x, y, SIZE, SIZE); 
+  if (r.contains(p)) { current = i; 
+  return; 
+  } 
+  } 
+  } 
+  88   public void mouseReleased(MouseEvent event) { current = -1; 
+  } 
+  }); 
+  addMouseMotionListener(new MouseMotionAdapter() { public void mouseDragged(MouseEvent event) { if (current == -1) return; 
+  points[current] = event.getPoint(); 
+  repaint(); 
+  } 
+  }); 
+  current = -1; 
+  89 90 91 92 93 94 95 96 97 98 99 100 101 102 103 104   } 
+  105   (Continues)   From the Library of Hristo Dimov Hristov   780   Chapter 11   Advanced AWT   Listing 11.1 (Continued) /** * Set a shape maker and initialize it with a random point set. 
+  * @param aShapeMaker a shape maker that defines a shape from a point set */ public void setShapeMaker(ShapeMaker aShapeMaker) { shapeMaker = aShapeMaker; 
+  int n = shapeMaker.getPointCount(); 
+  points = new Point2D[n]; 
+  for (int i = 0; i < n; i++) { double x = generator.nextDouble() * getWidth(); 
+  double y = generator.nextDouble() * getHeight(); 
+  points[i] = new Point2D.Double(x, y); 
+  } 
+  repaint(); 
+  } 
+  106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 123   public void paintComponent(Graphics g) { if (points == null) return; 
+  Graphics2D g2 = (Graphics2D) g; 
+  for (int i = 0; i < points.length; i++) { double x = points[i].getX() - SIZE / 2; 
+  double y = points[i].getY() - SIZE / 2; 
+  g2.fill(new Rectangle2D.Double(x, y, SIZE, SIZE)); 
+  } 
+  124 125 126 127 128 129 130 131 132 133 134   g2.draw(shapeMaker.makeShape(points)); 
+  135   } 
+  136 137   public Dimension getPreferredSize() { return PREFERRED_SIZE; } 
+  138 139   } 
+  140 141 142 143 144 145 146 147   /** * A shape maker can make a shape from a point set. Concrete subclasses must return a shape in the * makeShape method. 
+  */ abstract class ShapeMaker { private int pointCount; 
+  148 149 150 151 152   /** * Constructs a shape maker. 
+  * @param pointCount the number of points needed to define this shape. 
+  */   From the Library of Hristo Dimov Hristov   11.2 Shapes   781   public ShapeMaker(int pointCount) { this.pointCount = pointCount; 
+  } 
+  153 154 155 156 157   /** * Gets the number of points needed to define this shape. 
+  * @return the point count */ public int getPointCount() { return pointCount; 
+  } 
+  158 159 160 161 162 163 164 165 166   /** * Makes a shape out of the given point set. 
+  * @param p the points that define the shape * @return the shape defined by the points */ public abstract Shape makeShape(Point2D[] p); 
+  167 168 169 170 171 172 173   public String toString() { return getClass().getName(); 
+  } 
+  174 175 176 177 178   } 
+  179 180 181 182 183 184 185 186 187 188   /** * Makes a line that joins two given points. 
+  */ class LineMaker extends ShapeMaker { public LineMaker() { super(2); 
+  } 
+  189   public Shape makeShape(Point2D[] p) { return new Line2D.Double(p[0], p[1]); 
+  } 
+  190 191 192 193 194   } 
+  195 196 197 198 199 200   /** * Makes a rectangle that joins two given corner points. 
+  */ class RectangleMaker extends ShapeMaker { (Continues)   From the Library of Hristo Dimov Hristov   782   Chapter 11   Advanced AWT   Listing 11.1 (Continued) public RectangleMaker() { super(2); 
+  } 
+  201 202 203 204 205   public Shape makeShape(Point2D[] p) { Rectangle2D s = new Rectangle2D.Double(); 
+  s.setFrameFromDiagonal(p[0], p[1]); 
+  return s; 
+  } 
+  206 207 208 209 210 211 212   } 
+  213 214 215 216 217 218 219 220 221 222   /** * Makes a round rectangle that joins two given corner points. 
+  */ class RoundRectangleMaker extends ShapeMaker { public RoundRectangleMaker() { super(2); 
+  } 
+  223   public Shape makeShape(Point2D[] p) { RoundRectangle2D s = new RoundRectangle2D.Double(0, 0, 0, 0, 20, 20); 
+  s.setFrameFromDiagonal(p[0], p[1]); 
+  return s; 
+  } 
+  224 225 226 227 228 229 230   } 
+  231 232 233 234 235 236 237 238 239 240   /** * Makes an ellipse contained in a bounding box with two given corner points. 
+  */ class EllipseMaker extends ShapeMaker { public EllipseMaker() { super(2); 
+  } 
+  241   public Shape makeShape(Point2D[] p) { Ellipse2D s = new Ellipse2D.Double(); 
+  s.setFrameFromDiagonal(p[0], p[1]); 
+  return s; 
+  } 
+  242 243 244 245 246 247 248   } 
+  From the Library of Hristo Dimov Hristov   11.2 Shapes   783   249 250 251 252 253 254 255 256 257 258 259 260 261   /** * Makes an arc contained in a bounding box with two given corner points, and with starting and * ending angles given by lines emanating from the center of the bounding box and ending in two * given points. To show the correctness of the angle computation, the returned shape contains the * arc, the bounding box, and the lines. 
+  */ class ArcMaker extends ShapeMaker { public ArcMaker() { super(4); 
+  } 
+  262   public Shape makeShape(Point2D[] p) { double centerX = (p[0].getX() + p[1].getX()) / 2; 
+  double centerY = (p[0].getY() + p[1].getY()) / 2; 
+  double width = Math.abs(p[1].getX() - p[0].getX()); 
+  double height = Math.abs(p[1].getY() - p[0].getY()); 
+  263 264 265 266 267 268 269   double skewedStartAngle = Math.toDegrees(Math.atan2(-(p[2].getY() - centerY) * width, (p[2].getX() - centerX) * height)); 
+  double skewedEndAngle = Math.toDegrees(Math.atan2(-(p[3].getY() - centerY) * width, (p[3].getX() - centerX) * height)); 
+  double skewedAngleDifference = skewedEndAngle - skewedStartAngle; 
+  if (skewedStartAngle < 0) skewedStartAngle += 360; 
+  if (skewedAngleDifference < 0) skewedAngleDifference += 360; 
+  270 271 272 273 274 275 276 277   Arc2D s = new Arc2D.Double(0, 0, 0, 0, skewedStartAngle, skewedAngleDifference, Arc2D.OPEN); 
+  s.setFrameFromDiagonal(p[0], p[1]); 
+  278 279 280   GeneralPath g = new GeneralPath(); 
+  g.append(s, false); 
+  Rectangle2D r = new Rectangle2D.Double(); 
+  r.setFrameFromDiagonal(p[0], p[1]); 
+  g.append(r, false); 
+  Point2D center = new Point2D.Double(centerX, centerY); 
+  g.append(new Line2D.Double(center, p[2]), false); 
+  g.append(new Line2D.Double(center, p[3]), false); 
+  return g; 
+  281 282 283 284 285 286 287 288 289   } 
+  290 291   } 
+  292 293 294 295   /** * Makes a polygon defined by six corner points. 
+  */ (Continues)   From the Library of Hristo Dimov Hristov   784   Chapter 11   Advanced AWT   Listing 11.1 (Continued) 296 297 298 299 300 301   class PolygonMaker extends ShapeMaker { public PolygonMaker() { super(6); 
+  } 
+  302   public Shape makeShape(Point2D[] p) { GeneralPath s = new GeneralPath(); 
+  s.moveTo((float) p[0].getX(), (float) p[0].getY()); 
+  for (int i = 1; i < p.length; i++) s.lineTo((float) p[i].getX(), (float) p[i].getY()); 
+  s.closePath(); 
+  return s; 
+  } 
+  303 304 305 306 307 308 309 310 311 312   } 
+  313 314 315 316 317 318 319 320 321 322   /** * Makes a quad curve defined by two end points and a control point. 
+  */ class QuadCurveMaker extends ShapeMaker { public QuadCurveMaker() { super(3); 
+  } 
+  323   public Shape makeShape(Point2D[] p) { return new QuadCurve2D.Double(p[0].getX(), p[0].getY(), p[1].getX(), p[1].getY(), p[2].getX(), p[2].getY()); 
+  } 
+  324 325 326 327 328 329   } 
+  330 331 332 333 334 335 336 337 338 339   /** * Makes a cubic curve defined by two end points and two control points. 
+  */ class CubicCurveMaker extends ShapeMaker { public CubicCurveMaker() { super(4); 
+  } 
+  340   From the Library of Hristo Dimov Hristov   11.2 Shapes   public Shape makeShape(Point2D[] p) { return new CubicCurve2D.Double(p[0].getX(), p[0].getY(), p[1].getX(), p[1].getY(), p[2] .getX(), p[2].getY(), p[3].getX(), p[3].getY()); 
+  } 
+  341 342 343 344 345 346   785   } 
+  java.awt.geom.RoundRectangle2D.Double 1.2   • RoundRectangle2D.Double(double x, double y, double width, double height, double arcWidth, double arcHeight)   constructs a rounded rectangle with the given bounding rectangle and arc dimensions. See Figure 11.4 for an explanation of the arcWidth and arcHeight parameters. 
+  java.awt.geom.Arc2D.Double 1.2   • Arc2D.Double(double x, double y, double w, double h, double startAngle, double arcAngle, int type)   constructs an arc with the given bounding rectangle, start and arc angle, and arc type.The startAngle and arcAngle are explained on p. 773.The type is one of Arc2D.OPEN, Arc2D.PIE, and Arc2D.CHORD. 
+  java.awt.geom.QuadCurve2D.Double 1.2   • QuadCurve2D.Double(double x1, double y1, double ctrlx, double ctrly, double x2, double y2) constructs a quadratic curve from a start point, a control point, and an end point. 
+  java.awt.geom.CubicCurve2D.Double 1.2   • CubicCurve2D.Double(double x1, double y1, double ctrlx1, double ctrly1, double ctrlx2, double ctrly2, double x2, double y2)   constructs a cubic curve from a start point, two control points, and an end point. 
+  java.awt.geom.GeneralPath 1.2   • GeneralPath() constructs an empty general path. 
+  From the Library of Hristo Dimov Hristov   786   Chapter 11   Advanced AWT   java.awt.geom.Path2D.Float 6   • void moveTo(float x, float y) makes (x, y) the current point—that is, the starting point of the next segment. 
+  • void lineTo(float x, float y) • void quadTo(float ctrlx, float ctrly, float x, float y) • void curveTo(float ctrl1x, float ctrl1y, float ctrl2x, float ctrl2y, float x, float y) draws a line, quadratic curve, or cubic curve from the current point to the end point (x, y), and makes that end point the current point. 
+  java.awt.geom.Path2D 6   • void append(Shape s, boolean connect) adds the outline of the given shape to the general path. If connect is true, the current point of the general path is connected to the starting point of the added shape by a straight line. 
+  • void closePath() closes the path by drawing a straight line from the current point to the first point in the path. 

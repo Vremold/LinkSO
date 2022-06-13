@@ -1,0 +1,8 @@
+  Now that you have seen how to create and transform streams, we will finally get to the most important point—getting answers from the stream data. The methods that we cover in this section are called reductions. Reductions are terminal operations. 
+  They reduce the stream to a non-stream value that can be used in your program. 
+  You have already seen a simple reduction: The count method returns the number of elements of a stream. 
+  Other simple reductions are max and min that return the largest or smallest value. 
+  There is a twist—these methods return an Optional<T> value that either wraps the answer or indicates that there is none (because the stream happened to be empty). 
+  In the olden days, it was common to return null in such a situation. But that can lead to null pointer exceptions when it happens in an incompletely tested program. 
+  The Optional type is a better way of indicating a missing return value. We discuss the Optional type in detail in the next section. Here is how you can get the maximum of a stream: Optional<String> largest = words.max(String::compareToIgnoreCase); 
+  System.out.println("largest: " + largest.orElse("")); 

@@ -1,0 +1,34 @@
+  Let us start by looking at a simple program that uses two threads. This program moves money between bank accounts. We make use of a Bank class that stores the balances of a given number of accounts. The transfer method transfers an amount from one account to another. See Listing 12.2 for the implementation. 
+  In the first thread, we will move money from account 0 to account 1. The second thread moves money from account 2 to account 3. 
+  Here is a simple procedure for running a task in a separate thread: 1. Place the code for the task into the run method of a class that implements the Runnable interface. That interface is very simple, with a single method: public interface Runnable { void run(); 
+  } 
+  Since Runnable is a functional interface, you can make an instance with a lambda expression: Runnable r = () -> { task code }; 
+  2. Construct a Thread object from the Runnable:   var t = new Thread(r); 
+  3. Start the thread: t.start(); 
+  To make a separate thread for transferring money, we only need to place the code for the transfer inside the run method of a Runnable, and then start a thread: Runnable r = () -> { try { for (int i = 0; i < STEPS; i++) { double amount = MAX_AMOUNT * Math.random(); 
+  bank.transfer(0, 1, amount); 
+  Thread.sleep((int) (DELAY * Math.random())); 
+  } 
+  } 
+  catch (InterruptedException e) { } 
+  }; 
+  var t = new Thread(r); 
+  t.start(); 
+  For a given number of steps, this thread transfers a random amount, and then sleeps for a random delay. 
+  We need to catch an InterruptedException that the sleep method threatens to throw. We will discuss this exception in Section 12.3.1, "Interrupting Threads," on p. 743. Typically, interruption is used to request that a thread terminates. Accordingly, our run method exits when an InterruptedException occurs. 
+  Our program starts a second thread as well that moves money from account 2 to account 3. When you run this program, you get a printout like this: Thread[Thread1,5,main] 606.77 from 2 to 3 Total Balance: Thread[Thread0,5,main] 98.99 from 0 to 1 Total Balance: Thread[Thread-   400000.00 400000.00   1,5,main] 476.78 Thread[Thread0,5,main] 653.64 Thread[Thread1,5,main] 807.14 Thread[Thread0,5,main] 481.49 Thread[Thread0,5,main] 203.73 Thread[Thread1,5,main] 111.76 Thread[Thread1,5,main] 794.88 . . . 
+  from 2 to 3 Total Balance:   400000.00   from 0 to 1 Total Balance:   400000.00   from 2 to 3 Total Balance:   400000.00   from 0 to 1 Total Balance:   400000.00   from 0 to 1 Total Balance:   400000.00   from 2 to 3 Total Balance:   400000.00   from 2 to 3 Total Balance:   400000.00   As you can see, the output of the two threads is interleaved, showing that they run concurrently. In fact, sometimes the output is a little messier when two output lines are interleaved. 
+  That’s all there is to it! You now know how to run tasks concurrently. The remainder of this chapter tells you how to control the interaction between threads. 
+  The complete code is shown in Listing 12.1. 
+  Note You can also define a thread by forming a subclass of the Thread class, like this: class MyThread extends Thread { public void run() { task code } 
+  } 
+  Then you construct an object of the subclass and call its start method. 
+  However, this approach is no longer recommended. You should decouple the task that is to be run in parallel from the mechanism of running it. If you have   many tasks, it is too expensive to create a separate thread for each of them. 
+  Instead, you can use a thread pool—see Section 12.6.2, "Executors," on p. 
+  802. 
+  Caution Do not call the run method of the Thread class or the Runnable object. Calling the run method directly merely executes the task in the same thread—no new thread is started. Instead, call the Thread.start method. It creates a new thread that executes the run method. 
+  java.lang.Thread 1.0 Thread(Runnable target) constructs a new thread that calls the run() method of the specified target. 
+  void start() starts this thread, causing the run() method to be called. This method will return immediately. The new thread runs concurrently. 
+  void run() calls the run method of the associated Runnable. 
+  static void sleep(long millis) sleeps for the given number of milliseconds. 
+  java.lang.Runnable 1.0 void run() must be overridden and supplied with instructions for the task that you want to have executed. 

@@ -1,0 +1,40 @@
+  One of the long-awaited features that has finally appeared in Java SE5 is output formatting in the style of C’s printf( ) statement. Not only does this allow for simplified output code, but it also gives Java developers powerful control over output formatting and alignment.2       
+printf()
+  C’s printf( ) doesn’t assemble strings the way Java does, but takes a single format string and inserts values into it, formatting as it goes. Instead of using the overloaded ‘+’ operator (which C doesn’t overload) to concatenate quoted text and variables, printf( ) uses special placeholders to show where the data should go. The arguments that are inserted into the format string follow in a comma-separated list. 
+  For example: 
+  printf("Row 1: [%d %f]\n", x, y); 
+  At run time, the value of x is inserted into %d and the value of y is inserted into %f. These placeholders are called/ormaf specifiers and, in addition to telling where to insert the value, they also tell what kind of variable is to be inserted and how to format it. For instance, the ‘%d’ above says that x is an integer and the ‘%f says y is a floating point value (a float or double). 
+System.out.format()
+  Java SE5 introduced the format( ) method, available to PrintStream or PrintWriter objects (which you’ll learn more about in the I/O chapter), which includes System.out. The format( ) method is modeled after C’s printf( ). There’s even a convenience printf( ) method that you can use if you’re feeling nostalgic, which just calls format( ). Here’s a simple example: 
+  You can see that format( ) and printf( ) are equivalent. In both cases, there’s only a single format string, followed by one argument for each format specifier. 
+The Formatter class
+  All of Java’s new formatting functionality is handled by the Formatter class in the java.util package. You can think of Formatter as a translator that converts your format string and data into the desired result. When you create a Formatter object, you tell it where you want this result to go by passing that information to the constructor: 
+  All the tommy output goes to System.out and all the terry output goes to an alias of System.out. The constructor is overloaded to take a range of output locations, but the most useful are PrintStreams (as above), OutputStreams, and Files. You’ll learn more about these in the I/O chapter. 
+  Exercise 3: (1) Modify Turtle.java so that it sends all output to System.err. 
+  The previous example uses a new format specifier, ‘%s’. This indicates a String argument and is an example of the simplest kind of format specifier-one that has only a conversion type. 
+Format specifiers
+  To control spacing and alignment when data is inserted, you need more elaborate format specifiers. Here’s the general syntax: 
+  %[argument_index$][flags][width][.precision]conversion  Often, you’ll need to control the minimum size of a field. This can be accomplished by specifying a width. The Formatter guarantees that a field is at least a certain number of characters wide by padding it with spaces if necessary. By default, the data is right justified, but this can be overridden by including a ‘-’ in the flags section. 
+  The opposite of width is precision, which is used to specify a maximum. Unlike the width, which is applicable to all of the data conversion types and behaves the same with each, precision has a different meaning for different types. For Strings, the precision specifies the maximum number of characters from the String to print. For floating point numbers, precision specifies the number of decimal places to display (the default is 6), rounding if there are too many or adding trailing zeroes if there are too few. Since integers have no fractional part, precision isn’t applicable to them and you’ll get an exception if you use precision with an integer conversion type. 
+  This example uses format specifiers to print a shopping receipt: 
+  As you can see, the Formatter provides powerful control over spacing and alignment with fairly concise notation. Here, the format strings are simply copied in order to produce the appropriate spacing. 
+  Exercise 4: (3) Modify Receipt.java so that the widths are all controlled by a single set of constant values. The goal is to allow you to easily change a width by changing a single value in one place. 
+  
+Formatter conversions
+  These are the conversions you’ll come across most frequently: 
+  Conversion Characters  d Integral (as decimal) 
+  c Unicode character  b Boolean value 
+  s String  f Floating point (as decimal) 
+  e Floating point (in scientific notation)  x Integral (as hex) 
+  h Hash code (as hex)  % Literal "%" 
+  Here’s an example that shows these conversions in action: 
+  The commented lines show conversions that are invalid for that particular variable type; executing them will trigger an exception. 
+  Notice that the ‘b’ conversion works for each variable above. Although it’s valid for any argument type, it might not behave as you’d expect. For boolean primitives or Boolean objects, the result will be true or false, accordingly. However, for any other argument, as long as the argument type is not null the result is always true. Even the numeric value of zero, which is synonymous with false in many languages (including C), will produce true, so be careful when using this conversion with non-boolean types. 
+  There are more obscure conversion types and other format specifier options. You can read about these in the JDK documentation for the Formatter class. 
+  Exercise 5: (5) For each of the basic conversion types in the above table, write the most complex formatting expression possible. That is, use all the possible format specifiers available for that conversion type. 
+String.format()
+  Java SE5 also took a cue from C’s sprintf( ), which is used to create Strings. String.format( ) is a static method which takes all the same arguments as Formatter’s format( ) but returns a String. It can come in handy when you only need to call format( ) once: 
+  Under the hood, all String.format( ) does is instantiate a Formatter and pass your arguments to it, but using this convenience method can often be clearer and easier than doing it by hand. 
+  A hex dump tool  As a second example, often you want to look at the bytes inside a binary file using hex format. Here’s a small utility that displays a binary array of bytes in a readable hex format, using String.format( ): 
+  To open and read the binary file, this uses another utility that will be introduced in the I/O chapter: net.mindview.util.BinaryFile. The read( ) method returns the entire file as a byte array. 
+  Exercise 6: (2) Create a class that contains int, long, float and double fields. Create a toString( ) method for this class that uses String.format( ), and demonstrate that your class works correctly. 

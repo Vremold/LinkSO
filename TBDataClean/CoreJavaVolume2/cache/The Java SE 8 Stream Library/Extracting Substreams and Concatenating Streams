@@ -1,0 +1,14 @@
+The call stream.limit(n) returns a new stream that ends after n elements (or
+when the original stream ends, if it is shorter). This method is particularly useful
+for cutting infinite streams down to size. For example,
+Stream<Double> randoms = Stream.generate(Math::random).limit(100);
+
+yields a stream with 100 random numbers.
+The call stream.skip(n) does the exact opposite: It discards the first n elements. This
+is handy when splitting text into words since, due to the way the split method
+works, the first element is an unwanted empty string. We can make it go away
+by calling skip:
+Stream<String> words = Stream.of(contents.split("\\PL+")).skip(1);
+
+From the Library of Hristo Dimov Hristov
+

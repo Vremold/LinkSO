@@ -1,0 +1,11 @@
+  Other than concurrency applications, the only two Java SE5 implementations of Queue are LinkedList and PriorityQueue, which are differentiated by ordering behavior rather than performance. Here’s a basic example that involves most of the Queue implementations (not all of them will work in this example), including the concurrency-based Queues. You place elements in one end and extract them from the other: 
+  You can see that, with the exception of the priority queues, a Queue will produce elements in exactly the same order as they are placed in the Queue. 
+Priority queues
+  Priority queues were given a simple introduction in the Holding Your Objects chapter. A more interesting problem is a to-do list, where each object contains a string and a primary and secondary priority value. The ordering of this list is again controlled by implementing Comparable: 
+  You can see how the ordering of the items happens automatically because of the priority queue. 
+  Exercise 11: (2) Create a class that contains an Integer that is initialized to a value between o and 100 using java.util.Random. Implement Comparable using this Integer field. Fill a PriorityQueue with objects of your class, and extract the values using poll( ) to show that it produces the expected order. 
+Deques
+  A deque (double-ended queue) is like a queue, but you can add and remove elements from either end. There are methods in LinkedList that support deque operations, but there is no explicit interface for a deque in the Java standard libraries. Thus, LinkedList cannot implement this interface and you cannot upcast to a Deque interface as you can to a Queue in the previous example. However, you can create a Deque class using composition, and simply expose the relevant methods from LinkedList: 
+  If you put this Deque to use in your own programs, you may discover that you need to add other methods in order to make it practical. 
+  Here’s a simple test of the Deque class: 
+  It’s less likely that you’ll put elements in and take them out at both ends, so Deque is not as commonly used as Queue. 

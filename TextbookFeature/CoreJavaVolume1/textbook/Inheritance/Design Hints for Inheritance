@@ -1,0 +1,41 @@
+  We want to end this chapter with some hints that we have found useful when using inheritance. 
+  1. Place common operations and fields in the superclass. 
+  This is why we put the name field into the Person class instead of replicating it in the Employee and Student classes. 
+  2. Don’t use protected fields. 
+  Some programmers think it is a good idea to define most instance fields as protected, "just in case," so that subclasses can access these fields if they need to. However, the protected mechanism doesn’t give much protection, for two reasons. First, the set of subclasses is unbounded—anyone can form a subclass of your classes and then write code that directly accesses protected instance fields, thereby breaking encapsulation. And second, in Java, all classes in the same package have access to protected fields, whether or not they are subclasses. 
+  However, protected methods can be useful to indicate methods that are not ready for general use and should be redefined in subclasses. 
+  3. Use inheritance to model the "is–a" relationship. 
+  Inheritance is a handy code-saver, but sometimes people overuse it. For example, suppose we need a Contractor class. Contractors have names and hire dates, but they do not have salaries. Instead, they are paid by the hour, and they do not stay around long enough to get a raise. 
+  There is the temptation to form a subclass Contractor from Employee and add an hourlyWage field. 
+  public class Contractor extends Employee { private double hourlyWage; 
+  . . . 
+  } 
+  This is not a good idea, however, because now each contractor object has both a salary and hourly wage field. It will cause you no end of grief when you implement methods for printing paychecks or tax forms. You will end up writing more code than you would have written by not inheriting in the first place. 
+  The contractor-employee relationship fails the "is–a" test. A contractor is not a special case of an employee. 
+  4. Don’t use inheritance unless all inherited methods make sense. 
+  Suppose we want to write a Holiday class. Surely every holiday is a day, and days can be expressed as instances of the GregorianCalendar class, so we can use inheritance. 
+  class Holiday extends GregorianCalendar { . . . } 
+  Unfortunately, the set of holidays is not closed under the inherited operations. One of the public methods of GregorianCalendar is add. And add can turn holidays into nonholidays: Holiday christmas; 
+  christmas.add(Calendar.DAY_OF_MONTH, 12); 
+  Therefore, inheritance is not appropriate in this example. 
+  Note that this problem does not arise if you extend LocalDate. 
+  Because that class is immutable, there is no method that could turn a holiday into a nonholiday. 
+  5. Don’t change the expected behavior when you override a method. 
+  The substitution principle applies not just to syntax but, more importantly, to behavior. When you override a method, you should not unreasonably change its behavior. The compiler can’t help you—it cannot check whether your redefinitions make sense. For example, you can "fix" the issue of the add method in the Holiday class by redefining add, perhaps to do nothing, or to throw an exception, or to move on to the next holiday. 
+  However, such a fix violates the substitution principle. The sequence of statements int d1 = x.get(Calendar.DAY_OF_MONTH); 
+  x.add(Calendar.DAY_OF_MONTH, 1); 
+  int d2 = x.get(Calendar.DAY_OF_MONTH); 
+  System.out.println(d2 - d1); 
+  should have the expected behavior, no matter whether x is of type GregorianCalendar or Holiday. 
+  Of course, therein lies the rub. Reasonable and unreasonable people can argue at length about what the expected behavior is. For example, some authors argue that the substitution principle requires Manager.equals to ignore the bonus field because Employee.equals ignores it. These discussions are pointless if they occur in a vacuum. Ultimately, what matters is that you do not circumvent the intent of the original design when you override methods in subclasses. 
+  6. Use polymorphism, not type information. 
+  Whenever you find code of the form if (x is of type 1) action1(x); 
+  else if (x is of type 2) action2(x); 
+  think polymorphism. 
+  Do action1 and action2 represent a common concept? If so, make the concept a method of a common superclass or interface of both types. 
+  Then, you can simply call x.action(); 
+  and have the dynamic dispatch mechanism inherent in polymorphism launch the correct action. 
+  Code that uses polymorphic methods or interface implementations is much easier to maintain and extend than code using multiple type tests. 
+  7. Don’t overuse reflection. 
+  The reflection mechanism lets you write programs with amazing generality, by detecting fields and methods at runtime. This capability can be extremely useful for systems programming, but it is usually not   appropriate in applications. Reflection is fragile—with it, the compiler cannot help you find programming errors. Any errors are found at runtime and result in exceptions. 
+  You have now seen how Java supports the fundamentals of object-oriented programming: classes, inheritance, and polymorphism. In the next chapter, we will tackle two advanced topics that are very important for using Java effectively: interfaces and lambda expressions. 

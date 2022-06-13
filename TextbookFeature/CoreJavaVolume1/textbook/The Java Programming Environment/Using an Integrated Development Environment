@@ -1,0 +1,14 @@
+  In the preceding section, you saw how to compile and run a Java program from the command line. That is a useful skill for troubleshooting, but for most day-to-day work, you should use an integrated development environment. These environments are so powerful and convenient that it simply doesn’t make much sense to labor on without them. Excellent choices are the freely available Eclipse, IntelliJ IDEA, and NetBeans. In this chapter, you will learn how to get started with Eclipse. Of course, if you prefer a different development environment, you can certainly use it with this book. 
+  Get started by downloading Eclipse from http://eclipse.org/downloads. Versions exist for Linux, Mac OS X, and Windows. Run the installation program and pick the installation set called "Eclipse IDE for Java Developers". 
+  Here are the steps to write a program with Eclipse. 
+  1. After starting Eclipse, select File → New → Project from the menu. 
+  2. Select "Java Project" from the wizard dialog (see Figure 2.5). 
+  3. Click the Next button. Uncheck the "Use default location" checkbox. 
+  Click on Browse and navigate to the corejava/v1ch02/Welcome directory (Figure 2.6). 
+  Figure 2.5 The New Project dialog in Eclipse   Figure 2.6 Configuring a project in Eclipse 4. Click the Finish button. The project is now created. 
+  5. Click on the triangles in the left pane next to the project until you locate the file Welcome.java, and double-click on it. You should now see a   pane with the program code (see Figure 2.7). 
+  Figure 2.7 Editing a source file with Eclipse 6. With the right mouse button, click on the project name (Welcome) in the left pane. Select Run → Run As → Java Application. The program output is displayed in the console pane. 
+  Presumably, this program does not have typos or bugs. (It was only a few lines of code, after all.) Let us suppose, for the sake of argument, that your code occasionally contains a typo (perhaps even a syntax error). Try it out— ruin your file, for example, by changing the capitalization of String as follows: string greeting = "Welcome to Core Java!"; 
+  Note the wiggly line under string. In the tabs below the source code, click on Problems and expand the triangles until you see an error message that complains about an unknown string type (see Figure 2.8). Click on the   error message. The cursor moves to the matching line in the edit pane, where you can correct your error. This allows you to fix your errors quickly. 
+  Figure 2.8 Error messages in Eclipse   Tip Often, an Eclipse error report is accompanied by a lightbulb icon. 
+  Click on the lightbulb to get a list of suggested fixes. 

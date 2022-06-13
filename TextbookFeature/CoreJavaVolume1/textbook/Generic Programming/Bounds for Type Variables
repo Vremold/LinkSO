@@ -1,0 +1,16 @@
+  Sometimes, a class or a method needs to place restrictions on type variables. 
+  Here is a typical example. We want to compute the smallest element of an array: class ArrayAlg { public static <T> T min(T[] a) // almost correct { if (a == null || a.length == 0) return null; 
+  T smallest = a[0]; 
+  for (int i = 1; i < a.length; i++) if (smallest.compareTo(a[i]) > 0) smallest = a[i]; 
+  return smallest; 
+  } 
+  } 
+  But there is a problem. Look inside the code of the min method. The variable smallest has type T, which means it could be an object of an arbitrary class. How do we know that the class to which T belongs has a compareTo method? 
+  The solution is to restrict T to a class that implements the Comparable interface—a standard interface with a single method, compareTo. You can achieve this by giving a bound for the type variable T: public static <T extends Comparable> T min(T[] a) . . . 
+  Actually, the Comparable interface is itself a generic type. For now, we will ignore that complexity and the warnings that the compiler generates. 
+  Section 8.8, "Wildcard Types," on p. 459 discusses how to properly use type parameters with the Comparable interface. 
+  Now, the generic min method can only be called with arrays of classes that implement the Comparable interface, such as String, LocalDate, and so on. Calling min with a Rectangle array is a compile-time error because the Rectangle class does not implement Comparable. 
+  You may wonder why we use the extends keyword rather than the implements keyword in this situation—after all, Comparable is an interface. The notation <T extends BoundingType>   expresses that T should be a subtype of the bounding type. Both T and the bounding type can be either a class or an interface. The extends keyword was chosen because it is a reasonable approximation of the subtype concept, and the Java designers did not want to add a new keyword (such as sub) to the language. 
+  A type variable or wildcard can have multiple bounds. For example: T extends Comparable & Serializable   The bounding types are separated by ampersands (&) because commas are used to separate type variables. 
+  As with Java inheritance, you can have as many interface supertypes as you like, but at most one of the bounds can be a class. If you have a class as a bound, it must be the first one in the bounds list. 
+  In the next sample program (Listing 8.2), we rewrite the minmax method to be generic. The method computes the minimum and maximum of a generic array, returning a Pair<T>. 

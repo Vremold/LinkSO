@@ -1,0 +1,175 @@
+  Every Java programmer is familiar with the process of inserting calls to System.out.println into troublesome code to gain insight into program behavior. Of course, once you have figured out the cause of trouble,   you remove the print statements, only to put them back in when the next problem surfaces. The logging API is designed to overcome this problem. 
+  Here are the principal advantages of the API: It is easy to suppress all log records or just those below a certain level, and just as easy to turn them back on. 
+  Suppressed logs are very cheap, so there is only a minimal penalty for leaving the logging code in your application. 
+  Log records can be directed to different handlers—for displaying in the console, writing to a file, and so on. 
+  Both loggers and handlers can filter records. Filters can discard boring log entries, using any criteria supplied by the filter implementor. 
+  Log records can be formatted in different ways—for example, in plain text or XML. 
+  Applications can use multiple loggers, with hierarchical names such as com.mycompany.myapp, similar to package names. 
+  The logging configuration is controlled by a configuration file. 
+  Note Many applications use other logging frameworks, such as Log4J 2 (https://logging.apache.org/log4j/2.x) and Logback (https://logback.qos.ch), that offer higher performance than the standard Java logging framework. These frameworks have slightly different APIs. Logging façades such as SLF4J (https://www.slf4j.org) and Commons Logging (https://commons.apache.org/proper/commonslogging) provide a unified API so that you can replace the logging framework without rewriting your application. To make matters more confusing, Log4J 2 can also be a façade to components that use SLF4J. In this book, we cover the standard Java logging framework. 
+  It is good enough for many purposes, and learning its API will prepare you for understanding the alternatives. 
+  Note As of Java 9, the Java platform has a separate lightweight logging system that does not depend on the java.logging module (which contains the standard Java logging framework). This system is intended only for use in the Java API. If the java.logging module is present, log messages are automatically forwarded to it. 
+  Third-party log frameworks can provide adapters to receive platform logging messages. We do not cover platform logging since it is not meant to be used by application programmers. 
+7.5.1 Basic Logging
+  For simple logging, use the global logger and call its info method: Logger.getGlobal().info("File->Open menu item selected"); 
+  By default, the record is printed like this: May 10, 2013 10:12:15 PM LoggingImageViewer fileOpen INFO: File->Open menu item selected   But if you call Logger.getGlobal().setLevel(Level.OFF); 
+  at an appropriate place (such as the beginning of main), all logging is suppressed. 
+7.5.2 Advanced Logging
+  Now that you have seen "logging for dummies," let’s go on to industrialstrength logging. In a professional application, you wouldn’t want to log all records to a single global logger. Instead, you can define your own loggers. 
+  Call the getLogger method to create or retrieve a logger:   private static final Logger myLogger = Logger.getLogger("com.mycompany.myapp"); 
+  Tip A logger that is not referenced by any variable can be garbagecollected. To prevent this, save a reference to the logger with a static variable, as in the example above. 
+  Similar to package names, logger names are hierarchical. In fact, they are more hierarchical than packages. There is no semantic relationship between a package and its parent, but logger parents and children share certain properties. For example, if you set the log level on the logger "com.mycompany", then the child loggers inherit that level. 
+  There are seven logging levels: SEVERE WARNING INFO CONFIG FINE FINER FINEST By default, the top three levels are actually logged. You can set a different level—for example, logger.setLevel(Level.FINE); 
+  Now FINE and all levels above it are logged. 
+  You can also use Level.ALL to turn on logging for all levels or Level.OFF to turn all logging off. 
+  There are logging methods for all levels, such as   logger.warning(message); 
+  logger.fine(message); 
+  and so on. Alternatively, you can use the log method and supply the level, such as logger.log(Level.FINE, message); 
+  Tip The default logging configuration logs all records with the level of INFO or higher. Therefore, you should use the levels CONFIG, FINE, FINER, and FINEST for debugging messages that are useful for diagnostics but meaningless to the user. 
+  Caution If you set the logging level to a value finer than INFO, you also need to change the log handler configuration. The default log handler suppresses messages below INFO. See the next section for details. 
+  The default log record shows the name of the class and method that contain the logging call, as inferred from the call stack. However, if the virtual machine optimizes execution, accurate call information may not be available. 
+  You can use the logp method to give the precise location of the calling class and method. The method signature is void logp(Level l, String className, String methodName, String message)   There are convenience methods for tracing execution flow: void entering(String className, String methodName) void entering(String className, String methodName, Object param)   void entering(String className, String methodName, Object[] params) void exiting(String className, String methodName) void exiting(String className, String methodName, Object result)   For example: int read(String file, String pattern) { logger.entering("com.mycompany.mylib.Reader", "read", new Object[] { file, pattern }); 
+  . . . 
+  logger.exiting("com.mycompany.mylib.Reader", "read", count); 
+  return count; 
+  } 
+  These calls generate log records of level FINER that start with the strings ENTRY and RETURN. 
+  Note At some point in the future, the logging methods with an Object[] parameter will be rewritten to support variable parameter lists ("varargs"). Then, you will be able to make calls such as logger.entering("com.mycompany.mylib.Reader", "read", file, pattern). 
+  A common use for logging is to log unexpected exceptions. Two convenience methods include a description of the exception in the log record. 
+  void throwing(String className, String methodName, Throwable t) void log(Level l, String message, Throwable t)   Typical uses are if (. . .) { var e = new IOException(". . ."); 
+  logger.throwing("com.mycompany.mylib.Reader", "read", e); 
+  throw e; 
+  } 
+  and try { . . . 
+  } 
+  catch (IOException e) { Logger.getLogger("com.mycompany.myapp").log(Level.WARNING, "Reading image } 
+  The throwing call logs a record with level FINER and a message that starts with THROW. 
+7.5.3 Changing the Log Manager Configuration
+  You can change various properties of the logging system by editing a configuration file. The default configuration file is located at conf/logging.properties   (or at jre/lib/logging.properties prior to Java 9). 
+  To use another file, set the java.util.logging.config.file property to the file location by starting your application with java -Djava.util.logging.config.file=configFile MainClass   To change the default logging level, edit the configuration file and modify the line .level=INFO   You can specify the logging levels for your own loggers by adding lines such as com.mycompany.myapp.level=FINE   That is, append the .level suffix to the logger name. 
+  As you will see later in this section, the loggers don’t actually send the   messages to the console—that is the job of the handlers. Handlers also have levels. To see FINE messages on the console, you also need to set java.util.logging.ConsoleHandler.level=FINE   Caution The settings in the log manager configuration are not system properties. Starting a program with Dcom.mycompany.myapp.level=FINE does not have any effect on the logger. 
+  The log manager is initialized during VM startup, before main executes. If you want to customize the logging properties but didn’t start your application with the -Djava.util.logging.config.file command-line option, call System.setProperty( "java.util.logging.config.file", file) in your program. 
+  But then you must also call LogManager.getLogManager().readConfiguration() to reinitialize the log manager. 
+  As of Java 9, you can instead update the logging configuration by calling LogManager.getLogManager().updateConfiguration(mapper); 
+  A new configuration is read from the location specified by the java.util.logging.config.file system property. Then the mapper is applied to resolve the values for all keys in the old or new configuration. The mapper is a Function<String,BiFunction<String,String,String>>. It maps keys in the existing con-figuration to replacement functions. Each replacement function receives the old and new values associated with the key (or null if there is no associated value), and produces a replacement, or null if the key should be dropped in the update. 
+  That sounds rather complex, so let’s walk through a couple of examples. A useful mapping scheme would be to merge the old and new configurations, preferring the new value when a key is present in both the old and new configurations. Then the mapper is key -> ((oldValue, newValue) -> newValue == null ? oldValue : newValue)   Or perhaps you want to only update the keys that start with com.mycompany and leave the others unchanged: key -> key.startsWith("com.mycompany") ? ((oldValue, newValue) -> newValue) : ((oldValue, newValue) -> oldValue)   It is also possible to change logging levels in a running program by using the jconsole program. See www.oracle.com/technetwork/articles/java/jconsole1564139.html#LoggingControl for information. 
+  Note The logging properties file is processed by the java.util.logging.LogManager class. It is possible to specify a different log manager by setting the java.util.logging.manager system property to the name of a subclass. Alternatively, you can keep the standard log manager and still bypass the initialization from the logging properties file. Set the java.util.logging.config.class system property to the name of a class that sets log manager properties in some other way. 
+  See the API documentation for the LogManager class for more information. 
+7.5.4 Localization
+  You may want to localize logging messages so that they are readable for   international users. Internationalization of applications is the topic of Chapter 7 of Volume II. Briefly, here are the points to keep in mind when localizing logging messages. 
+  Localized applications contain locale-specific information in resource bundles. A resource bundle consists of a set of mappings for various locales (such as United States or Germany). For example, a resource bundle may map the string "readingFile" into strings "Reading file" in English or "Achtung! Datei wird eingelesen" in German. 
+  A program may contain multiple resource bundles—for example, one for menus and another for log messages. Each resource bundle has a name (such as "com.mycompany.logmessages"). To add mappings to a resource bundle, supply a file for each locale. English message mappings are in a file com/mycompany/logmessages_en.properties, and German message mappings are in a file com/mycompany/logmessages_de.properties. (The en and de are the language codes.) You place the files together with the class files of your application, so that the ResourceBundle class will automatically locate them. These files are plain text files, consisting of entries such as readingFile=Achtung! Datei wird eingelesen renamingFile=Datei wird umbenannt . . . 
+  When requesting a logger, you can specify a resource bundle: Logger logger = Logger.getLogger(loggerName, "com.mycompany.logmessages"); 
+  Then specify the resource bundle key, not the actual message string, for the log message: logger.info("readingFile"); 
+  You often need to include arguments into localized messages. A message may contain placeholders: {0}, {1}, and so on. For example, to include the file name with a log message, use the placeholder like this:   Reading file {0}. 
+  Achtung! Datei {0} wird eingelesen. 
+  Then, to pass values into the placeholders, call one of the following methods: logger.log(Level.INFO, "readingFile", fileName); 
+  logger.log(Level.INFO, "renamingFile", new Object[] { oldName, newName }); 
+  Alternatively, as of Java 9, you can specify the resource bundle object (and not the name) in the logrb method: logger.logrb(Level.INFO, bundle, "renamingFile", oldName, newName); 
+  Note This is the only logging method that uses variable arguments for the message parameters. 
+7.5.5 Handlers
+  By default, loggers send records to a ConsoleHandler that prints them to the System.err stream. Specifically, the logger sends the record to the parent handler, and the ultimate ancestor (with name "") has a ConsoleHandler. 
+  Like loggers, handlers have a logging level. For a record to be logged, its logging level must be above the threshold of both the logger and the handler. 
+  The log manager configuration file sets the logging level of the default console handler as java.util.logging.ConsoleHandler.level=INFO   To log records with level FINE, change both the default logger level and the handler level in the configuration. Alternatively, you can bypass the configuration file altogether and install your own handler. 
+  Logger logger = Logger.getLogger("com.mycompany.myapp"); 
+  logger.setLevel(Level.FINE); 
+  logger.setUseParentHandlers(false); 
+  var handler = new ConsoleHandler(); 
+  handler.setLevel(Level.FINE); 
+  logger.addHandler(handler); 
+  By default, a logger sends records both to its own handlers and to the handlers of the parent. Our logger is a child of the primordial logger (with name "") that sends all records with level INFO and above to the console. 
+  We don’t want to see those records twice, however, so we set the useParentHandlers property to false. 
+  To send log records elsewhere, add another handler. The logging API provides two useful handlers for this purpose: a FileHandler and a SocketHandler. The SocketHandler sends records to a specified host and port. Of greater interest is the FileHandler that collects records in a file. 
+  You can simply send records to a default file handler, like this: var handler = new FileHandler(); 
+  logger.addHandler(handler); 
+  The records are sent to a file javan.log in the user’s home directory, where n is a number to make the file unique. If a system has no concept of the user’s home directory (for example, in Windows 95/98/ME), then the file is stored in a default location such as C:\Windows. By default, the records are formatted in XML. A typical log record has the form <record> <date>2002-02-04T07:45:15</date> <millis>1012837515710</millis> <sequence>1</sequence> <logger>com.mycompany.myapp</logger> <level>INFO</level> <class>com.mycompany.mylib.Reader</class> <method>read</method> <thread>10</thread> <message>Reading file corejava.gif</message> </record>   You can modify the default behavior of the file handler by setting various parameters in the log manager configuration (see Table 7.1) or by using another constructor (see the API notes at the end of this section). 
+  Table 7.1 File Handler Configuration Parameters Configuration Property   Description Default   java.util.logging.FileHandler.level   The handler Level.ALL level   java.util.logging.FileHandler.append   false Controls whether the handler should append to an existing file, or open a new file for each program run   java.util.logging.FileHandler.limit   The 0 (no limit) in the approximate 50000 maximum configuration number of bytes to write to a file before opening another (0 = no limit)   java.util.logging.FileHandler.pattern   The pattern %h/java%u.log for the log file name. 
+  See Table 7.2 for pattern variables. 
+  java.util.logging.FileHandler.count   The number 1 (no rotation) of logs in a rotation sequence   java.util.logging.FileHandler.filter   The filter No filtering class to use   java.util.logging.FileHandler.encoding The The platform enco character encoding to use   java.util.logging.FileHandler.formatter The record java.util.log formatter You probably don’t want to use the default log file name. Therefore, you should use another pattern, such as %h/myapp.log. (See Table 7.2 for an explanation of the pattern variables.) Table 7.2 Log File Pattern Variables Variable Description %h   The value of the user.home system property   %t   The system temporary directory   %u   A unique number to resolve conflicts   %g   The generation number for rotated logs (a .%g suffix is used if rotation is specified and the pattern doesn’t contain %g)   %%   The % character   If multiple applications (or multiple copies of the same application) use the same log file, you should turn the append flag on. Alternatively, use %u in the file name pattern so that each application creates a unique copy of the log. 
+  It is also a good idea to turn file rotation on. Log files are kept in a rotation sequence, such as myapp.log.0, myapp.log.1, myapp.log.2, and so on. Whenever a file exceeds the size limit, the oldest log is deleted, the other files are renamed, and a new file with generation number 0 is created. 
+  Tip Many programmers use logging as an aid for the technical support staff. If a program misbehaves in the field, the user can send back the log files for inspection. In that case, you should turn the append flag on, use rotating logs, or both. 
+  You can also define your own handlers by extending the Handler or the StreamHandler class. We define such a handler in the example program at the end of this section. That handler displays the records in a window (see Figure 7.2). 
+  Figure 7.2 A log handler that displays records in a window The handler extends the StreamHandler class and installs a stream whose write methods display the stream output in a text area. 
+  class WindowHandler extends StreamHandler { public WindowHandler() { . . . 
+  var output = new JTextArea(); 
+  setOutputStream(new OutputStream() { public void write(int b) {} // not called public void write(byte[] b, int off, int len) { output.append(new String(b, off, len)); 
+  } 
+  }); 
+  } 
+  . . . 
+  } 
+  There is just one problem with this approach—the handler buffers the records and only writes them to the stream when the buffer is full. Therefore, we override the publish method to flush the buffer after each record: class WindowHandler extends StreamHandler { . . . 
+  public void publish(LogRecord record) { super.publish(record); 
+  flush(); 
+  } 
+  } 
+  If you want to write more exotic stream handlers, extend the Handler class and define the publish, flush, and close methods. 
+7.5.6 Filters
+  By default, records are filtered according to their logging levels. Each logger and handler can have an optional filter to perform additional filtering. To define a filter, implement the Filter interface and define the method boolean isLoggable(LogRecord record)   Analyze the log record, using any criteria that you desire, and return true for those records that should be included in the log. For example, a particular filter may only be interested in the messages generated by the entering and exiting methods. The filter should then call record.getMessage() and check whether it starts with ENTRY or RETURN. 
+  To install a filter into a logger or handler, simply call the setFilter method. Note that you can have at most one filter at a time. 
+7.5.7 Formatters
+  The ConsoleHandler and FileHandler classes emit the log records in text and XML formats. However, you can define your own formats as well. 
+  You need to extend the Formatter class and override the method String format(LogRecord record)   Format the information in the record in any way you like and return the resulting string. In your format method, you may want to call the method String formatMessage(LogRecord record)   That method formats the message part of the record, substituting parameters and applying localization. 
+  Many file formats (such as XML) require a head and tail parts that surround the formatted records. To achieve this, override the methods String getHead(Handler h) String getTail(Handler h)   Finally, call the setFormatter method to install the formatter into the handler. 
+7.5.8 A Logging Recipe
+  With so many options for logging, it is easy to lose track of the fundamentals. 
+  The following recipe summarizes the most common operations. 
+  1. For a simple application, choose a single logger. It is a good idea to give the logger the same name as your main application package, such as com.mycompany.myprog. You can always get the logger by calling Logger logger = Logger.getLogger("com.mycompany.myprog"); 
+  For convenience, you may want to add static fields private static final Logger logger = Logger.getLogger("com.mycompany.myprog"); 
+  to classes with a lot of logging activity. 
+  2. The default logging configuration logs all messages of level INFO or higher to the console. Users can override the default configuration, but as you have seen, the process is a bit involved. Therefore, it is a good idea to install a more reasonable default in your application. 
+  The following code ensures that all messages are logged to an application-specific file. Place the code into the main method of your application. 
+  if (System.getProperty("java.util.logging.config.class") == null && System.getProperty("java.util.logging.config.file") == null) { try { Logger.getLogger("").setLevel(Level.ALL); 
+  final int LOG_ROTATION_COUNT = 10; 
+  var handler = new FileHandler("%h/myapp.log", 0, LOG_ROTATION_COUNT Logger.getLogger("").addHandler(handler); 
+  } 
+  catch (IOException e) { logger.log(Level.SEVERE, "Can't create log file handler", e); 
+  } 
+  } 
+  3. Now you are ready to log to your heart’s content. Keep in mind that all messages with level INFO, WARNING, and SEVERE show up on the console. Therefore, reserve these levels for messages that are meaningful to the users of your program. The level FINE is a good   choice for logging messages that are intended for programmers. 
+  Whenever you are tempted to call System.out.println, emit a log message instead: logger.fine("File open dialog canceled"); 
+  It is also a good idea to log unexpected exceptions. For example: try { . . . 
+  } 
+  catch (SomeException e) { logger.log(Level.FINE, "explanation", e); 
+  } 
+  java.util.logging.Logger 1.4 Logger getLogger(String loggerName) Logger getLogger(String loggerName, String bundleName) gets the logger with the given name. If the logger doesn’t exist, it is created. Localized messages are located in the resource bundle whose name is bundleName. 
+  void severe(String message) void warning(String message) void info(String message) void config(String message) void fine(String message) void finer(String message) void finest(String message) logs a record with the level indicated by the method name and the given message. 
+  void entering(String className, String methodName) void entering(String className, String methodName, Object param) void entering(String className, String methodName, Object[] param) void exiting(String className, String methodName) void exiting(String className, String methodName, Object result) logs a record that describes entering or exiting a method with the given parameter(s) or return value. 
+  void throwing(String className, String methodName, Throwable t) logs a record that describes throwing of the given exception object. 
+  void log(Level level, String message) void log(Level level, String message, Object obj) void log(Level level, String message, Object[] objs) void log(Level level, String message, Throwable t) logs a record with the given level and message, optionally including objects or a throwable. To include objects, the message must contain formatting placeholders ({0}, {1}, and so on). 
+  void logp(Level level, String className, String methodName, String message) void logp(Level level, String className, String methodName, String message, Object obj) void logp(Level level, String className, String methodName, String message, Object[] objs) void logp(Level level, String className, String methodName, String message, Throwable t) logs a record with the given level, precise caller information, and message, optionally including objects or a throwable. 
+  void logrb(Level level, String className, String methodName, ResourceBundle bundle, String message, Object... params) 9 void logrb(Level level, String className, String methodName, ResourceBundle bundle, String message, Throwable thrown) 9 logs a record with the given level, precise caller information, resource   bundle, and message, followed by objects or a throwable. 
+  Level getLevel() void setLevel(Level l) gets and sets the level of this logger. 
+  Logger getParent() void setParent(Logger l) gets and sets the parent logger of this logger. 
+  Handler[] getHandlers() gets all handlers of this logger. 
+  void addHandler(Handler h) void removeHandler(Handler h) adds or removes a handler for this logger. 
+  boolean getUseParentHandlers() void setUseParentHandlers(boolean b) gets and sets the "use parent handler" property. If this property is true, the logger forwards all logged records to the handlers of its parent. 
+  Filter getFilter() void setFilter(Filter f) gets and sets the filter of this logger. 
+  java.util.logging.Handler 1.4 abstract void publish(LogRecord record) sends the record to the intended destination. 
+  abstract void flush() flushes any buffered data. 
+  abstract void close() flushes any buffered data and releases all associated resources. 
+  Filter getFilter() void setFilter(Filter f) gets and sets the filter of this handler. 
+  Formatter getFormatter() void setFormatter(Formatter f) gets and sets the formatter of this handler. 
+  Level getLevel() void setLevel(Level l) gets and sets the level of this handler. 
+  java.util.logging.ConsoleHandler 1.4 ConsoleHandler() constructs a new console handler. 
+  java.util.logging.FileHandler 1.4 FileHandler(String pattern) FileHandler(String pattern, boolean append) FileHandler(String pattern, int limit, int count) FileHandler(String pattern, int limit, int count, boolean append) FileHandler(String pattern, long limit, int count, boolean append) 9 constructs a file handler. See Table 7.2 for the pattern format. limit is   the approximate maximum number of bytes before a new log file is opened. count is the number of files in a rotation sequence. If append is true, records should be appended to an existing log file. 
+  java.util.logging.LogRecord 1.4 Level getLevel() gets the logging level of this record. 
+  String getLoggerName() gets the name of the logger that is logging this record. 
+  ResourceBundle getResourceBundle() String getResourceBundleName() gets the resource bundle, or its name, to be used for localizing the message, or null if none is provided. 
+  String getMessage() gets the "raw" message before localization or formatting. 
+  Object[] getParameters() gets the parameter objects, or null if none is provided. 
+  Throwable getThrown() gets the thrown object, or null if none is provided. 
+  String getSourceClassName() String getSourceMethodName() gets the location of the code that logged this record. This information may be supplied by the logging code or automatically inferred from the runtime stack. It might be inaccurate if the logging code supplied the wrong value or if the running code was optimized so that the exact location cannot be inferred. 
+  long getMillis()   gets the creation time, in milliseconds since 1970. 
+  Instant getInstant() 9 gets the creation time as a java.time.Instant (see Chapter 6 of Volume II). 
+  long getSequenceNumber() gets the unique sequence number of this record. 
+  int getThreadID() gets the unique ID for the thread in which this record was created. 
+  These IDs are assigned by the LogRecord class and have no relationship to other thread IDs. 
+  java.util.logging.LogManager 1.4 static LogManager getLogManager() gets the global LogManager instance. 
+  void readConfiguration() void readConfiguration(InputStream in) reads the logging configuration from the file specified by the system property java.util.logging.config.file, or the given input stream. 
+  void updateConfiguration(InputStream in, Function<String,BiFunction<String,String,String>> mapper) 9   void updateConfiguration(Function<String,BiFunction<String,Str mapper) 9 merges the logging configuration with the file specified by the system property java.util.logging.config.file or the given input stream. See Section 7.5.3, "Changing the Log Manager Configuration," 
+  on p. 407 for a description of the mapper parameter. 
+  java.util.logging.Filter 1.4 boolean isLoggable(LogRecord record) returns true if the given log record should be logged. 
+  java.util.logging.Formatter 1.4 abstract String format(LogRecord record) returns the string that results from formatting the given log record. 
+  String getHead(Handler h) String getTail(Handler h) returns the strings that should appear at the head and tail of the document containing the log records. The Formatter superclass defines these methods to return the empty string; override them if necessary. 
+  String formatMessage(LogRecord record) returns the localized and formatted message part of the log record. 

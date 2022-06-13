@@ -1,0 +1,2 @@
+  Before regular expressions (in J2SE1.4) or the Scanner class (in Java SE5), the way to split a string into parts was to "tokenize" it with StringTokenizer. But now it’s much easier and more succinct to do the same thing with regular expressions or the Scanner class. Here’s a simple comparison of StringTokenizer to the other two techniques: 
+  With regular expressions or Scanner objects, you can also split a string into parts using more complex patterns—something that’s difficult with StringTokenizer. It seems safe to say that the StringTokenizer is obsolete. 

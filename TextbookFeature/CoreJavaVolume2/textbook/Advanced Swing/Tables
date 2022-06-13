@@ -1,0 +1,509 @@
+  599   javax.swing.JList<E> 1.2   • Color getBackground() returns the background color for unselected cells. 
+  • Color getSelectionBackground() returns the background color for selected cells. 
+  • Color getForeground() returns the foreground color for unselected cells. 
+  • Color getSelectionForeground() returns the foreground color for selected cells. 
+  • void setCellRenderer(ListCellRenderer<? super E> cellRenderer) sets the renderer that paints the cells in the list. 
+  javax.swing.ListCellRenderer<E> 1.2   • Component getListCellRendererComponent(JList<? extends E> list, E item, int index, boolean isSelected, boolean hasFocus)   returns a component whose paint method draws the cell contents. If the list cells do not have fixed size, that component must also implement getPreferredSize. 
+  Parameters:   list   The list whose cell is being drawn   item   The item to be drawn   index   The index where the item is stored in the model   isSelected   true if the specified cell was selected   hasFocus   true if the specified cell has the focus   10.2 Tables The JTable component displays a two- dimensional grid of objects. Tables are common in user interfaces, and the Swing team has put a lot of effort into the table control. Tables are inherently complex, but—perhaps more successfully than other Swing classes—the JTable component hides much of that complexity. You can produce fully functional tables with rich behavior by writing a few lines of code. You can also write more code and customize the display and behavior for your specific applications. 
+  From the Library of Hristo Dimov Hristov   600   Chapter 10   Advanced Swing   In the following sections, we will explain how to make simple tables, how the user interacts with them, and how to make some of the most common adjustments. 
+  As with the other complex Swing controls, it is impossible to cover all aspects in complete detail. For more information, look in Graphic Java™, Third Edition, by David M. Geary (Prentice Hall, 1999), or Core Swing by Kim Topley (Prentice Hall, 1999). 
+10.2.1 A Simple Table
+  Similar to the JList component, a JTable does not store its own data but obtains them from a table model. The JTable class has a constructor that wraps a two-dimensional array of objects into a default model. That is the strategy that we use in our first example; later in this chapter, we will turn to table models. 
+  Figure 10.5 shows a typical table, describing the properties of the planets of the solar system. (A planet is gaseous if it consists mostly of hydrogen and helium. 
+  You should take the “Color” entries with a grain of salt—that column was added because it will be useful in later code examples.)   Figure 10.5 A simple table As you can see from the code in Listing 10.5, the data of the table is stored as a two-dimensional array of Object values: Object[][] cells = { { "Mercury", 2440.0, 0, false, Color.YELLOW }, { "Venus", 6052.0, 0, false, Color.YELLOW }, ... 
+  } 
+  From the Library of Hristo Dimov Hristov   10.2 Tables   601   NOTE: Here, we take advantage of autoboxing. The entries in the second, third, and fourth columns are automatically converted into objects of type Double, Integer, and Boolean. 
+  The table simply invokes the toString method on each object to display it. That’s why the colors show up as java.awt.Color[r=. . .,g=. . .,b=. . .]. 
+  Supply the column names in a separate array of strings: String[] columnNames = { "Planet", "Radius", "Moons", "Gaseous", "Color" }; 
+  Then, construct a table from the cell and column name arrays: JTable table = new JTable(cells, columnNames); 
+  NOTE: Note that a JTable, unlike a JList, is not a generic type. There is a good reason for that. Elements in a list are expected to be of a uniform type—but, in general, there is no single element type for the entire table. In our example, the planet name is a string, the color is a java.awt.Color, and so on. 
+  You can add scroll bars in the usual way—by wrapping the table in a JScrollPane: JScrollPane pane = new JScrollPane(table); 
+  When you scroll the table, the table header doesn’t scroll out of view. 
+  Next, click on one of the column headers and drag it to the left or right. See how the entire column becomes detached (see Figure 10.6). You can drop it in a different location. This rearranges the columns in the view only. The data model is not affected. 
+  Figure 10.6 Moving a column   From the Library of Hristo Dimov Hristov   602   Chapter 10   Advanced Swing   To resize columns, simply place the cursor between two columns until the cursor shape changes to an arrow. Then, drag the column boundary to the desired place (see Figure 10.7). 
+  Figure 10.7 Resizing columns Users can select rows by clicking anywhere in a row. The selected rows are highlighted; you will see later how to get selection events. Users can also edit the table entries by clicking on a cell and typing into it. However, in this code example, the edits do not change the underlying data. In your programs, you should either make cells uneditable or handle cell editing events and update your model. We will discuss those topics later in this section. 
+  Finally, click on a column header. The rows are automatically sorted. Click again, and the sort order is reversed. This behavior is activated by the call table.setAutoCreateRowSorter(true); 
+  You can print a table with the call table.print(); 
+  A print dialog box appears, and the table is sent to the printer. We will discuss custom printing options in Chapter 11. 
+  NOTE: If you resize the TableTest frame so that its height is taller than the table height, you will see a gray area below the table. Unlike JList and JTree components, the table does not fill the scroll pane’s viewport. This can be a problem if you want to support drag and drop. (For more information on drag and drop, see Chapter 11.) In that case, call table.setFillsViewportHeight(true); 
+  From the Library of Hristo Dimov Hristov   10.2 Tables   603   CAUTION: If you don’t wrap a table into a scroll pane, you need to explicitly add the header: add(table.getTableHeader(), BorderLayout.NORTH); 
+  Listing 10.5 1   table/TableTest.java   package table; 
+  2 3 4   import java.awt.*; 
+  import java.awt.print.*; 
+  5 6   import javax.swing.*; 
+  7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25   /** * This program demonstrates how to show a simple table. 
+  * @version 1.13 2016-05-10 * @author Cay Horstmann */ public class TableTest { public static void main(String[] args) { EventQueue.invokeLater(() -> { JFrame frame = new PlanetTableFrame(); 
+  frame.setTitle("TableTest"); 
+  frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
+  frame.setVisible(true); 
+  }); 
+  } 
+  } 
+  26 27 28 29 30 31 32 33 34 35 36 37 38   /** * This frame contains a table of planet data. 
+  */ class PlanetTableFrame extends JFrame { private String[] columnNames = { "Planet", "Radius", "Moons", "Gaseous", "Color" }; 
+  private Object[][] cells = { { "Mercury", 2440.0, 0, false, Color.YELLOW }, { "Venus", 6052.0, 0, false, Color.YELLOW }, { "Earth", 6378.0, 1, false, Color.BLUE }, { "Mars", 3397.0, 2, false, Color.RED }, { "Jupiter", 71492.0, 16, true, Color.ORANGE }, { "Saturn", 60268.0, 18, true, Color.ORANGE }, { "Uranus", 25559.0, 17, true, Color.BLUE }, { "Neptune", 24766.0, 8, true, Color.BLUE }, { "Pluto", 1137.0, 1, false, Color.BLACK } }; 
+  39   (Continues)   From the Library of Hristo Dimov Hristov   604   Chapter 10   Advanced Swing   Listing 10.5 (Continued) public PlanetTableFrame() { final JTable table = new JTable(cells, columnNames); 
+  table.setAutoCreateRowSorter(true); 
+  add(new JScrollPane(table), BorderLayout.CENTER); 
+  JButton printButton = new JButton("Print"); 
+  printButton.addActionListener(event -> { try { table.print(); } 
+  catch (SecurityException | PrinterException ex) { ex.printStackTrace(); } 
+  }); 
+  JPanel buttonPanel = new JPanel(); 
+  buttonPanel.add(printButton); 
+  add(buttonPanel, BorderLayout.SOUTH); 
+  pack(); 
+  } 
+  40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56   } 
+  javax.swing.JTable 1.2   • JTable(Object[][] entries, Object[] columnNames) constructs a table with a default table model. 
+  • void print() 5.0 displays a print dialog box and prints the table. 
+  • boolean getAutoCreateRowSorter() 6 • void setAutoCreateRowSorter(boolean newValue) 6 gets or sets the autoCreateRowSorter property. The default is false. When set, a default row sorter is automatically set whenever the model changes. 
+  • boolean getFillsViewportHeight() 6 • void setFillsViewportHeight(boolean newValue) 6 gets or sets the fillsViewportHeight property. The default is false. When set, the table always fills the enclosing viewport. 
+10.2.2 Table Models
+  In the preceding example, the table data were stored in a two-dimensional array. 
+  However, you should generally not use that strategy in your own code. Instead of dumping data into an array to display it as a table, consider implementing your own table model. 
+  From the Library of Hristo Dimov Hristov   10.2 Tables   605   Table models are particularly simple to implement because you can take advantage of the AbstractTableModel class that implements most of the required methods. You only need to supply three methods: public int getRowCount(); 
+  public int getColumnCount(); 
+  public Object getValueAt(int row, int column); 
+  There are many ways of implementing the getValueAt method. For example, if you want to display the contents of a RowSet that contains the result of a database query, simply provide this method: public Object getValueAt(int r, int c) { try { rowSet.absolute(r + 1); 
+  return rowSet.getObject(c + 1); 
+  } 
+  catch (SQLException e) { e.printStackTrace(); 
+  return null; 
+  } 
+  } 
+  Our sample program is even simpler. We construct a table that shows some computed values—namely, the growth of an investment under different interest rate scenarios (see Figure 10.8). 
+  Figure 10.8 Growth of an investment   From the Library of Hristo Dimov Hristov   606   Chapter 10   Advanced Swing   The getValueAt method computes the appropriate value and formats it: public Object getValueAt(int r, int c) { double rate = (c + minRate) / 100.0; 
+  int nperiods = r; 
+  double futureBalance = INITIAL_BALANCE * Math.pow(1 + rate, nperiods); 
+  return String.format("%.2f", futureBalance); 
+  } 
+  The getRowCount and getColumnCount methods simply return the number of rows and columns: public int getRowCount() { return years; } 
+  public int getColumnCount() { return maxRate - minRate + 1; } 
+  If you don’t supply column names, the getColumnName method of the AbstractTableModel names the columns A, B, C, and so on. To change the default column names, override the getColumnName method. In this example, we simply label each column with the interest rate. 
+  public String getColumnName(int c) { return (c + minRate) + "%"; } 
+  You can find the complete source code in Listing 10.6. 
+  Listing 10.6 1   tableModel/InvestmentTable.java   package tableModel; 
+  2 3   import java.awt.*; 
+  4 5 6   import javax.swing.*; 
+  import javax.swing.table.*; 
+  7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23   /** * This program shows how to build a table from a table model. 
+  * @version 1.03 2006-05-10 * @author Cay Horstmann */ public class InvestmentTable { public static void main(String[] args) { EventQueue.invokeLater(() -> { JFrame frame = new InvestmentTableFrame(); 
+  frame.setTitle("InvestmentTable"); 
+  frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
+  frame.setVisible(true); 
+  }); 
+  From the Library of Hristo Dimov Hristov   10.2 Tables   } 
+  24 25   607   } 
+  26 27 28 29 30 31 32 33 34 35 36 37 38   /** * This frame contains the investment table. 
+  */ class InvestmentTableFrame extends JFrame { public InvestmentTableFrame() { TableModel model = new InvestmentTableModel(30, 5, 10); 
+  JTable table = new JTable(model); 
+  add(new JScrollPane(table)); 
+  pack(); 
+  } 
+  39 40   } 
+  41 42 43 44 45 46 47 48   /** * This table model computes the cell entries each time they are requested. The table contents * shows the growth of an investment for a number of years under different interest rates. 
+  */ class InvestmentTableModel extends AbstractTableModel { private static double INITIAL_BALANCE = 100000.0; 
+  49 50 51 52   private int years; 
+  private int minRate; 
+  private int maxRate; 
+  53 54 55 56 57 58 59 60 61 62 63 64 65   /** * Constructs an investment table model. 
+  * @param y the number of years * @param r1 the lowest interest rate to tabulate * @param r2 the highest interest rate to tabulate */ public InvestmentTableModel(int y, int r1, int r2) { years = y; 
+  minRate = r1; 
+  maxRate = r2; 
+  } 
+  66 67 68 69 70   public int getRowCount() { return years; 
+  } 
+  71   (Continues)   From the Library of Hristo Dimov Hristov   608   Chapter 10   Advanced Swing   Listing 10.6 (Continued) public int getColumnCount() { return maxRate - minRate + 1; 
+  } 
+  72 73 74 75 76   public Object getValueAt(int r, int c) { double rate = (c + minRate) / 100.0; 
+  int nperiods = r; 
+  double futureBalance = INITIAL_BALANCE * Math.pow(1 + rate, nperiods); 
+  return String.format("%.2f", futureBalance); 
+  } 
+  77 78 79 80 81 82 83 84   public String getColumnName(int c) { return (c + minRate) + "%"; 
+  } 
+  85 86 87 88 89   } 
+  javax.swing.table.TableModel 1.2   • int getRowCount() • int getColumnCount() gets the number of rows and columns in the table model. 
+  • Object getValueAt(int row, int column) gets the value at the given row and column. 
+  • void setValueAt(Object newValue, int row, int column) sets a new value at the given row and column. 
+  • boolean isCellEditable(int row, int column) returns true if the cell at the given row and column is editable. 
+  • String getColumnName(int column) gets the column title. 
+10.2.3 Working with Rows and Columns
+  In this subsection, you will see how to manipulate the rows and columns in a table. 
+  As you read through this material, keep in mind that a Swing table is quite asymmetric—the operations that you can carry out on rows and columns are different. The table component was optimized to display rows of information with the same structure, such as the result of a database query, not an arbitrary   From the Library of Hristo Dimov Hristov   10.2 Tables   609   two-dimensional grid of objects. You will see this asymmetry throughout this subsection. 
+  10.2.3.1 Column Classes In the next example, we again display our planet data, but this time we want to give the table more information about the column types. This is achieved by defining the method Class<?> getColumnClass(int columnIndex)   of the table model to return the class that describes the column type. 
+  The JTable class uses this information to pick an appropriate renderer for the class. 
+  Table 10.1 shows the default rendering actions. 
+  You can see the checkboxes and images in Figure 10.9. (Thanks to Jim Evins, www.snaught.com/JimsCoolIcons/Planets, for providing the planet images!)   Figure 10.9 A table with planet data   From the Library of Hristo Dimov Hristov   610   Chapter 10   Advanced Swing   Table 10.1 Default Rendering Actions Type   Rendered As   Boolean   Checkbox   Icon   Image   Object   String   To render other types, you can install a custom renderer—see Section 10.2.4, “Cell Rendering and Editing,” on p. 626. 
+  10.2.3.2 Accessing Table Columns The JTable class stores information about table columns in objects of type TableColumn. 
+  A TableColumnModel object manages the columns. (Figure 10.10 shows the relationships   Figure 10.10 Relationship between table classes   From the Library of Hristo Dimov Hristov   10.2 Tables   611   among the most important table classes.) If you don’t want to insert or remove columns dynamically, you won’t use the column model much. The most common use for the column model is simply to get a TableColumn object: int columnIndex = . . .; 
+  TableColumn column = table.getColumnModel().getColumn(columnIndex); 
+  10.2.3.3 Resizing Columns The TableColumn class gives you control over the resizing behavior of columns. You can set the preferred, minimum, and maximum width with the methods void setPreferredWidth(int width) void setMinWidth(int width) void setMaxWidth(int width)   This information is used by the table component to lay out the columns. 
+  Use the method void setResizable(boolean resizable)   to control whether the user is allowed to resize the column. 
+  You can programmatically resize a column with the method void setWidth(int width)   When a column is resized, the default is to leave the total size of the table unchanged. Of course, the width increase or decrease of the resized column must then be distributed over other columns. The default behavior is to change the size of all columns to the right of the resized column. That’s a good default because it allows a user to adjust all columns to a desired width, moving from left to right. 
+  You can set another behavior from Table 10.2 by using the method void setAutoResizeMode(int mode)   of the JTable class. 
+  Table 10.2 Resize Modes Mode   Behavior   AUTO_RESIZE_OFF   Don’t resize other columns; change the table width. 
+  AUTO_RESIZE_NEXT_COLUMN   Resize the next column only. 
+  (Continues)   From the Library of Hristo Dimov Hristov   612   Chapter 10   Advanced Swing   Table 10.2 (Continued) Mode   Behavior   AUTO_RESIZE_SUBSEQUENT_COLUMNS   Resize all subsequent columns equally; this is the default behavior. 
+  AUTO_RESIZE_LAST_COLUMN   Resize the last column only. 
+  AUTO_RESIZE_ALL_COLUMNS   Resize all columns in the table; this is not a good choice because it prevents the user from adjusting multiple columns to a desired size. 
+  10.2.3.4 Resizing Rows Row heights are managed directly by the JTable class. If your cells are taller than the default, you may want to set the row height: table.setRowHeight(height); 
+  By default, all rows of the table have the same height. You can set the heights of individual rows with the call table.setRowHeight(row, height); 
+  The actual row height equals the row height set with these methods, reduced by the row margin. The default row margin is 1 pixel, but you can change it with the call table.setRowMargin(margin); 
+  10.2.3.5 Selecting Rows, Columns, and Cells Depending on the selection mode, the user can select rows, columns, or individual cells in the table. By default, row selection is enabled. Clicking inside a cell selects the entire row (see Figure 10.9 on p. 609). Call table.setRowSelectionAllowed(false)   to disable row selection. 
+  When row selection is enabled, you can control whether the user is allowed to select a single row, a contiguous set of rows, or any set of rows. You need to retrieve the selection model and use its setSelectionMode method: table.getSelectionModel().setSelectionMode(mode); 
+  Here, mode is one of the three values:   From the Library of Hristo Dimov Hristov   10.2 Tables   613   ListSelectionModel.SINGLE_SELECTION ListSelectionModel.SINGLE_INTERVAL_SELECTION ListSelectionModel.MULTIPLE_INTERVAL_SELECTION   Column selection is disabled by default. You can turn it on with the call table.setColumnSelectionAllowed(true)   Enabling both row and column selection is equivalent to enabling cell selection. 
+  The user then selects ranges of cells (see Figure 10.11). You can also enable that setting with the call table.setCellSelectionEnabled(true)   Figure 10.11 Selecting a range of cells Run the program in Listing 10.7 to watch cell selection in action. Enable row, column, or cell selection in the Selection menu and watch how the selection behavior changes. 
+  You can find out which rows and columns are selected by calling the getSelectedRows and getSelectedColumns methods. Both return an int[] array of the indexes of the   From the Library of Hristo Dimov Hristov   614   Chapter 10   Advanced Swing   selected items. Note that the index values are those of the table view, not the underlying table model. Try selecting rows and columns, then drag columns to different places and sort the rows by clicking on column headers. Use the Print Selection menu item to see which rows and columns are reported as selected. 
+  If you need to translate the table index values to table model index values, use the JTable methods convertRowIndexToModel and convertColumnIndexToModel. 
+  10.2.3.6 Sorting Rows As you have seen in our first table example, it is easy to add row sorting to a JTable simply by calling the setAutoCreateRowSorter method. However, to have finer-grained control over the sorting behavior, install a TableRowSorter<M> object into a JTable and customize it. The type parameter M denotes the table model; it needs to be a subtype of the TableModel interface. 
+  TableRowSorter<TableModel> sorter = new TableRowSorter<TableModel>(model); 
+  table.setRowSorter(sorter); 
+  Some columns should not be sortable, such as the image column in our planet data. Turn sorting off by calling sorter.setSortable(IMAGE_COLUMN, false); 
+  You can install a custom comparator for each column. In our example, we will sort the colors in the Color column by preferring blue and green over red. When you click on the Color column, you will see that the blue planets go to the bottom of the table. This is achieved with the following call: sorter.setComparator(COLOR_COLUMN, new Comparator<Color>() { public int compare(Color c1, Color c2) { int d = c1.getBlue() - c2.getBlue(); 
+  if (d != 0) return d; 
+  d = c1.getGreen() - c2.getGreen(); 
+  if (d != 0) return d; 
+  return c1.getRed() - c2.getRed(); 
+  } 
+  }); 
+  If you do not specify a comparator for a column, the sort order is determined as follows: 1. 
+  If the column class is String, use the default collator returned by Collator.getInstance(). It sorts strings in a way that is appropriate for the current locale. (See Chapter 7 for more information about locales and collators.)   From the Library of Hristo Dimov Hristov   10.2 Tables   2. 
+  3. 
+  615   If the column class implements Comparable, use its compareTo method. 
+  If a TableStringConverter has been set for the sorter, sort the strings returned by the converter’s toString method with the default collator. If you want to use this approach, define a converter as follows: sorter.setStringConverter(new TableStringConverter() { public String toString(TableModel model, int row, int column) { Object value = model.getValueAt(row, column); 
+  convert value to a string and return it } 
+  }); 
+  4. 
+  Otherwise, call the toString method on the cell values and sort them with the default collator. 
+  10.2.3.7 Filtering Rows In addition to sorting rows, the TableRowSorter can also selectively hide rows—a process called filtering. To activate filtering, set a RowFilter. For example, to include all rows that contain at least one moon, call sorter.setRowFilter(RowFilter.numberFilter(ComparisonType.NOT_EQUAL, 0, MOONS_COLUMN)); 
+  Here, we use a predefined number filter. To construct a number filter, supply • The comparison type (one of EQUAL, NOT_EQUAL, AFTER, or BEFORE). 
+  • An object of a subclass of Number (such as an Integer or Double). Only objects that have the same class as the given Number object are considered. 
+  • Zero or more column index values. If no index values are supplied, all columns are searched. 
+  The static RowFilter.dateFilter method constructs a date filter in the same way; you need to supply a Date object instead of the Number object. 
+  Finally, the static RowFilter.regexFilter method constructs a filter that looks for strings matching a regular expression. For example, sorter.setRowFilter(RowFilter.regexFilter(".*[^s]$", PLANET_COLUMN)); 
+  only displays those planets whose name doesn’t end with an “s”. (See Chapter 2 for more information on regular expressions.) You can also combine filters with the andFilter, orFilter, and notFilter methods. To filter for planets not ending in an “s” with at least one moon, you can use this filter combination:   From the Library of Hristo Dimov Hristov   616   Chapter 10   Advanced Swing   sorter.setRowFilter(RowFilter.andFilter(Arrays.asList( RowFilter.regexFilter(".*[^s]$", PLANET_COLUMN), RowFilter.numberFilter(ComparisonType.NOT_EQUAL, 0, MOONS_COLUMN))); 
+  CAUTION: Annoyingly, the andFilter and orFilter methods don’t use variable arguments but a single parameter of type Iterable. 
+  To implement your own filter, provide a subclass of RowFilter and implement an include method to indicate which rows should be displayed. This is easy to do, but the glorious generality of the RowFilter class makes it a bit scary. 
+  The RowFilter<M, I> class has two type parameters—the types for the model and for the row identifier. When dealing with tables, the model is always a subtype of TableModel and the identifier type is Integer. (At some point in the future, other components might also support row filtering. For example, to filter rows in a JTree, one might use a RowFilter<TreeModel, TreePath>.) A row filter must implement the method public boolean include(RowFilter.Entry<? extends M, ? extends I> entry)   The RowFilter.Entry class supplies methods to obtain the model, the row identifier, and the value at a given index. Therefore, you can filter both by row identifier and by the contents of the row. 
+  For example, this filter displays every other row: RowFilter<TableModel, Integer> filter = new RowFilter<TableModel, Integer>() { public boolean include(Entry<? extends TableModel, ? extends Integer> entry) { return entry.getIdentifier() % 2 == 0; 
+  } 
+  }; 
+  If you wanted to include only those planets with an even number of moons, you would instead test for ((Integer) entry.getValue(MOONS_COLUMN)) % 2 == 0   In our sample program, we allow the user to hide arbitrary rows. We store the hidden row indexes in a set. The row filter includes all rows whose indexes are not in that set. 
+  The filtering mechanism wasn’t designed for filters with criteria changing over time. In our sample program, we keep calling sorter.setRowFilter(filter); 
+  From the Library of Hristo Dimov Hristov   10.2 Tables   617   whenever the set of hidden rows changes. Setting a filter causes it to be applied immediately. 
+  10.2.3.8 Hiding and Displaying Columns As you saw in the preceding section, you can filter table rows by either their contents or their row identifier. Hiding table columns uses a completely different mechanism. 
+  The removeColumn method of the JTable class removes a column from the table view. The column data are not actually removed from the model—they are just hidden from view. The removeColumn method takes a TableColumn argument. If you have the column number (for example, from a call to getSelectedColumns), you need to ask the table model for the actual table column object: TableColumnModel columnModel = table.getColumnModel(); 
+  TableColumn column = columnModel.getColumn(i); 
+  table.removeColumn(column); 
+  If you remember the column, you can later add it back in: table.addColumn(column); 
+  This method adds the column to the end. If you want it to appear elsewhere, call the moveColumn method. 
+  You can also add a new column that corresponds to a column index in the table model, by adding a new TableColumn object: table.addColumn(new TableColumn(modelColumnIndex)); 
+  You can have multiple table columns that view the same column of the model. 
+  The program in Listing 10.7 demonstrates selection and filtering of rows and columns. 
+  Listing 10.7 1   tableRowColumn/PlanetTableFrame.java   package tableRowColumn; 
+  2 3 4   import java.awt.*; 
+  import java.util.*; 
+  5 6 7   import javax.swing.*; 
+  import javax.swing.table.*; 
+  8 9 10   /** * This frame contains a table of planet data. 
+  (Continues)   From the Library of Hristo Dimov Hristov   618   Chapter 10   Advanced Swing   Listing 10.7 (Continued) 11 12 13 14 15   */ public class PlanetTableFrame extends JFrame { private static final int DEFAULT_WIDTH = 600; 
+  private static final int DEFAULT_HEIGHT = 500; 
+  16 17 18   public static final int COLOR_COLUMN = 4; 
+  public static final int IMAGE_COLUMN = 5; 
+  19 20 21 22 23 24 25   private JTable table; 
+  private HashSet<Integer> removedRowIndices; 
+  private ArrayList<TableColumn> removedColumns; 
+  private JCheckBoxMenuItem rowsItem; 
+  private JCheckBoxMenuItem columnsItem; 
+  private JCheckBoxMenuItem cellsItem; 
+  26 27   private String[] columnNames = { "Planet", "Radius", "Moons", "Gaseous", "Color", "Image" }; 
+  28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47   private Object[][] cells = { { "Mercury", 2440.0, 0, false, Color.YELLOW, new ImageIcon(getClass().getResource("Mercury.gif")) }, { "Venus", 6052.0, 0, false, Color.YELLOW, new ImageIcon(getClass().getResource("Venus.gif")) }, { "Earth", 6378.0, 1, false, Color.BLUE, new ImageIcon(getClass().getResource("Earth.gif")) }, { "Mars", 3397.0, 2, false, Color.RED, new ImageIcon(getClass().getResource("Mars.gif")) }, { "Jupiter", 71492.0, 16, true, Color.ORANGE, new ImageIcon(getClass().getResource("Jupiter.gif")) }, { "Saturn", 60268.0, 18, true, Color.ORANGE, new ImageIcon(getClass().getResource("Saturn.gif")) }, { "Uranus", 25559.0, 17, true, Color.BLUE, new ImageIcon(getClass().getResource("Uranus.gif")) }, { "Neptune", 24766.0, 8, true, Color.BLUE, new ImageIcon(getClass().getResource("Neptune.gif")) }, { "Pluto", 1137.0, 1, false, Color.BLACK, new ImageIcon(getClass().getResource("Pluto.gif")) } }; 
+  48 49 50 51   public PlanetTableFrame() { setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT); 
+  52 53 54 55 56 57   TableModel model = new DefaultTableModel(cells, columnNames) { public Class<?> getColumnClass(int c) { return cells[0][c].getClass(); 
+  From the Library of Hristo Dimov Hristov   10.2 Tables   } 
+  58 59   619   }; 
+  60 61   table = new JTable(model); 
+  62 63 64 65   table.setRowHeight(100); 
+  table.getColumnModel().getColumn(COLOR_COLUMN).setMinWidth(250); 
+  table.getColumnModel().getColumn(IMAGE_COLUMN).setMinWidth(100); 
+  66 67 68 69 70 71 72   final TableRowSorter<TableModel> sorter = new TableRowSorter<>(model); 
+  table.setRowSorter(sorter); 
+  sorter.setComparator(COLOR_COLUMN, Comparator.comparing(Color::getBlue) .thenComparing(Color::getGreen).thenComparing(Color::getRed)); 
+  sorter.setSortable(IMAGE_COLUMN, false); 
+  add(new JScrollPane(table), BorderLayout.CENTER); 
+  73 74 75   removedRowIndices = new HashSet<>(); 
+  removedColumns = new ArrayList<>(); 
+  76 77 78 79 80 81 82 83   final RowFilter<TableModel, Integer> filter = new RowFilter<TableModel, Integer>() { public boolean include(Entry<? extends TableModel, ? extends Integer> entry) { return !removedRowIndices.contains(entry.getIdentifier()); 
+  } 
+  }; 
+  84 85   // create menu   86 87 88   JMenuBar menuBar = new JMenuBar(); 
+  setJMenuBar(menuBar); 
+  89 90 91   JMenu selectionMenu = new JMenu("Selection"); 
+  menuBar.add(selectionMenu); 
+  92 93 94 95   rowsItem = new JCheckBoxMenuItem("Rows"); 
+  columnsItem = new JCheckBoxMenuItem("Columns"); 
+  cellsItem = new JCheckBoxMenuItem("Cells"); 
+  96 97 98 99   rowsItem.setSelected(table.getRowSelectionAllowed()); 
+  columnsItem.setSelected(table.getColumnSelectionAllowed()); 
+  cellsItem.setSelected(table.getCellSelectionEnabled()); 
+  100 101 102 103 104 105 106   rowsItem.addActionListener(event -> { table.clearSelection(); 
+  table.setRowSelectionAllowed(rowsItem.isSelected()); 
+  updateCheckboxMenuItems(); 
+  }); 
+  (Continues)   From the Library of Hristo Dimov Hristov   620   Chapter 10   Advanced Swing   Listing 10.7 (Continued) 107 108 109 110 111 112 113 114   columnsItem.addActionListener(event -> { table.clearSelection(); 
+  table.setColumnSelectionAllowed(columnsItem.isSelected()); 
+  updateCheckboxMenuItems(); 
+  }); 
+  selectionMenu.add(columnsItem); 
+  115 116 117 118 119 120 121 122   cellsItem.addActionListener(event -> { table.clearSelection(); 
+  table.setCellSelectionEnabled(cellsItem.isSelected()); 
+  updateCheckboxMenuItems(); 
+  }); 
+  selectionMenu.add(cellsItem); 
+  123 124 125   JMenu tableMenu = new JMenu("Edit"); 
+  menuBar.add(tableMenu); 
+  126 127 128 129 130 131   JMenuItem hideColumnsItem = new JMenuItem("Hide Columns"); 
+  hideColumnsItem.addActionListener(event -> { int[] selected = table.getSelectedColumns(); 
+  TableColumnModel columnModel = table.getColumnModel(); 
+  132 133 134   // remove columns from view, starting at the last // index so that column numbers aren't affected   135 136 137 138 139   for (int i = selected.length - 1; i >= 0; i--) { TableColumn column = columnModel.getColumn(selected[i]); 
+  table.removeColumn(column); 
+  140 141   // store removed columns for "show columns" command   142 143 144 145 146   removedColumns.add(column); 
+  } 
+  }); 
+  tableMenu.add(hideColumnsItem); 
+  147 148 149 150 151 152 153   JMenuItem showColumnsItem = new JMenuItem("Show Columns"); 
+  showColumnsItem.addActionListener(event -> { // restore all removed columns for (TableColumn tc : removedColumns) table.addColumn(tc); 
+  From the Library of Hristo Dimov Hristov   10.2 Tables   621   removedColumns.clear(); 
+  }); 
+  tableMenu.add(showColumnsItem); 
+  154 155 156 157   JMenuItem hideRowsItem = new JMenuItem("Hide Rows"); 
+  hideRowsItem.addActionListener(event -> { int[] selected = table.getSelectedRows(); 
+  for (int i : selected) removedRowIndices.add(table.convertRowIndexToModel(i)); 
+  sorter.setRowFilter(filter); 
+  }); 
+  tableMenu.add(hideRowsItem); 
+  158 159 160 161 162 163 164 165 166 167   JMenuItem showRowsItem = new JMenuItem("Show Rows"); 
+  showRowsItem.addActionListener(event -> { removedRowIndices.clear(); 
+  sorter.setRowFilter(filter); 
+  }); 
+  tableMenu.add(showRowsItem); 
+  168 169 170 171 172 173 174 175   JMenuItem printSelectionItem = new JMenuItem("Print Selection"); 
+  printSelectionItem.addActionListener(event -> { int[] selected = table.getSelectedRows(); 
+  System.out.println("Selected rows: " + Arrays.toString(selected)); 
+  selected = table.getSelectedColumns(); 
+  System.out.println("Selected columns: " + Arrays.toString(selected)); 
+  }); 
+  tableMenu.add(printSelectionItem); 
+  176 177 178 179 180 181 182 183 184   } 
+  185 186   private void updateCheckboxMenuItems() { rowsItem.setSelected(table.getRowSelectionAllowed()); 
+  columnsItem.setSelected(table.getColumnSelectionAllowed()); 
+  cellsItem.setSelected(table.getCellSelectionEnabled()); 
+  } 
+  187 188 189 190 191 192 193   } 
+  javax.swing.table.TableModel 1.2   • Class getColumnClass(int columnIndex) gets the class for the values in this column. This information is used for sorting and rendering. 
+  From the Library of Hristo Dimov Hristov   622   Chapter 10   Advanced Swing   javax.swing.JTable 1.2   • TableColumnModel getColumnModel() gets the “column model” that describes the arrangement of the table columns. 
+  • void setAutoResizeMode(int mode) sets the mode for automatic resizing of table columns. 
+  Parameters:   mode   One of AUTO_RESIZE_OFF, AUTO_RESIZE_NEXT_COLUMN, AUTO_RESIZE_SUBSEQUENT_COLUMNS, AUTO_RESIZE_LAST_COLUMN, and AUTO_RESIZE_ALL_COLUMNS   • int getRowMargin() • void setRowMargin(int margin) gets or sets the amount of empty space between cells in adjacent rows. 
+  • int getRowHeight() • void setRowHeight(int height) gets or sets the default height of all rows of the table. 
+  • int getRowHeight(int row) • void setRowHeight(int row, int height) gets or sets the height of the given row of the table. 
+  • ListSelectionModel getSelectionModel() returns the list selection model.You need that model to choose between row, column, and cell selection. 
+  • boolean getRowSelectionAllowed() • void setRowSelectionAllowed(boolean b) gets or sets the rowSelectionAllowed property. If true, rows are selected when the user clicks on cells. 
+  • boolean getColumnSelectionAllowed() • void setColumnSelectionAllowed(boolean b) gets or sets the columnSelectionAllowed property. If true, columns are selected when the user clicks on cells. 
+  • boolean getCellSelectionEnabled() returns true if both rowSelectionAllowed and columnSelectionAllowed are true. 
+  • void setCellSelectionEnabled(boolean b) sets both rowSelectionAllowed and columnSelectionAllowed to b. 
+  • void addColumn(TableColumn column) adds a column as the last column of the table view. 
+  (Continues)   From the Library of Hristo Dimov Hristov   10.2 Tables   623   javax.swing.JTable 1.2 (Continued)   • void moveColumn(int from, int to) moves the column whose table index is from so that its index becomes to. Only the view is affected. 
+  • void removeColumn(TableColumn column) removes the given column from the view. 
+  • int convertRowIndexToModel(int index) 6 • int convertColumnIndexToModel(int index) returns the model index of the row or column with the given index. This value is different from index when rows are sorted or filtered, or when columns are moved or removed. 
+  • void setRowSorter(RowSorter<? extends TableModel> sorter) sets the row sorter. 
+  javax.swing.table.TableColumnModel 1.2   • TableColumn getColumn(int index) gets the table column object that describes the column with the given view index. 
+  javax.swing.table.TableColumn 1.2   • TableColumn(int modelColumnIndex) constructs a table column for viewing the model column with the given index. 
+  • void setPreferredWidth(int width) • void setMinWidth(int width) • void setMaxWidth(int width) sets the preferred, minimum, and maximum width of this table column to width. 
+  • void setWidth(int width) sets the actual width of this column to width. 
+  • void setResizable(boolean b) If b is true, this column is resizable. 
+  From the Library of Hristo Dimov Hristov   624   Chapter 10   Advanced Swing   javax.swing.ListSelectionModel 1.2   • void setSelectionMode(int mode) Parameters:   mode   One of SINGLE_SELECTION, SINGLE_INTERVAL_SELECTION, and MULTIPLE_INTERVAL_SELECTION   javax.swing.DefaultRowSorter<M, I> 6   • void setComparator(int column, Comparator<?> comparator) sets the comparator to be used with the given column. 
+  • void setSortable(int column, boolean enabled) enables or disables sorting for the given column. 
+  • void setRowFilter(RowFilter<? super M,? super I> filter) sets the row filter. 
+  javax.swing.table.TableRowSorter<M extends TableModel> 6   • void setStringConverter(TableStringConverter stringConverter) sets the string converter used for sorting and filtering. 
+  javax.swing.table.TableStringConverter 6   • abstract String toString(TableModel model, int row, int column) converts the model value at the given location to a string; you can override this method. 
+  javax.swing.RowFilter<M, I> 6   • boolean include(RowFilter.Entry<? extends M,? extends I> entry) specifies the rows that are retained; you can override this method. 
+  (Continues)   From the Library of Hristo Dimov Hristov   10.2 Tables   625   javax.swing.RowFilter<M, I> 6 (Continued)   • static <M,I> RowFilter<M,I> numberFilter(RowFilter.ComparisonType type, Number number, int... 
+  indices)   • static <M,I> RowFilter<M,I> dateFilter(RowFilter.ComparisonType type, Date date, int... indices) returns a filter that includes rows containing values that match the given comparison to the given number or date. The comparison type is one of EQUAL, NOT_EQUAL, AFTER, or BEFORE. If any column model indexes are given, only those columns are searched; 
+  otherwise, all columns are searched. For the number filter, the class of the cell value must match the class of number. 
+  • static <M,I> RowFilter<M,I> regexFilter(String regex, int... indices) returns a filter that includes rows that have a string value matching the given regular expression. If any column model indexes are given, only those columns are searched; otherwise, all columns are searched. Note that the string returned by the getStringValue method of RowFilter.Entry is matched. 
+  • static <M,I> RowFilter<M,I> andFilter(Iterable<? extends RowFilter<? super M,? super I>> filters) • static <M,I> RowFilter<M,I> orFilter(Iterable<? extends RowFilter<? super M,? super I>> filters) returns a filter that includes the entries included by all filters or at least one of the filters. 
+  • static <M,I> RowFilter<M,I> notFilter(RowFilter<M,I> filter) returns a filter that includes the entries not included by the given filter. 
+  javax.swing.RowFilter.Entry<M, I> 6   • I getIdentifier() returns the identifier of this row entry. 
+  • M getModel() returns the model of this row entry. 
+  • Object getValue(int index) returns the value stored at the given index of this row. 
+  • int getValueCount() returns the number of values stored in this row. 
+  • String getStringValue() returns the value stored at the given index of this row, converted to a string. The TableRowSorter produces entries whose getStringValue calls the sorter’s string converter. 
+  From the Library of Hristo Dimov Hristov   626   Chapter 10   Advanced Swing 10.2.4 Cell Rendering and Editing
+  As you saw in Section 10.2.3.2, “Accessing Table Columns,” on p. 610, the column type determines how the cells are rendered. There are default renderers for the types Boolean and Icon that render a checkbox or icon. For all other types, you need to install a custom renderer. 
+  10.2.4.1 Rendering Cells Table cell renderers are similar to the list cell renderers that you saw earlier. They implement the TableCellRenderer interface which has a single method: Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)   That method is called when the table needs to draw a cell. You return a component whose paint method is then invoked to fill the cell area. 
+  The table in Figure 10.12 contains cells of type Color. The renderer simply returns a panel with a background color that is the color object stored in the cell. The color is passed as the value parameter. 
+  class ColorTableCellRenderer extends JPanel implements TableCellRenderer { public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) { setBackground((Color) value); 
+  if (hasFocus) setBorder(UIManager.getBorder("Table.focusCellHighlightBorder")); 
+  else setBorder(null); 
+  return this; 
+  } 
+  } 
+  As you can see, the renderer draws a border when the cell has focus. (We ask the UIManager for the correct border. To find the lookup key, we peeked into the source code of the DefaultTableCellRenderer class.) Generally, you will also want to set the background color of the cell to indicate whether it is currently selected. We skip this step because it would interfere with the displayed color. The ListRenderingTest example in Listing 10.4 shows how to indicate the selection status in a renderer. 
+  You need to tell the table to use this renderer with all objects of type Color. The setDefaultRenderer method of the JTable class lets you establish this association. Supply a Class object and the renderer:   From the Library of Hristo Dimov Hristov   10.2 Tables   627   Figure 10.12 A table with cell renderers table.setDefaultRenderer(Color.class, new ColorTableCellRenderer()); 
+  That renderer is now used for all objects of the given type in this table. 
+  If you want to select a renderer based on some other criterion, you need to subclass the JTable class and override the getCellRenderer method. 
+  TIP: If your renderer simply draws a text string or an icon, you can extend the DefaultTableCellRenderer class. It takes care of rendering the focus and selection status for you. 
+  10.2.4.2 Rendering the Header To display an icon in the header, set the header value: moonColumn.setHeaderValue(new ImageIcon("Moons.gif")); 
+  However, the table header isn’t smart enough to choose an appropriate renderer for the header value. You have to install the renderer manually. For example, to show an image icon in a column header, call moonColumn.setHeaderRenderer(table.getDefaultRenderer(ImageIcon.class)); 
+  From the Library of Hristo Dimov Hristov   628   Chapter 10   Advanced Swing   10.2.4.3 Editing Cells To enable cell editing, the table model must indicate which cells are editable by defining the isCellEditable method. Most commonly, you will want to make certain columns editable. In the example program, we allow editing in four columns. 
+  public boolean isCellEditable(int r, int c) { return c == PLANET_COLUMN || c == MOONS_COLUMN || c == GASEOUS_COLUMN || c == COLOR_COLUMN; 
+  } 
+  NOTE: The AbstractTableModel defines the isCellEditable method to always return false. The DefaultTableModel overrides the method to always return true. 
+  If you run the program (Listings 10.8 to 10.11), note that you can click the checkboxes in the Gaseous column and turn the check marks on and off. If you click a cell in the Moons column, a combo box appears (see Figure 10.13). You will shortly see how to install such a combo box as a cell editor. 
+  Figure 10.13 A cell editor Finally, click a cell in the first column. The cell gains focus. You can start typing, and the cell contents change. 
+  From the Library of Hristo Dimov Hristov   10.2 Tables   629   What you just saw in action are the three variations of the DefaultCellEditor class. A DefaultCellEditor can be constructed with a JTextField, a JCheckBox, or a JComboBox. The JTable class automatically installs a checkbox editor for Boolean cells and a text field editor for all editable cells that don’t supply their own renderer. The text fields let the user edit the strings that result from applying toString to the return value of the getValueAt method of the table model. 
+  When the edit is complete, the edited value is retrieved by calling the getCellEditorValue method of your editor. That method should return a value of the correct type (that is, the type returned by the getColumnType method of the model). 
+  To get a combo box editor, set a cell editor manually—the JTable component has no idea what values might be appropriate for a particular type. For the Moons column, we wanted to enable the user to pick any value between 0 and 20. Here is the code for initializing the combo box: JComboBox moonCombo = new JComboBox(); 
+  for (int i = 0; i <= 20; i++) moonCombo.addItem(i); 
+  To construct a DefaultCellEditor, supply the combo box in the constructor: TableCellEditor moonEditor = new DefaultCellEditor(moonCombo); 
+  Next, we need to install the editor. Unlike the color cell renderer, this editor does not depend on the object type—we don’t necessarily want to use it for all objects of type Integer. Instead, we need to install it into a particular column: moonColumn.setCellEditor(moonEditor); 
+  10.2.4.4 Custom Editors Run the example program again and click a color. A color chooser pops up and lets you pick a new color for the planet. Select a color and click OK. The cell color is updated (see Figure 10.14). 
+  The color cell editor is not a standard table cell editor but a custom implementation. To create a custom cell editor, implement the TableCellEditor interface. That interface is a bit tedious, and as of Java SE 1.3, an AbstractCellEditor class is provided to take care of the event handling details. 
+  The getTableCellEditorComponent method of the TableCellEditor interface requests a component to render the cell. It is exactly the same as the getTableCellRendererComponent method of the TableCellRenderer interface, except that there is no focus parameter. When the cell is being edited, it is presumed to have focus. The editor component temporarily replaces the renderer when the editing is in progress. In our example, we return a blank panel that is not colored. This is an indication to the user that the cell is currently being edited. 
+  From the Library of Hristo Dimov Hristov   630   Chapter 10   Advanced Swing   Figure 10.14 Editing the cell color with a color chooser Next, you want to have your editor pop up when the user clicks on the cell. 
+  The JTable class calls your editor with an event (such as a mouse click) to find out if that event is acceptable to initiate the editing process. The AbstractCellEditor class defines the method to accept all events. 
+  public boolean isCellEditable(EventObject anEvent) { return true; 
+  } 
+  However, if you override this method to return false, the table would not go through the trouble of inserting the editor component. 
+  From the Library of Hristo Dimov Hristov   10.2 Tables   631   Once the editor component is installed, the shouldSelectCell method is called, presumably with the same event. You should initiate editing in this method—for example, by popping up an external edit dialog box. 
+  public boolean shouldSelectCell(EventObject anEvent) { colorDialog.setVisible(true); 
+  return true; 
+  } 
+  If the user cancels the edit, the table calls the cancelCellEditing method. If the user has clicked on another table cell, the table calls the stopCellEditing method. In both cases, you should hide the dialog box. When your stopCellEditing method is called, the table would like to use the partially edited value. You should return true if the current value is valid. In the color chooser, any value is valid. But if you edit other data, you can ensure that only valid data are retrieved from the editor. 
+  Also, you should call the superclass methods that take care of event firing— otherwise, the editing won’t be properly canceled. 
+  public void cancelCellEditing() { colorDialog.setVisible(false); 
+  super.cancelCellEditing(); 
+  } 
+  Finally, you need a method that yields the value that the user supplied in the editing process: public Object getCellEditorValue() { return colorChooser.getColor(); 
+  } 
+  To summarize, your custom editor should do the following: 1. 
+  2. 
+  3. 
+  4. 
+  Extend the AbstractCellEditor class and implement the TableCellEditor interface. 
+  Define the getTableCellEditorComponent method to supply a component. This can either be a dummy component (if you pop up a dialog box) or a component for in-place editing such as a combo box or text field. 
+  Define the shouldSelectCell, stopCellEditing, and cancelCellEditing methods to handle the start, completion, and cancellation of the editing process. The stopCellEditing and cancelCellEditing methods should call the superclass methods to ensure that listeners are notified. 
+  Define the getCellEditorValue method to return the value that is the result of the editing process. 
+  From the Library of Hristo Dimov Hristov   632   Chapter 10   Advanced Swing   Finally, indicate when the user is finished editing by calling the stopCellEditing and cancelCellEditing methods. When constructing the color dialog box, we install the accept and cancel callbacks that fire these events. 
+  colorDialog = JColorChooser.createDialog(null, "Planet Color", false, colorChooser, EventHandler.create(ActionListener.class, this, "stopCellEditing"), EventHandler.create(ActionListener.class, this, "cancelCellEditing")); 
+  This completes the implementation of the custom editor. 
+  You now know how to make a cell editable and how to install an editor. There is one remaining issue—how to update the model with the value that the user edited. When editing is complete, the JTable class calls the following method of the table model: void setValueAt(Object value, int r, int c)   You need to override the method to store the new value. The value parameter is the object that was returned by the cell editor. If you implemented the cell editor, you know the type of the object you return from the getCellEditorValue method. In the case of the DefaultCellEditor, there are three possibilities for that value. It is a Boolean if the cell editor is a checkbox, a string if it is a text field, and, if the value comes from a combo box, it is the object that the user selected. 
+  If the value object does not have the appropriate type, you need to convert it. That happens most commonly when a number is edited in a text field. In our example, we populated the combo box with Integer objects so that no conversion is necessary. 
+  Listing 10.8 1   tableCellRender/TableCellRenderFrame.java   package tableCellRender; 
+  2 3 4 5   import java.awt.*; 
+  import javax.swing.*; 
+  import javax.swing.table.*; 
+  6 7 8 9 10 11 12 13   /** * This frame contains a table of planet data. 
+  */ public class TableCellRenderFrame extends JFrame { private static final int DEFAULT_WIDTH = 600; 
+  private static final int DEFAULT_HEIGHT = 400; 
+  14 15 16   public TableCellRenderFrame() {   From the Library of Hristo Dimov Hristov   10.2 Tables   633   setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT); 
+  17 18   TableModel model = new PlanetTableModel(); 
+  JTable table = new JTable(model); 
+  table.setRowSelectionAllowed(false); 
+  19 20 21 22   // set up renderers and editors   23 24   table.setDefaultRenderer(Color.class, new ColorTableCellRenderer()); 
+  table.setDefaultEditor(Color.class, new ColorTableCellEditor()); 
+  25 26 27   JComboBox<Integer> moonCombo = new JComboBox<>(); 
+  for (int i = 0; i <= 20; i++) moonCombo.addItem(i); 
+  28 29 30 31   TableColumnModel columnModel = table.getColumnModel(); 
+  TableColumn moonColumn = columnModel.getColumn(PlanetTableModel.MOONS_COLUMN); 
+  moonColumn.setCellEditor(new DefaultCellEditor(moonCombo)); 
+  moonColumn.setHeaderRenderer(table.getDefaultRenderer(ImageIcon.class)); 
+  moonColumn.setHeaderValue(new ImageIcon(getClass().getResource("Moons.gif"))); 
+  32 33 34 35 36 37   // show table   38 39   table.setRowHeight(100); 
+  add(new JScrollPane(table), BorderLayout.CENTER); 
+  40 41   } 
+  42 43   } 
+  Listing 10.9 1   tableCellRender/PlanetTableModel.java   package tableCellRender; 
+  2 3 4 5   import java.awt.*; 
+  import javax.swing.*; 
+  import javax.swing.table.*; 
+  6 7 8 9 10 11 12 13 14 15 16   /** * The planet table model specifies the values, rendering and editing properties for the planet * data. 
+  */ public class PlanetTableModel extends AbstractTableModel { public static final int PLANET_COLUMN = 0; 
+  public static final int MOONS_COLUMN = 2; 
+  public static final int GASEOUS_COLUMN = 3; 
+  public static final int COLOR_COLUMN = 4; 
+  17   (Continues)   From the Library of Hristo Dimov Hristov   634   Chapter 10   Advanced Swing   Listing 10.9 (Continued) 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36   private Object[][] cells = { { "Mercury", 2440.0, 0, false, Color.YELLOW, new ImageIcon(getClass().getResource("Mercury.gif")) }, { "Venus", 6052.0, 0, false, Color.YELLOW, new ImageIcon(getClass().getResource("Venus.gif")) }, { "Earth", 6378.0, 1, false, Color.BLUE, new ImageIcon(getClass().getResource("Earth.gif")) }, { "Mars", 3397.0, 2, false, Color.RED, new ImageIcon(getClass().getResource("Mars.gif")) }, { "Jupiter", 71492.0, 16, true, Color.ORANGE, new ImageIcon(getClass().getResource("Jupiter.gif")) }, { "Saturn", 60268.0, 18, true, Color.ORANGE, new ImageIcon(getClass().getResource("Saturn.gif")) }, { "Uranus", 25559.0, 17, true, Color.BLUE, new ImageIcon(getClass().getResource("Uranus.gif")) }, { "Neptune", 24766.0, 8, true, Color.BLUE, new ImageIcon(getClass().getResource("Neptune.gif")) }, { "Pluto", 1137.0, 1, false, Color.BLACK, new ImageIcon(getClass().getResource("Pluto.gif")) } }; 
+  37 38   private String[] columnNames = { "Planet", "Radius", "Moons", "Gaseous", "Color", "Image" }; 
+  39 40 41 42 43   public String getColumnName(int c) { return columnNames[c]; 
+  } 
+  44 45 46 47 48   public Class<?> getColumnClass(int c) { return cells[0][c].getClass(); 
+  } 
+  49 50 51 52 53   public int getColumnCount() { return cells[0].length; 
+  } 
+  54 55 56 57 58   public int getRowCount() { return cells.length; 
+  } 
+  59 60 61 62 63   public Object getValueAt(int r, int c) { return cells[r][c]; 
+  } 
+  64   From the Library of Hristo Dimov Hristov   10.2 Tables   635   public void setValueAt(Object obj, int r, int c) { cells[r][c] = obj; 
+  } 
+  65 66 67 68 69   public boolean isCellEditable(int r, int c) { return c == PLANET_COLUMN || c == MOONS_COLUMN || c == GASEOUS_COLUMN || c == COLOR_COLUMN; 
+  } 
+  70 71 72 73 74   } 
+  Listing 10.10 1   tableCellRender/ColorTableCellRenderer.java   package tableCellRender; 
+  2 3 4 5   import java.awt.*; 
+  import javax.swing.*; 
+  import javax.swing.table.*; 
+  6 7 8 9 10 11 12 13 14 15 16 17 18 19 20   /** * This renderer renders a color value as a panel with the given color. 
+  */ public class ColorTableCellRenderer extends JPanel implements TableCellRenderer { public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) { setBackground((Color) value); 
+  if (hasFocus) setBorder(UIManager.getBorder("Table.focusCellHighlightBorder")); 
+  else setBorder(null); 
+  return this; 
+  } 
+  } 
+  Listing 10.11 1   tableCellRender/ColorTableCellEditor.java   package tableCellRender; 
+  2 3 4 5 6 7 8   import java.awt.*; 
+  import java.awt.event.*; 
+  import java.beans.*; 
+  import java.util.*; 
+  import javax.swing.*; 
+  import javax.swing.table.*; 
+  9 10 11 12   /** * This editor pops up a color dialog to edit a cell value. 
+  */ (Continues)   From the Library of Hristo Dimov Hristov   636   Chapter 10   Advanced Swing   Listing 10.11 (Continued) 13 14 15 16 17   public class ColorTableCellEditor extends AbstractCellEditor implements TableCellEditor { private JColorChooser colorChooser; 
+  private JDialog colorDialog; 
+  private JPanel panel; 
+  18 19 20 21 22   public ColorTableCellEditor() { panel = new JPanel(); 
+  // prepare color dialog   23   colorChooser = new JColorChooser(); 
+  colorDialog = JColorChooser.createDialog(null, "Planet Color", false, colorChooser, EventHandler.create(ActionListener.class, this, "stopCellEditing"), EventHandler.create(ActionListener.class, this, "cancelCellEditing")); 
+  24 25 26 27 28   } 
+  29 30 31 32 33 34 35 36 37   public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) { // this is where we get the current Color value. We store it in the dialog in case the user // starts editing colorChooser.setColor((Color) value); 
+  return panel; 
+  } 
+  38 39 40 41 42   public boolean shouldSelectCell(EventObject anEvent) { // start editing colorDialog.setVisible(true); 
+  43   // tell caller it is ok to select this cell return true; 
+  44 45 46   } 
+  47 48 49 50 51 52 53   public void cancelCellEditing() { // editing is canceled--hide dialog colorDialog.setVisible(false); 
+  super.cancelCellEditing(); 
+  } 
+  54 55 56 57 58 59   public boolean stopCellEditing() { // editing is complete--hide dialog colorDialog.setVisible(false); 
+  super.stopCellEditing(); 
+  From the Library of Hristo Dimov Hristov   10.2 Tables   637   60   // tell caller is is ok to use color value return true; 
+  61 62   } 
+  63 64   public Object getCellEditorValue() { return colorChooser.getColor(); 
+  } 
+  65 66 67 68 69   } 
+  javax.swing.JTable 1.2   • TableCellRenderer getDefaultRenderer(Class<?> type) gets the default renderer for the given type. 
+  • TableCellEditor getDefaultEditor(Class<?> type) gets the default editor for the given type. 
+  javax.swing.table.TableCellRenderer 1.2   • Component getTableCellRendererComponent(JTable table, Object value, boolean selected, boolean hasFocus, int row, int column)   returns a component whose paint method is invoked to render a table cell. 
+  Parameters:   table   The table containing the cell to be rendered   value   The cell to be rendered   selected   true if the cell is currently selected   hasFocus   true if the cell currently has focus   row, column   The row and column of the cell   javax.swing.table.TableColumn 1.2   • void setCellEditor(TableCellEditor editor) • void setCellRenderer(TableCellRenderer renderer) sets the cell editor or renderer for all cells in this column. 
+  • void setHeaderRenderer(TableCellRenderer renderer) sets the cell renderer for the header cell in this column. 
+  • void setHeaderValue(Object value) sets the value to be displayed for the header in this column. 
+  From the Library of Hristo Dimov Hristov   638   Chapter 10   Advanced Swing   javax.swing.DefaultCellEditor 1.2   • DefaultCellEditor(JComboBox comboBox) constructs a cell editor that presents the combo box for selecting cell values. 
+  javax.swing.table.TableCellEditor 1.2   • Component getTableCellEditorComponent(JTable table, Object value, boolean selected, int row, int column)   returns a component whose paint method renders a table cell. 
+  Parameters:   table   The table containing the cell to be rendered   value   The cell to be rendered   selected   true if the cell is currently selected   row, column   The row and column of the cell   javax.swing.CellEditor 1.2   • boolean isCellEditable(EventObject event) returns true if the event is suitable for initiating the editing process for this cell. 
+  • boolean shouldSelectCell(EventObject anEvent) starts the editing process. Returns true if the edited cell should be selected. Normally, you want to return true, but you can return false if you don’t want the editing process to change the cell selection. 
+  • void cancelCellEditing() cancels the editing process. You can abandon partial edits. 
+  • boolean stopCellEditing() stops the editing process, with the intent of using the result. Returns true if the edited value is in a proper state for retrieval. 
+  • Object getCellEditorValue() returns the edited result. 
+  • void addCellEditorListener(CellEditorListener l) • void removeCellEditorListener(CellEditorListener l) adds or removes the obligatory cell editor listener. 

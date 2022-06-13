@@ -1,0 +1,102 @@
+From the start, the developers of the Java technology were aware of the potential
+that Java showed for working with databases. In 1995, they began working on
+extending the standard Java library to deal with SQL access to databases. What
+they first hoped to do was to extend Java so that a program could talk to any
+random database using only “pure” Java. It didn’t take them long to realize that
+this is an impossible task: There are simply too many databases out there, using
+too many protocols. Moreover, although database vendors were all in favor of
+Java providing a standard network protocol for database access, they were only
+in favor of it if Java used their network protocol.
+What all the database vendors and tool vendors did agree on was that it would
+be useful for Java to provide a pure Java API for SQL access along with a driver
+manager to allow third-party drivers to connect to specific databases. Database
+vendors could provide their own drivers to plug in to the driver manager. There
+would then be a simple mechanism for registering third-party drivers with the
+driver manager.
+This organization follows the very successful model of Microsoft’s ODBC which
+provided a C programming language interface for database access. Both JDBC
+and ODBC are based on the same idea: Programs written according to the API
+talk to the driver manager, which, in turn, uses a driver to talk to the actual
+database.
+This means the JDBC API is all that most programmers will ever have to deal with.
+
+From the Library of Hristo Dimov Hristov
+
+5.1 The Design of JDBC
+
+283
+
+5.1.1 JDBC Driver Types
+The JDBC specification classifies drivers into the following types:
+• A type 1 driver translates JDBC to ODBC and relies on an ODBC driver to
+communicate with the database. Early versions of Java included one such
+driver, the JDBC/ODBC bridge. However, the bridge requires deployment and
+proper configuration of an ODBC driver. When JDBC was first released, the
+bridge was handy for testing, but it was never intended for production use.
+At this point, many better drivers are available, and Java 8 no longer provides
+the JDBC/ODBC bridge.
+• A type 2 driver is written partly in Java and partly in native code; it communicates with the client API of a database. When using such a driver, you must
+install some platform-specific code onto the client in addition to a Java library.
+• A type 3 driver is a pure Java client library that uses a database-independent
+protocol to communicate database requests to a server component, which
+then translates the requests into a database-specific protocol. This simplifies
+deployment because the platform-specific code is located only on the server.
+• A type 4 driver is a pure Java library that translates JDBC requests directly to
+a database-specific protocol.
+NOTE: The JDBC specification is available at http://download.oracle.com/otndocs/jcp/
+jdbc-4_2-mrel2-spec/.
+
+Most database vendors supply either a type 3 or type 4 driver with their database.
+Furthermore, a number of third-party companies specialize in producing drivers
+with better standards conformance, support for more platforms, better performance, or, in some cases, simply better reliability than the drivers provided by
+the database vendors.
+In summary, the ultimate goal of JDBC is to make possible the following:
+• Programmers can write applications in the Java programming language to
+access any database using standard SQL statements (or even specialized
+extensions of SQL) while still following Java language conventions.
+• Database vendors and database tool vendors can supply the low-level drivers.
+Thus, they can optimize their drivers for their specific products.
+
+From the Library of Hristo Dimov Hristov
+
+284
+
+Chapter 5
+
+Database Programming
+
+NOTE: If you are curious as to why Java just didn’t adopt the ODBC model, the
+reason, as given at the JavaOne conference in 1996, was this:
+•
+
+ODBC is hard to learn.
+
+•
+
+ODBC has a few commands with lots of complex options. The preferred
+style in the Java programming language is to have simple and intuitive
+methods, but to have lots of them.
+
+•
+
+ODBC relies on the use of void* pointers and other C features that are not
+natural in the Java programming language.
+
+•
+
+An ODBC-based solution is inherently less safe and harder to deploy than
+a pure Java solution.
+
+5.1.2 Typical Uses of JDBC
+The traditional client/server model has a rich GUI on the client and a database
+on the server (see Figure 5.1). In this model, a JDBC driver is deployed on the
+client.
+
+Figure 5.1 A traditional client/server application
+However, nowadays it is far more common to have a three-tier model where the
+client application does not make database calls. Instead, it calls on a middleware
+layer on the server that in turn makes the database queries. The three-tier model
+has a couple of advantages. It separates visual presentation (on the client) from the
+
+From the Library of Hristo Dimov Hristov
+

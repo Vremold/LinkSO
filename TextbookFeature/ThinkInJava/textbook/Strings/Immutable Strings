@@ -1,0 +1,7 @@
+  Objects of the String class are immutable. If you examine the JDK documentation for the String class, you’ll see that every method in the class that appears to modify a String actually creates and returns a brand new String object containing the modification. The original String is left untouched. 
+  Consider the following code: 
+  When q is passed in to upcase( ) it’s actually a copy of the reference to q. The object this reference is connected to stays in a single physical location. The references are copied as they are passed around. 
+  Looking at the definition for upcase( ), you can see that the reference that’s passed in has the name s, and it exists for only as long as the body of upcase( ) is being executed. When upcase( ) completes, the local reference s vanishes. upcase( ) returns the result, which is the original string with all the characters set to uppercase. Of course, it actually returns a reference to the result. But it turns out that the reference that it returns is for a new object, and the original q is left alone. 
+  This behavior is usually what you want. Suppose you say: 
+  String s = "asdf"; String x = Immutable.upcase(s); 
+  Do you really want the upcase( ) method to change the argument? To the reader of the code, an argument usually looks like a piece of information provided to the method, not something to be modified. This is an important guarantee, since it makes code easier to write and understand. 

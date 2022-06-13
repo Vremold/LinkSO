@@ -1,0 +1,207 @@
+  Any operating environment that supports GUIs constantly monitors events such as keystrokes or mouse clicks. These events are then reported to the programs that are running. Each program then decides what, if anything, to do in response to these events. 
+10.4.1 Basic Event Handling Concepts
+  In the Java AWT, event sources (such as buttons or scrollbars) have methods that allow you to register event listeners—objects that carry out the desired response to the event. 
+  When an event listener is notified about an event, information about the event is encapsulated in an event object. In Java, all event objects ultimately derive from the class java.util.EventObject. Of course, there are subclasses for each event type, such as ActionEvent and WindowEvent. 
+  Different event sources can produce different kinds of events. For example, a button can send ActionEvent objects, whereas a window can send WindowEvent objects. 
+  To sum up, here’s an overview of how event handling in the AWT works: An event listener is an instance of a class that implements a listener interface. 
+  An event source is an object that can register listener objects and send them event objects. 
+  The event source sends out event objects to all registered listeners when that event occurs. 
+  The listener objects then uses the information in the event object to determine their reaction to the event. 
+  Figure 10.12 shows the relationship between the event handling classes and interfaces. 
+  Figure 10.12 Relationship between event sources and listeners Here is an example for specifying a listener: ActionListener listener = . . .; 
+  var button = new JButton("OK"); 
+  button.addActionListener(listener); 
+  Now the listener object is notified whenever an "action event" occurs in the button. For buttons, as you might expect, an action event is a button click. 
+  To implement the ActionListener interface, the listener class must have a method called actionPerformed that receives an ActionEvent object as a parameter. 
+  class MyListener implements ActionListener { . . . 
+  public void actionPerformed(ActionEvent event) { // reaction to button click goes here . . . 
+  } 
+  } 
+  Whenever the user clicks the button, the JButton object creates an ActionEvent object and calls listener.actionPerformed(event), passing that event object. An event source such as a button can have multiple listeners. In that case, the button calls the actionPerformed methods of all listeners whenever the user clicks the button. 
+  Figure 10.13 shows the interaction between the event source, event listener, and event object. 
+  Figure 10.13 Event notification 10.4.2 Example: Handling a Button Click
+  As a way of getting comfortable with the event delegation model, let’s work through all the details needed for the simple example of responding to a button click. For this example, we will show a panel populated with three   buttons. Three listener objects are added as action listeners to the buttons. 
+  With this scenario, each time a user clicks on any of the buttons on the panel, the associated listener object receives an ActionEvent that indicates a button click. In our sample program, the listener object will then change the background color of the panel. 
+  Before we can show you the program that listens to button clicks, we first need to explain how to create buttons and how to add them to a panel. 
+  To create a button, specify a label string, an icon, or both in the button constructor. Here are two examples: var yellowButton = new JButton("Yellow"); 
+  var blueButton = new JButton(new ImageIcon("blue-ball.gif")); 
+  Call the add method to add the buttons to a panel: var yellowButton = new JButton("Yellow"); 
+  var blueButton = new JButton("Blue"); 
+  var redButton = new JButton("Red"); 
+  buttonPanel.add(yellowButton); 
+  buttonPanel.add(blueButton); 
+  buttonPanel.add(redButton); 
+  Figure 10.14 shows the result. 
+  Figure 10.14 A panel filled with buttons   Next, we need to add code that listens to these buttons. This requires classes that implement the ActionListener interface, which, as we just mentioned, has one method: actionPerformed, whose signature looks like this: public void actionPerformed(ActionEvent event)   The way to use the ActionListener interface is the same in all situations: The actionPerformed method (which is the only method in ActionListener) takes an object of type ActionEvent as a parameter. 
+  This event object gives you information about the event that happened. 
+  When a button is clicked, we want the background color of the panel to change to a particular color. We store the desired color in our listener class. 
+  class ColorAction implements ActionListener { private Color backgroundColor; 
+  public ColorAction(Color c) { backgroundColor = c; 
+  } 
+  public void actionPerformed(ActionEvent event) { // set panel background color . . . 
+  } 
+  } 
+  We then construct one object for each color and set the objects as the button listeners. 
+  var yellowAction = new ColorAction(Color.YELLOW); 
+  var blueAction = new ColorAction(Color.BLUE); 
+  var redAction = new ColorAction(Color.RED); 
+  yellowButton.addActionListener(yellowAction); 
+  blueButton.addActionListener(blueAction); 
+  redButton.addActionListener(redAction); 
+  For example, if a user clicks on the button marked "Yellow", the actionPerformed method of the yellowAction object is called. Its   backgroundColor instance field is set to Color.YELLOW, and it can now proceed to set the panel’s background color. 
+  Just one issue remains. The ColorAction object doesn’t have access to the buttonPanel variable. You can solve this problem in two ways. You can store the panel in the ColorAction object and set it in the ColorAction constructor. Or, more conveniently, you can make ColorAction into an inner class of the ButtonFrame class. Its methods can then access the outer panel automatically. 
+  Listing 10.5 contains the complete frame class. Whenever you click one of the buttons, the appropriate action listener changes the background color of the panel. 
+  javax.swing.JButton 1.2 JButton(String label) JButton(Icon icon) JButton(String label, Icon icon) constructs a button. The label string can be plain text or HTML; for example, "<html><b>Ok</b></html>". 
+  java.awt.Container 1.0 Component add(Component c) adds the component c to this container. 
+10.4.3 Specifying Listeners Concisely
+  In the preceding section, we defined a class for the event listener and constructed three objects of that class. It is not all that common to have multiple instances of a listener class. Most commonly, each listener carries out a separate action. In that case, there is no need to make a separate class. 
+  Simply use a lambda expression: exitButton.addActionListener(event -> System.exit(0)); 
+  Now consider the case in which we have multiple related actions, such as the color buttons of the preceding section. In such a case, implement a helper method: public void makeButton(String name, Color backgroundColor) { var button = new JButton(name); 
+  buttonPanel.add(button); 
+  button.addActionListener(event -> buttonPanel.setBackground(backgroundColor)); 
+  } 
+  Note that the lambda expression refers to the parameter variable backgroundColor. 
+  Then we simply call makeButton("yellow", Color.YELLOW); 
+  makeButton("blue", Color.BLUE); 
+  makeButton("red", Color.RED); 
+  Here, we construct three listener objects, one for each color, without explicitly defining a class. Each time the helper method is called, it makes an   instance of a class that implements the ActionListener interface. Its actionPerformed action references the backGroundColor value that is, in fact, stored with the listener object. However, all this happens without you having to explicitly define listener classes, instance variables, or constructors that set them. 
+  Note In older code, you will often see the use of anonymous classes: exitButton.addActionListener(new ActionListener() { public void actionPerformed(new ActionEvent) { System.exit(0); 
+  } 
+  }); 
+  Of course, this rather verbose code is no longer necessary. Using a lambda expression is simpler and clearer. 
+10.4.4 Adapter Classes
+  Not all events are as simple to handle as button clicks. Suppose you want to monitor when the user tries to close the main frame in order to put up a dialog and exit the program only when the user agrees. 
+  When the user tries to close a window, the JFrame object is the source of a WindowEvent. If you want to catch that event, you must have an appropriate listener object and add it to the frame’s list of window listeners. 
+  WindowListener listener = . . .; 
+  frame.addWindowListener(listener); 
+  The window listener must be an object of a class that implements the WindowListener interface. There are actually seven methods in the WindowListener interface. The frame calls them as the responses to seven distinct events that could happen to a window. The names are self-   explanatory, except that "iconified" is usually called "minimized" under Windows. Here is the complete WindowListener interface: public interface WindowListener { void windowOpened(WindowEvent e); 
+  void windowClosing(WindowEvent e); 
+  void windowClosed(WindowEvent e); 
+  void windowIconified(WindowEvent e); 
+  void windowDeiconified(WindowEvent e); 
+  void windowActivated(WindowEvent e); 
+  void windowDeactivated(WindowEvent e); 
+  } 
+  Of course, we can define a class that implements the interface, add a call to System.exit(0) in the windowClosing method, and write do-nothing functions for the other six methods. However, typing code for six methods that don’t do anything is the kind of tedious busywork that nobody likes. To simplify this task, each of the AWT listener interfaces that have more than one method comes with a companion adapter class that implements all the methods in the interface but does nothing with them. For example, the WindowAdapter class has seven do-nothing methods. You extend the adapter class to specify the desired reactions to some, but not all, of the event types in the interface. (An interface such as ActionListener that has only a single method does not need an adapter class.) Here is how we can define a window listener that overrides the windowClosing method: class Terminator extends WindowAdapter { public void windowClosing(WindowEvent e) { if (user agrees) System.exit(0); 
+  } 
+  } 
+  Now you can register an object of type Terminator as the event listener: var listener = new Terminator(); 
+  frame.addWindowListener(listener); 
+  Note Nowadays, one would implement do-nothing methods of the WindowListener interface as default methods. However, Swing was invented many years before there were default methods. 
+  java.awt.event.WindowListener 1.1 void windowOpened(WindowEvent e) is called after the window has been opened. 
+  void windowClosing(WindowEvent e) is called when the user has issued a window manager command to close the window. Note that the window will close only if its hide or dispose method is called. 
+  void windowClosed(WindowEvent e) is called after the window has closed. 
+  void windowIconified(WindowEvent e) is called after the window has been iconified. 
+  void windowDeiconified(WindowEvent e) is called after the window has been deiconified. 
+  void windowActivated(WindowEvent e) is called after the window has become active. Only a frame or dialog can be active. Typically, the window manager decorates the active window—for example, by highlighting the title bar. 
+  void windowDeactivated(WindowEvent e) is called after the window has become deactivated. 
+  java.awt.event.WindowStateListener 1.4 void windowStateChanged(WindowEvent event) is called after the window has been maximized, iconified, or restored to normal size. 
+10.4.5 Actions
+  It is common to have multiple ways to activate the same command. The user can choose a certain function through a menu, a keystroke, or a button on a toolbar. This is easy to achieve in the AWT event model: link all events to the same listener. For example, suppose blueAction is an action listener whose actionPerformed method changes the background color to blue. 
+  You can attach the same object as a listener to several event sources: A toolbar button labeled "Blue" 
+  A menu item labeled "Blue" 
+  A keystroke Ctrl+B The color change command will now be handled in a uniform way, no matter whether it was caused by a button click, a menu selection, or a key press. 
+  The Swing package provides a very useful mechanism to encapsulate commands and to attach them to multiple event sources: the Action interface. An action is an object that encapsulates A description of the command (as a text string and an optional icon); 
+  and Parameters that are necessary to carry out the command (such as the requested color in our example). 
+  The Action interface has the following methods: void actionPerformed(ActionEvent event) void setEnabled(boolean b) boolean isEnabled() void putValue(String key, Object value)   Object getValue(String key) void addPropertyChangeListener(PropertyChangeListener listener) void removePropertyChangeListener(PropertyChangeListener listener)   The first method is the familiar method in the ActionListener interface; 
+  in fact, the Action interface extends the ActionListener interface. 
+  Therefore, you can use an Action object whenever an ActionListener object is expected. 
+  The next two methods let you enable or disable the action and check whether the action is currently enabled. When an action is attached to a menu or toolbar and the action is disabled, the option is grayed out. 
+  The putValue and getValue methods let you store and retrieve arbitrary name/value pairs in the action object. A couple of important predefined strings, namely Action.NAME and Action.SMALL_ICON, store action names and icons into an action object: action.putValue(Action.NAME, "Blue"); 
+  action.putValue(Action.SMALL_ICON, new ImageIcon("blueball.gif")); 
+  Table 10.1 shows all predefined action table names. 
+  Table 10.1 Predefined Action Table Names Name   Value   NAME   The name of the action, displayed on buttons and menu items. 
+  SMALL_ICON   A place to store a small icon for display in a button, menu item, or toolbar. 
+  SHORT_DESCRIPTION A short description of the icon for display in a tooltip. 
+  LONG_DESCRIPTION   A long description of the icon for potential use in online help. No Swing component uses this value. 
+  MNEMONIC_KEY   A mnemonic abbreviation for display in menu items. 
+  ACCELERATOR_KEY   A place to store an accelerator keystroke. No Swing component uses this value. 
+  ACTION_COMMAND_KEY Historically, used in the now-obsolete registerKeyboardAction method. 
+  DEFAULT   Potentially useful catch-all property. No Swing component uses this value. 
+  If the action object is added to a menu or toolbar, the name and icon are automatically retrieved and displayed in the menu item or toolbar button. The SHORT_DESCRIPTION value turns into a tooltip. 
+  The final two methods of the Action interface allow other objects, in particular menus or toolbars that trigger the action, to be notified when the properties of the action object change. For example, if a menu is added as a property change listener of an action object and the action object is subsequently disabled, the menu is called and can gray out the action name. 
+  Note that Action is an interface, not a class. Any class implementing this interface must implement the seven methods we just discussed. Fortunately, a friendly soul has provided a class AbstractAction that implements all methods except for actionPerformed. That class takes care of storing all name/value pairs and managing the property change listeners. You simply extend AbstractAction and supply an actionPerformed method. 
+  Let’s build an action object that can execute color change commands. We store the name of the command, an icon, and the desired color. We store the color in the table of name/value pairs that the AbstractAction class provides. Here is the code for the ColorAction class. The constructor sets the name/value pairs, and the actionPerformed method carries out the color change action. 
+  public class ColorAction extends AbstractAction { public ColorAction(String name, Icon icon, Color c) { putValue(Action.NAME, name); 
+  putValue(Action.SMALL_ICON, icon); 
+  putValue("color", c); 
+  putValue(Action.SHORT_DESCRIPTION, "Set panel color to " + name.toLowerC   } 
+  public void actionPerformed(ActionEvent event) { Color c = (Color) getValue("color"); 
+  buttonPanel.setBackground(c); 
+  } 
+  } 
+  Our test program creates three objects of this class, such as var blueAction = new ColorAction("Blue", new ImageIcon("blueball.gif"), Color.BLUE); 
+  Next, let’s associate this action with a button. That is easy because we can use a JButton constructor that takes an Action object. 
+  var blueButton = new JButton(blueAction); 
+  That constructor reads the name and icon from the action, sets the short description as the tooltip, and sets the action as the listener. You can see the icons and a tooltip in Figure 10.15. 
+  Figure 10.15 Buttons display the icons from the action objects. 
+  As we demonstrate in the next chapter, it is just as easy to add the same action to a menu. 
+  Finally, we want to add the action objects to keystrokes so that an action is carried out when the user types a keyboard command. To associate actions   with keystrokes, you first need to generate objects of the KeyStroke class. 
+  This convenience class encapsulates the description of a key. To generate a KeyStroke object, don’t call a constructor but instead use the static getKeyStroke method of the KeyStroke class. 
+  KeyStroke ctrlBKey = KeyStroke.getKeyStroke("ctrl B"); 
+  To understand the next step, you need to understand the concept of keyboard focus. A user interface can have many buttons, menus, scrollbars, and other components. When you hit a key, it is sent to the component that has focus. 
+  That component is usually (but not always) visually distinguished. For example, in the Java look-and-feel, a button with focus has a thin rectangular border around the button text. You can use the Tab key to move the focus between components. When you press the space bar, the button with focus is clicked. Other keys carry out different actions; for example, the arrow keys can move a scrollbar. 
+  However, in our case, we do not want to send the keystroke to the component that has focus. Otherwise, each of the buttons would need to know how to handle the Ctrl+Y, Ctrl+B, and Ctrl+R keys. 
+  This is a common problem, and the Swing designers came up with a convenient solution. Every JComponent has three input maps, each mapping KeyStroke objects to associated actions. The three input maps correspond to three different conditions (see Table 10.2). 
+  Table 10.2 Input Map Conditions Flag   Invoke Action   WHEN_FOCUSED   When this component has keyboard focus   WHEN_ANCESTOR_OF_FOCUSED_COMPONENT When this component contains the component that has keyboard focus WHEN_IN_FOCUSED_WINDOW   When this component is contained in the same window as the component   that has keyboard focus Keystroke processing checks these maps in the following order: 1. Check the WHEN_FOCUSED map of the component with input focus. If the keystroke exists and its corresponding action is enabled, execute the action and stop processing. 
+  2. Starting from the component with input focus, check the WHEN_ANCESTOR_OF_FOCUSED_COMPONENT maps of its parent components. As soon as a map with the keystroke and a corresponding enabled action is found, execute the action and stop processing. 
+  3. Look at all visible and enabled components, in the window with input focus, that have this keystroke registered in a WHEN_IN_FOCUSED_WINDOW map. Give these components (in the order of their keystroke registration) a chance to execute the corresponding action. As soon as the first enabled action is executed, stop processing. 
+  To obtain an input map from the component, use the getInputMap method. Here is an example: InputMap imap = panel.getInputMap(JComponent.WHEN_FOCUSED); 
+  The WHEN_FOCUSED condition means that this map is consulted when the current component has the keyboard focus. In our situation, that isn’t the map we want. One of the buttons, not the panel, has the input focus. Either of the other two map choices works fine for inserting the color change keystrokes. 
+  We use WHEN_ANCESTOR_OF_FOCUSED_COMPONENT in our example program. 
+  The InputMap doesn’t directly map KeyStroke objects to Action objects. Instead, it maps to arbitrary objects, and a second map, implemented by the ActionMap class, maps objects to actions. That makes it easier to share the same actions among keystrokes that come from different input maps. 
+  Thus, each component has three input maps and one action map. To tie them together, you need to come up with names for the actions. Here is how you   can tie a key to an action: imap.put(KeyStroke.getKeyStroke("ctrl Y"), "panel.yellow"); 
+  ActionMap amap = panel.getActionMap(); 
+  amap.put("panel.yellow", yellowAction); 
+  It is customary to use the string "none" for a do-nothing action. That makes it easy to deactivate a key: imap.put(KeyStroke.getKeyStroke("ctrl C"), "none"); 
+  Caution The JDK documentation suggests using the action name as the action’s key. We don’t think that is a good idea. The action name is displayed on buttons and menu items; thus, it can change at the whim of the UI designer and may be translated into multiple languages. 
+  Such unstable strings are poor choices for lookup keys, so we recommend that you come up with action names that are independent of the displayed names. 
+  To summarize, here is what you do to carry out the same action in response to a button, a menu item, or a keystroke: 1. Implement a class that extends the AbstractAction class. You may be able to use the same class for multiple related actions. 
+  2. Construct an object of the action class. 
+  3. Construct a button or menu item from the action object. The constructor will read the label text and icon from the action object. 
+  4. For actions that can be triggered by keystrokes, you have to carry out additional steps. First, locate the top-level component of the window, such as a panel that contains all other components. 
+  5. Then, get the WHEN_ANCESTOR_OF_FOCUSED_COMPONENT input map of the top-level component. Make a KeyStroke object for the   desired keystroke. Make an action key object, such as a string that describes your action. Add the pair (keystroke, action key) into the input map. 
+  6. Finally, get the action map of the top-level component. Add the pair (action key, action object) into the map. 
+  javax.swing.Action 1.2 boolean isEnabled() void setEnabled(boolean b) gets or sets the enabled property of this action. 
+  void putValue(String key, Object value) places a key/value pair inside the action object. The key can be any string, but several names have predefined meanings—see Table 10.1. 
+  Object getValue(String key) returns the value of a stored name/value pair. 
+  javax.swing.KeyStroke 1.2 static KeyStroke getKeyStroke(String description) constructs a keystroke from a human-readable description (a sequence of whitespace-delimited strings). The description starts with zero or more modifiers (shift, control, ctrl, meta, alt, altGraph) and ends with either the string typed, followed by a one-character string (for example, "typed a"), or an optional event specifier (pressed or released, with pressed being the default), followed by a key code. The key code, when prefixed with VK_, should correspond to a KeyEvent constant; for example, "INSERT" 
+  corresponds to KeyEvent.VK_INSERT. 
+  javax.swing.JComponent 1.2 ActionMap getActionMap() 1.3 returns the map that associates action map keys (which can be arbitrary objects) with Action objects. 
+  InputMap getInputMap(int flag) 1.3 gets the input map that maps key strokes to action map keys. The flag is one of the values in Table 10.2. 
+10.4.6 Mouse Events
+  You do not need to handle mouse events explicitly if you just want the user to be able to click on a button or menu. These mouse operations are handled internally by the various components in the user interface. However, if you want to enable the user to draw with the mouse, you will need to trap the mouse move, click, and drag events. 
+  In this section, we will show you a simple graphics editor application that allows the user to place, move, and erase squares on a canvas (see Figure 10.16). 
+  Figure 10.16 A mouse test program When the user clicks a mouse button, three listener methods are called: mousePressed when the mouse is first pressed, mouseReleased when   the mouse is released, and, finally, mouseClicked. If you are only interested in complete clicks, you can ignore the first two methods. By using the getX and getY methods on the MouseEvent argument, you can obtain the x and y coordinates of the mouse pointer when the mouse was clicked. To distinguish between single, double, and triple (!) clicks, use the getClickCount method. 
+  In our sample program, we supply both a mousePressed and a mouseClicked methods. When you click on a pixel that is not inside any of the squares that have been drawn, a new square is added. We implemented this in the mousePressed method so that the user receives immediate feedback and does not have to wait until the mouse button is released. When a user double-clicks inside an existing square, it is erased. We implemented this in the mouseClicked method because we need the click count. 
+  public void mousePressed(MouseEvent event) { current = find(event.getPoint()); 
+  if (current == null) // not inside a square add(event.getPoint()); 
+  } 
+  public void mouseClicked(MouseEvent event) { current = find(event.getPoint()); 
+  if (current != null && event.getClickCount() >= 2) remove(current); 
+  } 
+  As the mouse moves over a window, the window receives a steady stream of mouse movement events. Note that there are separate MouseListener and MouseMotionListener interfaces. This is done for efficiency—there are a lot of mouse events as the user moves the mouse around, and a listener that just cares about mouse clicks will not be bothered with unwanted mouse moves. 
+  Our test application traps mouse motion events to change the cursor to a different shape (a cross hair) when it is over a square. This is done with the getPredefinedCursor method of the Cursor class. Table 10.3 lists the constants to use with this method along with what the cursors look like under Windows. 
+  Table 10.3 Sample Cursor Shapes Icon Constant   Icon Constant   DEFAULT_CURSOR   NE_RESIZE_CURSOR   CROSSHAIR_CURSOR   E_RESIZE_CURSOR   HAND_CURSOR   SE_RESIZE_CURSOR   MOVE_CURSOR   S_RESIZE_CURSOR   TEXT_CURSOR   SW_RESIZE_CURSOR   WAIT_CURSOR   W_RESIZE_CURSOR   N_RESIZE_CURSOR   NW_RESIZE_CURSOR   Here is the mouseMoved method of the MouseMotionListener in our example program: public void mouseMoved(MouseEvent event) { if (find(event.getPoint()) == null) setCursor(Cursor.getDefaultCursor()); 
+  else setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR)); 
+  } 
+  If the user presses a mouse button while the mouse is in motion, mouseDragged calls are generated instead of mouseMoved calls. Our test application lets a user drag the square under the cursor. We simply update the currently dragged rectangle to be centered under the mouse position. Then, we repaint the canvas to show the new mouse position. 
+  public void mouseDragged(MouseEvent event) { if (current != null) {   int x = event.getX(); 
+  int y = event.getY(); 
+  current.setFrame(x - SIDELENGTH / 2, y - SIDELENGTH / 2, SIDELENGTH, SID repaint(); 
+  } 
+  } 
+  Note The mouseMoved method is only called as long as the mouse stays inside the component. However, the mouseDragged method keeps getting called even when the mouse is being dragged outside the component. 
+  There are two other mouse event methods: mouseEntered and mouseExited. These methods are called when the mouse enters or exits a component. 
+  Finally, we explain how to listen to mouse events. Mouse clicks are reported through the mouseClicked method, which is part of the MouseListener interface. Many applications are only interested in mouse clicks and not in mouse moves; with the mouse move events occurring so frequently, the mouse move and drag events are defined in a separate interface called MouseMotionListener. 
+  In our program we are interested in both types of mouse events. We define two inner classes: MouseHandler and MouseMotionHandler. The MouseHandler class extends the MouseAdapter class because it defines only two of the five MouseListener methods. The MouseMotionHandler implements the MouseMotionListener and defines both methods of that interface. Listing 10.6 is the program listing. 
+  java.awt.event.MouseEvent 1.1 int getX() int getY() Point getPoint() returns the x (horizontal) and y (vertical) coordinates of the point where the event happened, measured from the top left corner of the component that is the event source. 
+  int getClickCount() returns the number of consecutive mouse clicks associated with this event. (The time interval for what constitutes "consecutive" is systemdependent.) java.awt.Component 1.0 public void setCursor(Cursor cursor) 1.1   sets the cursor image to the specified cursor. 
+10.4.7 The AWT Event Hierarchy
+  The EventObject class has a subclass AWTEvent, which is the parent of all AWT event classes. Figure 10.17 shows the inheritance diagram of the AWT events. 
+  Figure 10.17 Inheritance diagram of AWT event classes Some of the Swing components generate event objects of yet more event types; these directly extend EventObject, not AWTEvent. 
+  The event objects encapsulate information about the event that the event source communicates to its listeners. When necessary, you can then analyze the event objects that were passed to the listener object, as we did in the button example with the getSource and getActionCommand methods. 
+  Some of the AWT event classes are of no practical use for the Java programmer. For example, the AWT inserts PaintEvent objects into the event queue, but these objects are not delivered to listeners. Java programmers don’t listen to paint events; instead, they override the paintComponent method to control re-painting. The AWT also generates a number of events that are needed only by systems programmers, to provide input systems for ideographic languages, automated testing robots, and so on. 
+  The AWT makes a useful distinction between low-level and semantic events. 
+  A semantic event is one that expresses what the user is doing, such as "clicking that button"; an ActionEvent is a semantic event. Low-level events are those events that make this possible. In the case of a button click, this is a mouse down, a series of mouse moves, and a mouse up (but only if the mouse up is inside the button area). Or it might be a keystroke, which happens if the user selects the button with the Tab key and then activates it with the space bar. Similarly, adjusting a scrollbar is a semantic event, but dragging the mouse is a low-level event. 
+  Here are the most commonly used semantic event classes in the java.awt.event package: ActionEvent (for a button click, a menu selection, selecting a list item, or Enter typed in a text field) AdjustmentEvent (the user adjusted a scrollbar) ItemEvent (the user made a selection from a set of checkbox or list items) Five low-level event classes are commonly used:   KeyEvent (a key was pressed or released) MouseEvent (the mouse button was pressed, released, moved, or dragged) MouseWheelEvent (the mouse wheel was rotated) FocusEvent (a component got focus or lost focus) WindowEvent (the window state changed) Table 10.4 shows the most important AWT listener interfaces, events, and event sources. 

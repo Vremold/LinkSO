@@ -1,0 +1,15 @@
+  destroy an object  In most programming languages, the concept of the lifetime of a variable occupies a significant portion of the programming effort. How long does the variable last? If you are supposed to destroy it, when should you? Confusion over variable lifetimes can lead to a lot of bugs, and this section shows how Java greatly simplifies the issue by doing all the cleanup work for you. 
+Scoping
+  Most procedural languages have the concept of scope. This determines both the visibility and lifetime of the names defined within that scope. In C, C++, and Java, scope is determined by the placement of curly braces {}. So for example: 
+  { int x = 12; // Only x available { int q = 96; // Both x & q available } // Only x available // q is "out of scope" } 
+  A variable defined within a scope is available only to the end of that scope. 
+  Any text after a ‘//’ to the end of a line is a comment. 
+  Indentation makes Java code easier to read. Since Java is a free-form language, the extra spaces, tabs, and carriage returns do not affect the resulting program. 
+  You cannot do the following, even though it is legal in C and C++: 
+  { int x = 12; {  int x = 96; // Illegal } } 
+  The compiler will announce that the variable x has already been defined. Thus the C and C++ ability to “hide” a variable in a larger scope is not allowed, because the Java designers thought that it led to confusing programs. 
+Scope of objects
+  Java objects do not have the same lifetimes as primitives. When you create a Java object using new, it hangs around past the end of the scope. Thus if you use: 
+  { String s = new String("a string"); } // End of scope  the reference s vanishes at the end of the scope. However, the String object that s was pointing to is still occupying memory. In this bit of code, there is no way to access the object after the end of the scope, because the only reference to it is out of scope. In later chapters you’ll see how the reference to the object can be passed around and duplicated during the course of a program. 
+  It turns out that because objects created with new stay around for as long as you want them, a whole slew of C++ programming problems simply vanish in Java. In C++ you must not only make sure that the objects stay around for as long as you need them, you must also destroy the objects when you’re done with them. 
+  That brings up an interesting question. If Java leaves the objects lying around, what keeps them from filling up memory and halting your program? This is exactly the kind of problem that would occur in C++. This is where a bit of magic happens. Java has a garbage collector, which looks at all the objects that were created with new and figures out which ones are not being referenced anymore. Then it releases the memory for those objects, so the memory can be used for new objects. This means that you never need to worry about reclaiming memory yourself. You simply create objects, and when you no longer need them, they will go away by themselves. This eliminates a certain class of programming problem: the so-called “memory leak,” in which a programmer forgets to release memory. 

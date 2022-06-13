@@ -1,0 +1,36 @@
+  When experimenting with arrays, and with programs in general, it’s helpful to be able to easily generate arrays filled with test data. The tools in this section will fill an array with values or objects. 
+Arrays.fill()
+  The Java standard library Arrays class has a rather trivial fill( ) method: It only duplicates a single value into each location, or in the case of objects, copies the same reference into each location. Here’s an example: 
+  You can either fill the entire array or, as the last two statements show, fill a range of elements. But since you can only call Arrays.fill( ) with a single data value, the results are not especially useful. 
+Data Generators
+  To create more interesting arrays of data, but in a flexible fashion, we’ll use the Generator concept that was introduced in the Generics chapter. If a tool uses a Generator, you can produce any kind of data via your choice of Generator (this is an example of the Strategy design pattern—each different Generator represents a different strategy1). 
+  This section will supply some Generators, and as you’ve seen before, you can easily define your own. 
+  First, here’s a basic set of counting generators for all primitive wrapper types, and for Strings. The generator classes are nested within the CountingGenerator class so that they may use the same name as the object types they are generating; for example, a generator that creates Integer objects would be created with the expression new CountingGenerator.Integer( ): 
+  Each class implements some meaning of "counting." In the case of CountingGenerator.Character, this is just the upper and lowercase letters repeated over and over. The CountingGenerator.String class uses CountingGenerator.Character to fill an array of characters, which is then turned into a String. The size of the array is determined by the constructor argument. Notice that CountingGenerator.String uses a basic Generator <java.lang. Character > instead of a specific reference to CountingGenerator.Character. Later, this generator can be replaced to produce RandomGenerator.String in RandomGenerator.java. 
+  Here’s a test tool that uses reflection with the nested Generator idiom, so that it can be used to test any set of Generators that follow this form: 
+  This assumes that the class under test contains a set of nested Generator objects, each of which has a default constructor (one without arguments). The reflection method getClasses( ) produces all the nested classes. The test( ) method then creates an instance of each of these generators, and prints the result produced by calling next( ) ten times. 
+  Here is a set of Generators that use the random number generator. Because the Random constructor is initialized with a constant value, the output is repeatable each time you run a program using one of these Generators: 
+  You can see that RandomGenerator.String inherits from CountingGenerator.String and simply plugs in the new Character generator. 
+  To generate numbers that aren’t too large, RandomGenerator.Integer defaults to a modulus of 10,000, but the overloaded constructor allows you to choose a smaller value. The same approach is used for RandomGenerator.Long. For the Float and Double Generators, the values after the decimal point are trimmed. 
+  We can reuse GeneratorsTest to test RandomGenerator: 
+  You can change the number of values produced by changing the GeneratorsTest.size value, which is public. 
+Creating arrays from Generators
+  In order to take a Generator and produce an array, we need two conversion tools. The first one uses any Generator to produce an array of Object subtypes. To cope with the problem of primitives, the second tool takes any array of primitive wrapper types and produces the associated array of primitives. 
+  The first tool has two options, represented by an overloaded static method, array( ). The first version of the method takes an existing array and fills it using a Generator, and the second version takes a Class object, a Generator, and the desired number of elements, and creates a new array, again filling it using the Generator. Notice that this tool only produces arrays of Object subtypes and cannot create primitive arrays: 
+  The CollectionData class will be defined in the Containers in Depth chapter. It creates a Collection object filled with elements produced by the Generator gen. The number of elements is determined by the second constructor argument. All Collection subtypes have a toArray( ) method that will fill the argument array with the elements from the Collection. 
+  The second method uses reflection to dynamically create a new array of the appropriate type and size. This is then filled using the same technique as the first method. 
+  We can test Generated using one of the CountingGenerator classes defined in the previous section: 
+  Even though the array a is initialized, those values are overwritten by passing it through Generated.array( ), which replaces the values (but leaves the original array in place). The initialization of b shows how you can create a filled array from scratch. 
+  Generics don’t work with primitives, and we want to use the generators to fill primitive arrays. To solve the problem, we create a converter that takes any array of wrapper objects and converts it to an array of the associated primitive types. Without this tool, we would have to create special case generators for all the primitives. 
+  Each version of primitive( ) creates an appropriate primitive array of the correct length, then copies the elements from the in array of wrapper types. Notice that autounboxing takes place in the expression: 
+  result[i] = in [1]; 
+  Here’s an example that shows how you can use ConvertTo with both versions of Generated.array( ): 
+  Finally, here’s a program that tests the array generation tools using RandomGenerator classes: 
+  This also ensures that each version of ConvertTo.primitive( ) works correctly. 
+  Exercise 11: (2) Show that autoboxing doesn’t work with arrays. 
+  Exercise 12: (1) Create an initialized array of double using CountingGenerator. Print the results. 
+  Exercise 13: (2) Fill a String using CountingGenerator.Character. 
+  Exercise 14: (6) Create an array of each primitive type, then fill each array by using CountingGenerator. Print each array. 
+  Exercise 15: (2) Modify ContainerComparison.java by creating a Generator for BerylliumSphere, and change main( ) to use that Generator with Generated.array(). 
+  Exercise 16: (3) Starting with CountingGenerator.java, create a SkipGenerator class that produces new values by incrementing according to a constructor argument. Modify TestArrayGeneration.java to show that your new class works correctly. 
+  Exercise 17: (5) Create and test a Generator for BigDecimal, and ensure that it works with the Generated methods. 

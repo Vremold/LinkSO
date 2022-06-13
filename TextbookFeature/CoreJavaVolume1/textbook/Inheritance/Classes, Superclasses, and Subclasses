@@ -1,0 +1,201 @@
+  Let’s return to the Employee class that we discussed in the previous chapter. Suppose (alas) you work for a company where managers are treated differently from other employees. Managers are, of course, just like employees in many respects. Both employees and managers are paid a salary. 
+  However, while employees are expected to complete their assigned tasks in return for receiving their salary, managers get bonuses if they actually achieve what they are supposed to do. This is the kind of situation that cries out for inheritance. Why? Well, you need to define a new class, Manager,   and add functionality. But you can retain some of what you have already programmed in the Employee class, and all the fields of the original class can be preserved. More abstractly, there is an obvious "is–a" relationship between Manager and Employee. Every manager is an employee: This "is–a" relationship is the hallmark of inheritance. 
+  Note In this chapter, we use the classic example of employees and managers, but we must ask you to take this example with a grain of salt. In the real world, an employee can become a manager, so you would want to model being a manager as a role of an employee, not a subclass. In our example, however, we assume the corporate world is populated by two kinds of people: those who are forever employees, and those who have always been managers. 
+5.1.1 Defining Subclasses
+  Here is how you define a Manager class that inherits from the Employee class. Use the Java keyword extends to denote inheritance. 
+  public class Manager extends Employee { added methods and fields } 
+  The keyword extends indicates that you are making a new class that   derives from an existing class. The existing class is called the superclass, base class, or parent class. The new class is called the subclass, derived class, or child class. The terms superclass and subclass are those most commonly used by Java programmers, although some programmers prefer the parent/child analogy, which also ties in nicely with the "inheritance" 
+  theme. 
+  The Employee class is a superclass, but not because it is superior to its subclass or contains more functionality. In fact, the opposite is true: Subclasses have more functionality than their superclasses. For example, as you will see when we go over the rest of the Manager class code, the Manager class encapsulates more data and has more functionality than its superclass Employee. 
+  Note The prefixes super and sub come from the language of sets used in theoretical computer science and mathematics. The set of all employees contains the set of all managers, and thus is said to be a superset of the set of managers. Or, to put it another way, the set of all managers is a subset of the set of all employees. 
+  Our Manager class has a new field to store the bonus, and a new method to set it: public class Manager extends Employee { private double bonus; 
+  . . . 
+  public void setBonus(double bonus) { this.bonus = bonus; 
+  } 
+  } 
+  There is nothing special about these methods and fields. If you have a Manager object, you can simply apply the setBonus method. 
+  Manager boss = . . .; 
+  boss.setBonus(5000); 
+  Of course, if you have an Employee object, you cannot apply the setBonus method—it is not among the methods defined in the Employee class. 
+  However, you can use methods such as getName and getHireDay with Manager objects. Even though these methods are not explicitly defined in the Manager class, they are automatically inherited from the Employee superclass. 
+  Similarly, the fields name, salary, and hireDay are taken from the superclass. Every Manager object has four fields: name, salary, hireDay, and bonus. 
+  When defining a subclass by extending its superclass, you only need to indicate the differences between the subclass and the superclass. When designing classes, you place the most general methods in the superclass and more specialized methods in its subclasses. Factoring out common functionality by moving it to a superclass is routine in object-oriented programming. 
+5.1.2 Overriding Methods
+  Some of the superclass methods are not appropriate for the Manager subclass. In particular, the getSalary method should return the sum of the base salary and the bonus. You need to supply a new method to override the superclass method: public class Manager extends Employee { . . . 
+  public double getSalary() { . . . 
+  } 
+  . . . 
+  } 
+  How can you implement this method? At first glance, it appears to be simple   —just return the sum of the salary and bonus fields: public double getSalary() { return salary + bonus; // won't work } 
+  However, that won’t work. Recall that only the Employee methods have direct access to the private fields of the Employee class. This means that the getSalary method of the Manager class cannot directly access the salary field. If the Manager methods want to access those private fields, they have to do what every other method does—use the public interface, in this case the public getSalary method of the Employee class. 
+  So, let’s try again. You need to call getSalary instead of simply accessing the salary field: public double getSalary() { double baseSalary = getSalary(); // still won't work return baseSalary + bonus; 
+  } 
+  Now, the problem is that the call to getSalary simply calls itself, because the Manager class has a getSalary method (namely, the method we are trying to implement). The consequence is an infinite chain of calls to the same method, leading to a program crash. 
+  We need to indicate that we want to call the getSalary method of the Employee superclass, not the current class. You use the special keyword super for this purpose. The call super.getSalary()   calls the getSalary method of the Employee class. Here is the correct version of the getSalary method for the Manager class: public double getSalary() {   double baseSalary = super.getSalary(); 
+  return baseSalary + bonus; 
+  } 
+  Note Some people think of super as being analogous to the this reference. However, that analogy is not quite accurate: super is not a reference to an object. For example, you cannot assign the value super to another object variable. Instead, super is a special keyword that directs the compiler to invoke the superclass method. 
+  As you saw, a subclass can add fields, and it can add methods or override the methods of the superclass. However, inheritance can never take away any fields or methods. 
+5.1.3 Subclass Constructors
+  To complete our example, let us supply a constructor. 
+  public Manager(String name, double salary, int year, int month, int day) { super(name, salary, year, month, day); 
+  bonus = 0; 
+  } 
+  Here, the keyword super has a different meaning. The instruction   super(name, salary, year, month, day); 
+  is shorthand for "call the constructor of the Employee superclass with n, s, year, month, and day as parameters." 
+  Since the Manager constructor cannot access the private fields of the Employee class, it must initialize them through a constructor. The constructor is invoked with the special super syntax. The call using super must be the first statement in the constructor for the subclass. 
+  If the subclass constructor does not call a superclass constructor explicitly, the no-argument constructor of the superclass is invoked. If the superclass does not have a no-argument constructor and the subclass constructor does not call another superclass constructor explicitly, the Java compiler reports an error. 
+  Note Recall that the this keyword has two meanings: to denote a reference to the implicit parameter and to call another constructor of the same class. Likewise, the super keyword has two meanings: to invoke a superclass method and to invoke a superclass constructor. 
+  When used to invoke constructors, the this and super keywords are closely related. The constructor calls can only occur as the first statement in another constructor. The constructor parameters are either passed to another constructor of the same class (this) or a constructor of the superclass (super). 
+  // C++ Manager::Manager(String name, double salary, int year, int month, int da : Employee(name, salary, year, month, day) { bonus = 0; 
+  } 
+  After you redefine the getSalary method for Manager objects, managers will automatically have the bonus added to their salaries. 
+  Here’s an example of this at work. We make a new manager and set the manager’s bonus: Manager boss = new Manager("Carl Cracker", 80000, 1987, 12, 15); 
+  boss.setBonus(5000); 
+  We make an array of three employees: var staff = new Employee[3]; 
+  We populate the array with a mix of managers and employees: staff[0] = boss; 
+  staff[1] = new Employee("Harry Hacker", 50000, 1989, 10, 1); 
+  staff[2] = new Employee("Tony Tester", 40000, 1990, 3, 15); 
+  We print out everyone’s salary: for (Employee e : staff) System.out.println(e.getName() + " " + e.getSalary()); 
+  This loop prints the following data: Carl Cracker 85000.0 Harry Hacker 50000.0 Tommy Tester 40000.0   Now staff[1] and staff[2] each print their base salary because they are Employee objects. However, staff[0] is a Manager object whose getSalary method adds the bonus to the base salary. 
+  What is remarkable is that the call e.getSalary()   picks out the correct getSalary method. Note that the declared type of e is Employee, but the actual type of the object to which e refers can be either Employee or Manager. 
+  When e refers to an Employee object, the call e.getSalary() calls the getSalary method of the Employee class. However, when e refers to a Manager object, then the getSalary method of the Manager class is called instead. The virtual machine knows about the actual type of the object to which e refers, and therefore can invoke the correct method. 
+  The fact that an object variable (such as the variable e) can refer to multiple actual types is called polymorphism. Automatically selecting the appropriate method at runtime is called dynamic binding. We discuss both topics in more detail in this chapter. 
+5.1.4 Inheritance Hierarchies
+  Inheritance need not stop at deriving one layer of classes. We could have an Executive class that extends Manager, for example. The collection of all classes extending a common superclass is called an inheritance hierarchy, as shown in Figure 5.1. The path from a particular class to its ancestors in the inheritance hierarchy is its inheritance chain. 
+  Figure 5.1 Employee inheritance hierarchy There is usually more than one chain of descent from a distant ancestor class. 
+  You could form subclasses Programmer or Secretary that extend   Employee, and they would have nothing to do with the Manager class (or with each other). This process can continue as long as is necessary. 
+5.1.5 Polymorphism
+  A simple rule can help you decide whether or not inheritance is the right design for your data. The "is–a" rule states that every object of the subclass is an object of the superclass. For example, every manager is an employee. 
+  Thus, it makes sense for the Manager class to be a subclass of the Employee class. Naturally, the opposite is not true—not every employee is a manager. 
+  Another way of formulating the "is–a" rule is the substitution principle. That principle states that you can use a subclass object whenever the program expects a superclass object. 
+  For example, you can assign a subclass object to a superclass variable. 
+  Employee e; 
+  e = new Employee(. . .); // Employee object expected e = new Manager(. . .); // OK, Manager can be used as well   In the Java programming language, object variables are polymorphic. A variable of type Employee can refer to an object of type Employee or to an object of any subclass of the Employee class (such as Manager, Executive, Secretary, and so on). 
+  We took advantage of this principle in Listing 5.1: Manager boss = new Manager(. . .); 
+  Employee[] staff = new Employee[3]; 
+  staff[0] = boss; 
+  In this case, the variables staff[0] and boss refer to the same object. 
+  However, staff[0] is considered to be only an Employee object by the compiler. 
+  That means you can call boss.setBonus(5000); // OK   but you can’t call staff[0].setBonus(5000); // ERROR   The declared type of staff[0] is Employee, and the setBonus method is not a method of the Employee class. 
+  However, you cannot assign a superclass reference to a subclass variable. For example, it is not legal to make the assignment Manager m = staff[i]; // ERROR   The reason is clear: Not all employees are managers. If this assignment were to succeed and m were to refer to an Employee object that is not a manager, then it would later be possible to call m.setBonus(. . .) and a runtime error would occur. 
+  Caution In Java, arrays of subclass references can be converted to arrays of superclass references without a cast. For example, consider this array of managers: Manager[] managers = new Manager[10]; 
+  It is legal to convert this array to an Employee[] array:   Employee[] staff = managers; // OK   Sure, why not, you may think. After all, if managers[i] is a Manager, it is also an Employee. But actually, something surprising is going on. Keep in mind that managers and staff are references to the same array. Now consider the statement staff[0] = new Employee("Harry Hacker", . . .); 
+  The compiler will cheerfully allow this assignment. But staff[0] and managers[0] are the same reference, so it looks as if we managed to smuggle a mere employee into the management ranks. 
+  That would be very bad—calling managers[0].setBonus(1000) would try to access a nonexistent instance field and would corrupt neighboring memory. 
+  To make sure no such corruption can occur, all arrays remember the element type with which they were created, and they monitor that only compatible references are stored into them. For example, the array created as new Manager[10] remembers that it is an array of managers. Attempting to store an Employee reference causes an ArrayStoreException. 
+5.1.6 Understanding Method Calls
+  It is important to understand exactly how a method call is applied to an object. Let’s say we call x.f(args), and the implicit parameter x is declared to be an object of class C. Here is what happens: 1. The compiler looks at the declared type of the object and the method name. Note that there may be multiple methods, all with the same name, f, but with different parameter types. For example, there may be a method f(int) and a method f(String). The compiler enumerates all methods called f in the class C and all accessible methods called f in the superclasses of C. (Private methods of the superclass are not accessible.) Now the compiler knows all possible candidates for the method to be   called. 
+  2. Next, the compiler determines the types of the arguments supplied in the method call. If among all the methods called f there is a unique method whose parameter types are a best match for the supplied arguments, that method is chosen to be called. This process is called overloading resolution. For example, in a call x.f("Hello"), the compiler picks f(String) and not f(int). The situation can get complex because of type conversions (int to double, Manager to Employee, and so on). If the compiler cannot find any method with matching parameter types or if multiple methods all match after applying conversions, the compiler reports an error. 
+  Now the compiler knows the name and parameter types of the method that needs to be called. 
+  Note Recall that the name and parameter type list for a method is called the method’s signature. For example, f(int) and f(String) are two methods with the same name but different signatures. If you define a method in a subclass that has the same signature as a superclass method, you override the superclass method. 
+  The return type is not part of the signature. However, when you override a method, you need to keep the return type compatible. 
+  A subclass may change the return type to a subtype of the original type. For example, suppose the Employee class has a method public Employee getBuddy() { . . . } 
+  A manager would never want to have a lowly employee as a buddy. To reflect that fact, the Manager subclass can override this method as   public Manager getBuddy() { . . . } // OK to change return type   We say that the two getBuddy methods have covariant return types. 
+  3. If the method is private, static, final, or a constructor, then the compiler knows exactly which method to call. (The final modifier is explained in the next section.) This is called static binding. Otherwise, the method to be called depends on the actual type of the implicit parameter, and dynamic binding must be used at runtime. In our example, the compiler would generate an instruction to call f(String) with dynamic binding. 
+  4. When the program runs and uses dynamic binding to call a method, the virtual machine must call the version of the method that is appropriate for the actual type of the object to which x refers. Let’s say the actual type is D, a subclass of C. If the class D defines a method f(String), that method is called. If not, D’s superclass is searched for a method f(String), and so on. 
+  It would be time-consuming to carry out this search every time a method is called. Instead, the virtual machine precomputes for each class a method table that lists all method signatures and the actual methods to be called. When a method is actually called, the virtual machine simply makes a table lookup. In our example, the virtual machine consults the method table for the class D and looks up the method to call for f(String). That method may be D.f(String) or X.f(String), where X is some superclass of D. There is one twist to this scenario. If the call is super.f(param), then the compiler consults the method table of the superclass of the implicit parameter. 
+  Let’s look at this process in detail in the call e.getSalary() in Listing 5.1. The declared type of e is Employee. The Employee class has a single method, called getSalary, with no method parameters. Therefore, in this case, we don’t worry about overloading resolution. 
+  The getSalary method is not private, static, or final, so it is dynamically bound. The virtual machine produces method tables for the   Employee and Manager classes. The Employee table shows that all methods are defined in the Employee class itself: Employee: getName() -> Employee.getName() getSalary() -> Employee.getSalary() getHireDay() -> Employee.getHireDay() raiseSalary(double) -> Employee.raiseSalary(double)   Actually, that isn’t the whole story—as you will see later in this chapter, the Employee class has a superclass Object from which it inherits a number of methods. We ignore the Object methods for now. 
+  The Manager method table is slightly different. Three methods are inherited, one method is redefined, and one method is added. 
+  Manager: getName() -> Employee.getName() getSalary() -> Manager.getSalary() getHireDay() -> Employee.getHireDay() raiseSalary(double) -> Employee.raiseSalary(double) setBonus(double) -> Manager.setBonus(double)   At runtime, the call e.getSalary() is resolved as follows: 1. First, the virtual machine fetches the method table for the actual type of e. That may be the table for Employee, Manager, or another subclass of Employee. 
+  2. Then, the virtual machine looks up the defining class for the getSalary() signature. Now it knows which method to call. 
+  3. Finally, the virtual machine calls the method. 
+  Dynamic binding has a very important property: It makes programs extensible without the need for modifying existing code. Suppose a new class Executive is added and there is the possibility that the variable e refers to an object of that class. The code containing the call e.getSalary() need not be recompiled. The Executive.getSalary() method is called automatically if e happens to refer to an object of type Executive. 
+  Caution When you override a method, the subclass method must be at least as visible as the superclass method. In particular, if the superclass method is public, the subclass method must also be declared public. It is a common error to accidentally omit the public specifier for the subclass method. The compiler then complains that you try to supply a more restrictive access privilege. 
+5.1.7 Preventing Inheritance: Final Classes and Methods
+  Occasionally, you want to prevent someone from forming a subclass of one of your classes. Classes that cannot be extended are called final classes, and you use the final modifier in the definition of the class to indicate this. For example, suppose we want to prevent others from subclassing the Executive class. Simply declare the class using the final modifier, as follows: public final class Executive extends Manager { . . . 
+  } 
+  You can also make a specific method in a class final. If you do this, then no subclass can override that method. (All methods in a final class are automatically final.) For example: public class Employee { . . . 
+  public final String getName() { return name; 
+  } 
+  . . . 
+  } 
+  Note Recall that fields can also be declared as final. A final field cannot be changed after the object has been constructed. However, if a class is declared final, only the methods, not the fields, are automatically final. 
+  There is only one good reason to make a method or class final: to make sure its semantics cannot be changed in a subclass. For example, the getTime and setTime methods of the Calendar class are final. This indicates that the designers of the Calendar class have taken over responsibility for the conversion between the Date class and the calendar state. No subclass should be allowed to mess up this arrangement. Similarly, the String class is a final class. That means nobody can define a subclass of String. In other words, if you have a String reference, you know it refers to a String and nothing but a String. 
+  Some programmers believe that you should declare all methods as final unless you have a good reason to want polymorphism. In fact, in C++ and C#, methods do not use polymorphism unless you specifically request it. That may be a bit extreme, but we agree that it is a good idea to think carefully about final methods and classes when you design a class hierarchy. 
+  In the early days of Java, some programmers used the final keyword hoping to avoid the overhead of dynamic binding. If a method is not overridden, and it is short, then a compiler can optimize the method call away —a process called inlining. For example, inlining the call e.getName() replaces it with the field access e.name. This is a worthwhile improvement —CPUs hate branching because it interferes with their strategy of prefetching instructions while processing the current one. However, if getName can be overridden in another class, then the compiler cannot inline it because it has no way of knowing what the overriding code may do. 
+  Fortunately, the just-in-time compiler in the virtual machine can do a better job than a traditional compiler. It knows exactly which classes extend a given class, and it can check whether any class actually overrides a given method. 
+  If a method is short, frequently called, and not actually overridden, the justintime compiler can inline it. What happens if the virtual machine loads another subclass that overrides an inlined method? Then the optimizer must undo the inlining. That takes time, but it happens rarely. 
+5.1.8 Casting
+  Recall from Chapter 3 that the process of forcing a conversion from one type to another is called casting. The Java programming language has a special notation for casts. For example, double x = 3.405; 
+  int nx = (int) x; 
+  converts the value of the expression x into an integer, discarding the fractional part. 
+  Just as you occasionally need to convert a floating-point number to an integer, you may need to convert an object reference from one class to another. To actually make a cast of an object reference, use a syntax similar to what you use for casting numeric expressions. Surround the target class name with parentheses and place it before the object reference you want to cast. For example: Manager boss = (Manager) staff[0]; 
+  There is only one reason why you would want to make a cast—to use an object in its full capacity after its actual type has been temporarily forgotten. 
+  For example, in the ManagerTest class, the staff array had to be an array of Employee objects because some of its elements were regular employees. We would need to cast the managerial elements of the array back to Manager to access any of its new variables. (Note that in the sample code for the first section, we made a special effort to avoid the cast. We initialized the boss variable with a Manager object before storing it in the array. We needed the correct type to set the bonus of the manager.) As you know, in Java every variable has a type. The type describes the kind of object the variable refers to and what it can do. For example, staff[i]   refers to an Employee object (so it can also refer to a Manager object). 
+  The compiler checks that you do not promise too much when you store a value in a variable. If you assign a subclass reference to a superclass variable, you are promising less, and the compiler will simply let you do it. If you assign a superclass reference to a subclass variable, you are promising more. 
+  Then you must use a cast so that your promise can be checked at runtime. 
+  What happens if you try to cast down an inheritance chain and are "lying" 
+  about what an object contains? 
+  Manager boss = (Manager) staff[1]; // ERROR   When the program runs, the Java runtime system notices the broken promise and generates a ClassCastException. If you do not catch the exception, your program terminates. Thus, it is good programming practice to find out whether a cast will succeed before attempting it. Simply use the instanceof operator. For example: if (staff[1] instanceof Manager) { boss = (Manager) staff[1]; 
+  . . . 
+  } 
+  Finally, the compiler will not let you make a cast if there is no chance for the cast to succeed. For example, the cast String c = (String) staff[1]; 
+  is a compile-time error because String is not a subclass of Employee. 
+  To sum up: You can cast only within an inheritance hierarchy. 
+  Use instanceof to check before casting from a superclass to a subclass. 
+  Note The test x instanceof C   does not generate an exception if x is null. It simply returns false. That makes sense: null refers to no object, so it certainly doesn’t refer to an object of type C. 
+  Actually, converting the type of an object by a cast is not usually a good idea. 
+  In our example, you do not need to cast an Employee object to a Manager object for most purposes. The getSalary method will work correctly on both objects of both classes. The dynamic binding that makes polymorphism work locates the correct method automatically. 
+  The only reason to make the cast is to use a method that is unique to managers, such as setBonus. If for some reason you find yourself wanting to call setBonus on Employee objects, ask yourself whether this is an indication of a design flaw in the superclass. It may make sense to redesign the superclass and add a setBonus method. Remember, it takes only one uncaught ClassCastException to terminate your program. In general, it is best to minimize the use of casts and the instanceof operator. 
+  is the same as Manager* boss = dynamic_cast<Manager*>(staff[1]); // C++   with one important difference. If the cast fails, it does not yield a null object but throws an exception. In this sense, it is like a C++ cast of references. This is a pain in the neck. In C++, you can take care of the type test and type conversion in one operation. 
+  Manager* boss = dynamic_cast<Manager*>(staff[1]); // C++ if (boss != NULL) . . . 
+  In Java, you need to use a combination of the instanceof operator and a cast. 
+  if (staff[1] instanceof Manager) { Manager boss = (Manager) staff[1]; 
+  . . . 
+  } 
+5.1.9 Abstract Classes
+  As you move up the inheritance hierarchy, classes become more general and probably more abstract. At some point, the ancestor class becomes so general that you think of it more as a basis for other classes than as a class with specific instances you want to use. Consider, for example, an extension of our Employee class hierarchy. An employee is a person, and so is a student. Let us extend our class hierarchy to include classes Person and Student. 
+  Figure 5.2 shows the inheritance relationships between these classes. 
+  Figure 5.2 Inheritance diagram for Person and its subclasses Why bother with so high a level of abstraction? There are some attributes that make sense for every person, such as name. Both students and employees have names, and introducing a common superclass lets us factor out the getName method to a higher level in the inheritance hierarchy. 
+  Now let’s add another method, getDescription, whose purpose is to return a brief description of the person, such as an employee with a salary of $50,000.00 a student majoring in computer science   It is easy to implement this method for the Employee and Student classes. But what information can you provide in the Person class? The Person class knows nothing about the person except the name. Of course, you could implement Person.getDescription() to return an empty string. But there is a better way. If you use the abstract keyword, you do not need to implement the method at all. 
+  public abstract String getDescription(); 
+  // no implementation required   For added clarity, a class with one or more abstract methods must itself be declared abstract. 
+  public abstract class Person { . . . 
+  public abstract String getDescription(); 
+  } 
+  In addition to abstract methods, abstract classes can have fields and concrete methods. For example, the Person class stores the name of the person and has a concrete method that returns it. 
+  public abstract class Person { private String name; 
+  public Person(String name) { this.name = name; 
+  } 
+  public abstract String getDescription(); 
+  public String getName() { return name; 
+  } 
+  } 
+  Tip Some programmers don’t realize that abstract classes can have concrete methods. You should always move common fields and methods (whether abstract or not) to the superclass (whether abstract or not). 
+  Abstract methods act as placeholders for methods that are implemented in the subclasses. When you extend an abstract class, you have two choices. You can leave some or all of the abstract methods undefined; then you must tag the subclass as abstract as well. Or you can define all methods, and the subclass is no longer abstract. 
+  For example, we will define a Student class that extends the abstract Person class and implements the getDescription method. None of the methods of the Student class are abstract, so it does not need to be declared as an abstract class. 
+  A class can even be declared as abstract though it has no abstract methods. 
+  Abstract classes cannot be instantiated. That is, if a class is declared as abstract, no objects of that class can be created. For example, the expression new Person("Vince Vu")   is an error. However, you can create objects of concrete subclasses. 
+  Note that you can still create object variables of an abstract class, but such a variable must refer to an object of a nonabstract subclass. For example: Person p = new Student("Vince Vu", "Economics"); 
+  Here p is a variable of the abstract type Person that refers to an instance of the nonabstract subclass Student. 
+  . . . 
+  }; 
+  A C++ class is abstract if it has at least one pure virtual function. In   C++, there is no special keyword to denote abstract classes. 
+  Let us define a concrete subclass Student that extends the abstract class Person: public class Student extends Person { private String major; 
+  public Student(String name, String major) { super(name); 
+  this.major = major; 
+  } 
+  public String getDescription() { return "a student majoring in " + major; 
+  } 
+  } 
+  The Student class defines the getDescription method. Therefore, all methods in the Student class are concrete, and the class is no longer an abstract class. 
+  The program shown in Listing 5.4 defines the abstract superclass Person (Listing 5.5) and two concrete subclasses, Employee (Listing 5.6) and Student (Listing 5.7). We fill an array of Person references with employee and student objects: var people = new Person[2]; 
+  people[0] = new Employee(. . .); 
+  people[1] = new Student(. . .); 
+  We then print the names and descriptions of these objects: for (Person p : people) System.out.println(p.getName() + ", " + p.getDescription()); 
+  Some people are baffled by the call p.getDescription()   Isn’t this a call to an undefined method? Keep in mind that the variable p never refers to a Person object because it is impossible to construct an object of the abstract Person class. The variable p always refers to an object of a concrete subclass such as Employee or Student. For these objects, the getDescription method is defined. 
+  Could you have omitted the abstract method altogether from the Person super-class, simply defining the getDescription methods in the Employee and Student sub-classes? If you did that, you wouldn’t have been able to invoke the getDescription method on the variable p. The compiler ensures that you invoke only methods that are declared in the class. 
+  Abstract methods are an important concept in the Java programming language. You will encounter them most commonly inside interfaces. For more information about interfaces, turn to Chapter 6. 
+5.1.10 Protected Access
+  As you know, fields in a class are best tagged as private, and methods are usually tagged as public. Any features declared private won’t be accessible in other classes. As we said at the beginning of this chapter, this is also true for subclasses: A subclass cannot access the private fields of its superclass. 
+  There are times, however, when you want to restrict a method to subclasses only or, less commonly, to allow subclass methods to access a superclass field. In that case, you declare a class feature as protected. For example, if the superclass Employee declares the hireDay field as protected instead of private, then the Manager methods can access it directly. 
+  In Java, a protected field is accessible by any class in the same package. Now consider an Administrator subclass in a different package. The methods of the Administrator class can peek inside the hireDay field of Administrator objects only, not of other Employee objects. This restriction is made so that you can’t abuse the protected mechanism by forming subclasses just to gain access to the protected fields. 
+  In practice, use protected fields with caution. Suppose your class is used by other programmers and you designed it with protected fields. Unknown to you, other programmers may inherit classes from your class and start accessing your protected fields. In this case, you can no longer change the implementation of your class without upsetting those programmers. That is against the spirit of OOP, which encourages data encapsulation. 
+  Protected methods make more sense. A class may declare a method as protected if it is tricky to use. This indicates that the subclasses (which, presumably, know their ancestor well) can be trusted to use the method correctly, but other classes cannot. 
+  A good example of this kind of method is the clone method of the Object class—see Chapter 6 for more details. 
+  Here is a summary of the four access control modifiers in Java:   1. Accessible in the class only (private). 
+  2. Accessible by the world (public). 
+  3. Accessible in the package and all subclasses (protected). 
+  4. Accessible in the package—the (unfortunate) default. No modifiers are needed. 

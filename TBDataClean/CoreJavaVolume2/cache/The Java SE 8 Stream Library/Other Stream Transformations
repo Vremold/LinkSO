@@ -1,0 +1,69 @@
+
+11
+
+You can concatenate two streams with the static concat method of the Stream class:
+Stream<String> combined = Stream.concat(
+letters("Hello"), letters("World"));
+// Yields the stream ["H", "e", "l", "l", "o", "W", "o", "r", "l", "d"]
+
+Of course the first stream should not be infinite—otherwise the second one will
+never get a chance.
+java.util.stream.Stream 8
+
+• Stream<T> limit(long maxSize)
+yields a stream with up to maxSize of the initial elements from this stream.
+• Stream<T> skip(long n)
+yields a stream whose elements are all but the initial n elements of this stream.
+• static <T> Stream<T> concat(Stream<? extends T> a, Stream<? extends T> b)
+yields a stream whose elements are the elements of a followed by the elements of b.
+
+1.5 Other Stream Transformations
+The distinct method returns a stream that yields elements from the original stream,
+in the same order, except that duplicates are suppressed. The stream must
+obviously remember the elements that it has already seen.
+Stream<String> uniqueWords
+= Stream.of("merrily", "merrily", "merrily", "gently").distinct();
+// Only one "merrily" is retained
+
+For sorting a stream, there are several variations of the sorted method. One works
+for streams of Comparable elements, and another accepts a Comparator. Here, we sort
+strings so that the longest ones come first:
+Stream<String> longestFirst =
+words.stream().sorted(Comparator.comparing(String::length).reversed());
+
+As with all stream transformations, the sorted method yields a new stream whose
+elements are the elements of the original stream in sorted order.
+Of course, you can sort a collection without using streams. The sorted method is
+useful when the sorting process is part of a stream pipeline.
+Finally, the peek method yields another stream with the same elements as the
+original, but a function is invoked every time an element is retrieved. That is
+handy for debugging:
+
+From the Library of Hristo Dimov Hristov
+
+12
+
+Chapter 1
+
+The Java SE 8 Stream Library
+
+Object[] powers = Stream.iterate(1.0, p -> p * 2)
+.peek(e -> System.out.println("Fetching " + e))
+.limit(20).toArray();
+
+When an element is actually accessed, a message is printed. This way you can
+verify that the infinite stream returned by iterate is processed lazily.
+For debugging, you can have peek call a method into which you set a breakpoint.
+java.util.stream.Stream 8
+
+• Stream<T> distinct()
+yields a stream of the distinct elements of this stream.
+• Stream<T> sorted()
+• Stream<T> sorted(Comparator<? super T> comparator)
+yields as stream whose elements are the elements of this stream in sorted order.
+The first method requires that the elements are instances of a class implementing
+Comparable.
+• Stream<T> peek(Consumer<? super T> action)
+yields a stream with the same elements as this stream, passing each element to
+action as it is consumed.
+

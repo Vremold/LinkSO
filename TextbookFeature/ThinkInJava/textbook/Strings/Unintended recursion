@@ -1,0 +1,6 @@
+  Because (like every other class) the Java standard containers are ultimately inherited from Object, they contain a toString( ) method. This has been overridden so that they can produce a String representation of themselves, including the objects they hold. ArrayList.toString( ), for example, steps through the elements of the Array List and calls toString( ) for each one: 
+  Suppose you’d like your toString( ) to print the address of your class. It seems to make sense to simply refer to this: 
+  If you create an InfiniteRecursion object and then print it, you’ll get a very long sequence of exceptions. This is also true if you place the InfiniteRecursion objects in an ArrayList and print that ArrayList as shown here. What’s happening is automatic type conversion for Strings. When you say: 
+  "InfiniteRecursion address: " + this  The compiler sees a String followed by a’+’ and something that’s not a String, so it tries to convert this to a String. It does this conversion by calling toString( ), which produces a recursive call. 
+  If you really do want to print the address of the object, the solution is to call the ObjecttoString( ) method, which does just that. So instead of saying this, you’d say super.toString( ). 
+  Exercise 2: (1) Repair InfiniteRecursion.java. 

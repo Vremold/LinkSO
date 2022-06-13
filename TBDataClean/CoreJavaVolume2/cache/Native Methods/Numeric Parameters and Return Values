@@ -1,0 +1,178 @@
+
+947
+
+NOTE: Some shared libraries for native code must execute certain initializations.
+You can place any initialization code into a JNI_OnLoad method. Similarly, when
+the virtual machine (VM) shuts down, it will call the JNI_OnUnload method if you
+provide it. The prototypes are
+jint JNI_OnLoad(JavaVM* vm, void* reserved);
+void JNI_OnUnload(JavaVM* vm, void* reserved);
+
+The JNI_OnLoad method needs to return the minimum version of the VM it requires,
+such as JNI_VERSION_1_2.
+
+12.2 Numeric Parameters and Return Values
+When passing numbers between C and Java, you should understand which types
+correspond to each other. For example, although C does have data types called
+int and long, their implementation is platform-dependent. On some platforms, an
+int is a 16-bit quantity, on others it is a 32-bit quantity. In the Java platform, of
+course, an int is always a 32-bit integer. For that reason, JNI defines types jint,
+jlong, and so on.
+Table 12.1 shows the correspondence between Java types and C types.
+
+Table 12.1 Java Types and C Types
+Java Programming Language
+
+C Programming Language
+
+Bytes
+
+boolean
+
+jboolean
+
+1
+
+byte
+
+jbyte
+
+1
+
+char
+
+jchar
+
+2
+
+short
+
+jshort
+
+2
+
+int
+
+jint
+
+4
+
+long
+
+jlong
+
+8
+
+float
+
+jfloat
+
+4
+
+double
+
+jdouble
+
+8
+
+In the header file jni.h, these types are declared with typedef statements as the
+equivalent types on the target platform. That header file also defines the constants
+JNI_FALSE = 0 and JNI_TRUE = 1.
+Until Java SE 5.0, Java had no direct analog of the C printf function. In the following
+examples, we will suppose you are stuck with an ancient JDK release and decide
+
+From the Library of Hristo Dimov Hristov
+
+948
+
+Chapter 12
+
+Native Methods
+
+to implement the same functionality by calling the C printf function in a native
+method.
+Listing 12.5 shows a class called Printf1 that uses a native method to print a
+floating-point number with a given field width and precision.
+
+Listing 12.5
+1
+2
+3
+4
+5
+6
+7
+
+printf1/Printf1.java
+
+/**
+* @version 1.10 1997-07-01
+* @author Cay Horstmann
+*/
+class Printf1
+{
+public static native int print(int width, int precision, double x);
+
+8
+
+static
+{
+System.loadLibrary("Printf1");
+}
+
+9
+10
+11
+12
+13
+
+}
+
+Notice that when the method is implemented in C, all int and double parameters
+are changed to jint and jdouble, as shown in Listing 12.6.
+
+Listing 12.6
+1
+2
+3
+4
+
+printf1/Printf1.c
+
+/**
+@version 1.10 1997-07-01
+@author Cay Horstmann
+*/
+
+5
+6
+7
+
+#include "Printf1.h"
+#include <stdio.h>
+
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+
+JNIEXPORT jint JNICALL Java_Printf1_print(JNIEnv* env, jclass cl,
+jint width, jint precision, jdouble x)
+{
+char fmt[30];
+jint ret;
+sprintf(fmt, "%%%d.%df", width, precision);
+ret = printf(fmt, x);
+fflush(stdout);
+return ret;
+}
+
+From the Library of Hristo Dimov Hristov
+

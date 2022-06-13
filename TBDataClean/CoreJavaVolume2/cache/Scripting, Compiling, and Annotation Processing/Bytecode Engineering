@@ -1,0 +1,680 @@
+
+481
+
+8.7 Bytecode Engineering
+You have seen how annotations can be processed at runtime or at the source code
+level. There is a third possibility: processing at the bytecode level. Unless annotations are removed at the source level, they are present in the class files. The class
+file format is documented (see http://docs.oracle.com/javase/specs/jvms/se8/html). The format
+is rather complex, and it would be challenging to process class files without special
+libraries. One such library is the ASM library, available at http://asm.ow2.org.
+
+8.7.1 Modifying Class Files
+In this section, we use ASM to add logging messages to annotated methods. If a
+method is annotated with
+@LogEntry(logger=loggerName)
+
+then we add the bytecodes for the following statement at the beginning of the
+method:
+Logger.getLogger(loggerName).entering(className, methodName);
+
+For example, if you annotate the hashCode method of the Item class as
+@LogEntry(logger="global") public int hashCode()
+
+then a message similar to the following is printed whenever the method is called:
+May 17, 2016 10:57:59 AM Item hashCode
+FINER: ENTRY
+
+To achieve this, we do the following:
+1.
+2.
+3.
+4.
+
+Load the bytecodes in the class file.
+Locate all methods.
+For each method, check whether it has a LogEntry annotation.
+If it does, add the bytecodes for the following instructions at the beginning
+of the method:
+ldc loggerName
+invokestatic
+java/util/logging/Logger.getLogger:(Ljava/lang/String;)Ljava/util/logging/Logger;
+ldc className
+ldc methodName
+invokevirtual java/util/logging/Logger.entering:(Ljava/lang/String;Ljava/lang/String;)V
+
+Inserting these bytecodes sounds tricky, but ASM makes it fairly straightforward.
+We don’t describe the process of analyzing and inserting bytecodes in detail. The
+
+From the Library of Hristo Dimov Hristov
+
+482
+
+Chapter 8
+
+Scripting, Compiling, and Annotation Processing
+
+important point is that the program in Listing 8.12 edits a class file and inserts a
+logging call at the beginning of the methods annotated with the LogEntry annotation.
+For example, here is how you add the logging instructions to Item.java in
+Listing 8.13, where asm is the directory into which you installed the ASM library:
+javac set/Item.java
+javac -classpath .:asm/lib/\* bytecodeAnnotations/EntryLogger.java
+java -classpath .:asm/lib/\* bytecodeAnnotations.EntryLogger set.Item
+
+Try running
+javap -c set.Item
+
+before and after modifying the Item class file. You can see the inserted instructions
+at the beginning of the hashCode, equals, and compareTo methods.
+public int hashCode();
+Code:
+0: ldc #85; // String global
+2: invokestatic #80;
+// Method java/util/logging/Logger.getLogger:(Ljava/lang/String;)Ljava/util/logging/Logger;
+5: ldc
+#86; //String Item
+7: ldc
+#88; //String hashCode
+9: invokevirtual #84;
+// Method java/util/logging/Logger.entering:(Ljava/lang/String;Ljava/lang/String;)V
+12: bipush 13
+14: aload_0
+15: getfield
+#2; // Field description:Ljava/lang/String;
+18: invokevirtual #15; // Method java/lang/String.hashCode:()I
+21: imul
+22: bipush 17
+24: aload_0
+25: getfield
+#3; // Field partNumber:I
+28: imul
+29: iadd
+30: ireturn
+
+The SetTest program in Listing 8.14 inserts Item objects into a hash set. When you
+run it with the modified class file, you will see the logging messages.
+May 17, 2016 10:57:59 AM Item hashCode
+FINER: ENTRY
+May 17, 2016 10:57:59 AM Item hashCode
+FINER: ENTRY
+May 17, 2016 10:57:59 AM Item hashCode
+FINER: ENTRY
+May 17, 2016 10:57:59 AM Item equals
+FINER: ENTRY
+[[description=Toaster, partNumber=1729], [description=Microwave, partNumber=4104]]
+
+From the Library of Hristo Dimov Hristov
+
+8.7 Bytecode Engineering
+
+483
+
+Note the call to equals when we insert the same item twice.
+This example shows the power of bytecode engineering. Annotations are used
+to add directives to a program, and a bytecode editing tool picks up the directives
+and modifies the virtual machine instructions.
+
+Listing 8.12
+1
+
+bytecodeAnnotations/EntryLogger.java
+
+package bytecodeAnnotations;
+
+2
+3
+4
+
+import java.io.*;
+import java.nio.file.*;
+
+5
+6
+7
+
+import org.objectweb.asm.*;
+import org.objectweb.asm.commons.*;
+
+8
+9
+10
+11
+12
+13
+14
+15
+16
+
+/**
+* Adds "entering" logs to all methods of a class that have the LogEntry annotation.
+* @version 1.20 2016-05-10
+* @author Cay Horstmann
+*/
+public class EntryLogger extends ClassVisitor
+{
+private String className;
+
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+
+/**
+* Constructs an EntryLogger that inserts logging into annotated methods of a given class.
+* @param cg the class
+*/
+public EntryLogger(ClassWriter writer, String className)
+{
+super(Opcodes.ASM5, writer);
+this.className = className;
+}
+
+27
+28
+29
+30
+31
+32
+33
+34
+35
+
+@Override
+public MethodVisitor visitMethod(int access, String methodName, String desc,
+String signature, String[] exceptions)
+{
+MethodVisitor mv = cv.visitMethod(access, methodName, desc, signature, exceptions);
+return new AdviceAdapter(Opcodes.ASM5, mv, access, methodName, desc)
+{
+private String loggerName;
+
+36
+37
+38
+39
+40
+
+public AnnotationVisitor visitAnnotation(String desc, boolean visible)
+{
+return new AnnotationVisitor(Opcodes.ASM5)
+{
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+484
+
+Chapter 8
+
+Scripting, Compiling, and Annotation Processing
+
+Listing 8.12 (Continued)
+public void visit(String name, Object value)
+{
+if (desc.equals("LbytecodeAnnotations/LogEntry;") && name.equals("logger"))
+loggerName = value.toString();
+}
+
+41
+42
+43
+44
+45
+
+};
+
+46
+
+}
+
+47
+48
+
+public void onMethodEnter()
+{
+if (loggerName != null)
+{
+visitLdcInsn(loggerName);
+visitMethodInsn(INVOKESTATIC, "java/util/logging/Logger", "getLogger",
+"(Ljava/lang/String;)Ljava/util/logging/Logger;", false);
+visitLdcInsn(className);
+visitLdcInsn(methodName);
+visitMethodInsn(INVOKEVIRTUAL, "java/util/logging/Logger", "entering",
+"(Ljava/lang/String;Ljava/lang/String;)V", false);
+loggerName = null;
+}
+}
+
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+
+};
+
+63
+
+}
+
+64
+65
+
+/**
+* Adds entry logging code to the given class.
+* @param args the name of the class file to patch
+*/
+public static void main(String[] args) throws IOException
+{
+if (args.length == 0)
+{
+System.out.println("USAGE: java bytecodeAnnotations.EntryLogger classfile");
+System.exit(1);
+}
+Path path = Paths.get(args[0]);
+ClassReader reader = new ClassReader(Files.newInputStream(path));
+ClassWriter writer = new ClassWriter(
+ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+EntryLogger entryLogger = new EntryLogger(writer,
+path.toString().replace(".class", "").replaceAll("[/\\\\]", "."));
+reader.accept(entryLogger, ClassReader.EXPAND_FRAMES);
+Files.write(Paths.get(args[0]), writer.toByteArray());
+}
+
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+
+}
+
+From the Library of Hristo Dimov Hristov
+
+8.7 Bytecode Engineering
+
+Listing 8.13
+1
+
+485
+
+set/Item.java
+
+package set;
+
+2
+3
+4
+
+import java.util.*;
+import bytecodeAnnotations.*;
+
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+
+/**
+* An item with a description and a part number.
+* @version 1.01 2012-01-26
+* @author Cay Horstmann
+*/
+public class Item
+{
+private String description;
+private int partNumber;
+
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+
+/**
+* Constructs an item.
+* @param aDescription the item's description
+* @param aPartNumber the item's part number
+*/
+public Item(String aDescription, int aPartNumber)
+{
+description = aDescription;
+partNumber = aPartNumber;
+}
+
+26
+27
+28
+29
+30
+31
+32
+33
+34
+
+/**
+* Gets the description of this item.
+* @return the description
+*/
+public String getDescription()
+{
+return description;
+}
+
+35
+36
+37
+38
+39
+
+public String toString()
+{
+return "[description=" + description + ", partNumber=" + partNumber + "]";
+}
+
+40
+41
+42
+43
+44
+45
+
+@LogEntry(logger = "com.horstmann")
+public boolean equals(Object otherObject)
+{
+if (this == otherObject) return true;
+if (otherObject == null) return false;
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+486
+
+Chapter 8
+
+Scripting, Compiling, and Annotation Processing
+
+Listing 8.13 (Continued)
+if (getClass() != otherObject.getClass()) return false;
+Item other = (Item) otherObject;
+return Objects.equals(description, other.description) && partNumber == other.partNumber;
+
+46
+47
+48
+
+}
+
+49
+50
+
+@LogEntry(logger = "com.horstmann")
+public int hashCode()
+{
+return Objects.hash(description, partNumber);
+}
+
+51
+52
+53
+54
+55
+56
+
+}
+
+Listing 8.14
+1
+
+set/SetTest.java
+
+package set;
+
+2
+3
+4
+
+import java.util.*;
+import java.util.logging.*;
+
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+
+/**
+* @version 1.02 2012-01-26
+* @author Cay Horstmann
+*/
+public class SetTest
+{
+public static void main(String[] args)
+{
+Logger.getLogger("com.horstmann").setLevel(Level.FINEST);
+Handler handler = new ConsoleHandler();
+handler.setLevel(Level.FINEST);
+Logger.getLogger("com.horstmann").addHandler(handler);
+
+18
+
+Set<Item> parts = new HashSet<>();
+parts.add(new Item("Toaster", 1279));
+parts.add(new Item("Microwave", 4104));
+parts.add(new Item("Toaster", 1279));
+System.out.println(parts);
+
+19
+20
+21
+22
+23
+
+}
+
+24
+25
+
+}
+
+8.7.2 Modifying Bytecodes at Load Time
+In the preceding section, you saw a tool that edits class files. However, it can
+be cumbersome to add yet another tool into the build process. An attractive
+
+From the Library of Hristo Dimov Hristov
+
+8.7 Bytecode Engineering
+
+487
+
+alternative is to defer the bytecode engineering until load time, when the class
+loader loads the class.
+The instrumentation API has a hook for installing a bytecode transformer. The
+transformer must be installed before the main method of the program is called.
+You can meet this requirement by defining an agent, a library that is loaded to
+monitor a program in some way. The agent code can carry out initializations in
+a premain method.
+Here are the steps required to build an agent:
+1.
+
+Implement a class with a method
+public static void premain(String arg, Instrumentation instr)
+
+This method is called when the agent is loaded. The agent can get a single
+command-line argument, which is passed in the arg parameter. The instr
+parameter can be used to install various hooks.
+2.
+
+Make a manifest file EntryLoggingAgent.mf that sets the Premain-Class attribute, for
+example:
+Premain-Class: bytecodeAnnotations.EntryLoggingAgent
+
+3.
+
+Package the agent code and the manifest into a JAR file:
+javac -classpath .:asm/lib/\* bytecodeAnnotations/EntryLoggingAgent.java
+jar cvfm EntryLoggingAgent.jar bytecodeAnnotations/EntryLoggingAgent.mf \
+bytecodeAnnotations/Entry*.class
+
+To launch a Java program together with the agent, use the following command-line
+options:
+java -javaagent:AgentJARFile=agentArgument . . .
+
+For example, to run the SetTest program with the entry logging agent, call
+javac set/SetTest.java
+java -javaagent:EntryLoggingAgent.jar=set.Item -classpath .:asm/lib/\* set.SetTest
+
+The Item argument is the name of the class that the agent should modify.
+Listing 8.15 shows the agent code. The agent installs a class file transformer. The
+transformer first checks whether the class name matches the agent argument. If
+so, it uses the EntryLogger class from the preceding section to modify the bytecodes.
+However, the modified bytecodes are not saved to a file. Instead, the transformer
+returns them for loading into the virtual machine (see Figure 8.3). In other words,
+this technique carries out “just in time” modification of the bytecodes.
+
+From the Library of Hristo Dimov Hristov
+
+488
+
+Chapter 8
+
+Scripting, Compiling, and Annotation Processing
+
+Figure 8.3 Modifying classes at load time
+Listing 8.15
+1
+
+bytecodeAnnotations/EntryLoggingAgent.java
+
+package bytecodeAnnotations;
+
+2
+3
+
+import java.lang.instrument.*;
+
+4
+5
+
+import org.objectweb.asm.*;
+
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+
+/**
+* @version 1.10 2016-05-10
+* @author Cay Horstmann
+*/
+public class EntryLoggingAgent
+{
+public static void premain(final String arg, Instrumentation instr)
+{
+instr.addTransformer((loader, className, cl, pd, data) ->
+{
+if (!className.equals(arg)) return null;
+ClassReader reader = new ClassReader(data);
+ClassWriter writer = new ClassWriter(
+ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+EntryLogger el = new EntryLogger(writer, className);
+reader.accept(el, ClassReader.EXPAND_FRAMES);
+return writer.toByteArray();
+});
+}
+}
+
+From the Library of Hristo Dimov Hristov
+
+8.7 Bytecode Engineering
+
+489
+
+In this chapter, you have learned how to
+• Add annotations to Java programs
+• Design your own annotation interfaces
+• Implement tools that make use of the annotations
+You have seen three technologies for processing code: scripting, compiling Java
+programs, and processing annotations. The first two were quite straightforward.
+On the other hand, building annotation tools is undeniably complex and not
+something that most developers will need to tackle. This chapter gave you the
+background for understanding the inner workings of the annotation tools you
+will encounter, and perhaps piqued your interest in developing your own tools.
+In the next chapter, we’ll move on to an entirely different topic: security. Security
+has always been a core feature of the Java platform. As the world in which we
+live and compute gets more dangerous, a thorough understanding of Java security
+will be of increasing importance for many developers.
+
+From the Library of Hristo Dimov Hristov
+
+This page intentionally left blank
+
+From the Library of Hristo Dimov Hristov
+

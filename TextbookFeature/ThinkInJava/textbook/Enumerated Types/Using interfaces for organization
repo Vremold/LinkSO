@@ -1,0 +1,15 @@
+  The inability to inherit from an enum can be a bit frustrating at times. The motivation for inheriting from an enum comes partly from wanting to extend the number of elements in the original enum, and partly from wanting to create subcategories by using subtypes. 
+  You can achieve categorization by grouping the elements together inside an interface and creating an enumeration based on that interface. For example, suppose you have different classes of food that you’d like to create as enums, but you’d still like each one to be a type of Food. Here’s what it looks like: 
+  Since the only subtyping available for an enum is that of interface implementation, each nested enum implements the surrounding interface Food. Now it’s possible to say that "everything is a type of Food" as you can see here: 
+  The upcast to Food works for each enum type that implements Food, so they are all types of Food. 
+  An interface, however, is not as useful as an enum when you want to deal with a set of types. If you want to have an "enum of enums" you can create a surrounding enum with one instance for each enum in Food: 
+  Each of the above enums takes the corresponding Class object as a constructor argument, from which it can extract and store all the enum instances using getEnumConstants( ). These instances are later used in randomSelection( ), so now we can create a randomly generated meal by selecting one Food item from each Course: 
+  In this case, the value of creating an enum of enums is to iterate through each Course. Later, in the VendingMachine.java example, you’ll see another approach to categorization which is dictated by different constraints. 
+  Another, more compact, approach to the problem of categorization is to nest enums within enums, like this: 
+  The Security interface is necessary to collect the contained enums together as a common type. These are then categorized into the enums within SecurityCategory. 
+  If we take this approach with the Food example, the result is: 
+  In the end, it’s only a reorganization of the code but it may produce a clearer structure in some cases. 
+  Exercise 3: (1) Add a new Course to Course.java and demonstrate that it works in Meal.java. 
+  Exercise 4: (1) Repeat the above exercise for Meal2.java. 
+  Exercise 5: (4) Modify control/VowelsAndConsonants.java so that it uses three enum types: VOWEL, SOMETIMES_A_VOWEL, and CONSONANT. The enum constructor should take the various letters that describe that particular category. Hint: Use varargs, and remember that varargs automatically creates an array for you. 
+  Exercise 6: (3) Is there any special benefit in nesting Appetizer, MainCourse, Dessert, and Coffee inside Food rather than making them standalone enums that just happen to implement Food? 

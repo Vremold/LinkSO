@@ -1,0 +1,1028 @@
+If you want to present a set of choices to a user, and a radio button or checkbox
+set consumes too much space, you can use a combo box or a list. Combo boxes
+were covered in Volume I because they are relatively simple. The JList component
+has many more features, and its design is similar to that of the tree and table
+components. For that reason, it is our starting point for the discussion of complex
+Swing components.
+You can have lists of strings, of course, but you can also have lists of arbitrary
+objects, with full control of how they appear. The internal architecture of the list
+component that makes this generality possible is rather elegant. Unfortunately,
+the designers at Sun felt that they needed to show off that elegance, instead of
+hiding it from the programmer who just wants to use the component. You will
+find that the list control is somewhat awkward to use for common cases because
+you need to manipulate some of the machinery that makes the general cases
+possible. We will walk you through the simple and most common case—a list
+box of strings—and then give a more complex example that shows off the flexibility
+of the list component.
+
+10.1.1 The JList Component
+The JList component shows a number of items inside a single box. Figure 10.1
+shows an admittedly silly example. The user can select the attributes for the fox,
+such as “quick,” “brown,” “hungry,” “wild,” and, because we ran out of attributes,
+“static,” “private,” and “final.” You can thus have the private static final fox jump
+over the lazy dog.
+As of Java SE 7, JList is a generic type. The type parameter is the type of the values
+the user can select. In this example, we use a JList<String>.
+To construct this list component, start out with an array of strings and pass that
+array to the JList constructor:
+String[] words= { "quick", "brown", "hungry", "wild", . . . };
+JList<String> wordList = new JList<>(words);
+
+List boxes do not scroll automatically. To make a list box scroll, you must insert
+it into a scroll pane:
+JScrollPane scrollPane = new JScrollPane(wordList);
+
+Then, add the scroll pane, not the list, into the surrounding panel.
+We have to admit that the separation of the list display and the scrolling mechanism is elegant in theory, but a pain in practice. Essentially all lists that we ever
+
+From the Library of Hristo Dimov Hristov
+
+10.1 Lists
+
+583
+
+Figure 10.1 A list box
+encountered needed scrolling. It seems cruel to force programmers to go through
+the hoops in the default case just so they can appreciate that elegance.
+By default, the list component displays eight items; use the setVisibleRowCount method
+to change that value:
+wordList.setVisibleRowCount(4); // display 4 items
+
+You can set the layout orientation to one of three values:
+• JList.VERTICAL (the default): Arrange all items vertically.
+• JList.VERTICAL_WRAP: Start new columns if there are more items than the visible
+row count (see Figure 10.2).
+• JList.HORIZONTAL_WRAP: Start new columns if there are more items than the visible
+row count, but fill them horizontally. Look at the placement of the words
+“quick,” “brown,” and “hungry” in Figure 10.2 to see the difference between
+vertical and horizontal wrap.
+By default, a user can select multiple items. To add more items to a selection,
+press the Ctrl key while clicking on each item. To select a contiguous range of
+items, click on the first one, then hold down the Shift key and click on the last one.
+You can also restrict the user to a more limited selection mode with the
+setSelectionMode method:
+wordList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+// select one item at a time
+wordList.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
+// select one item or one range of items
+
+From the Library of Hristo Dimov Hristov
+
+584
+
+Chapter 10
+
+Advanced Swing
+
+Figure 10.2 Lists with vertical and horizontal wrap
+You might recall from Volume I that the basic user interface components send
+out action events when the user activates them. List boxes use a different notification mechanism. Instead of listening to action events, you need to listen to list
+selection events. Add a list selection listener to the list component, and implement
+the method
+public void valueChanged(ListSelectionEvent evt)
+
+in the listener.
+When the user selects items, a flurry of list selection events is generated. For example, suppose the user clicks on a new item. When the mouse button goes down,
+an event reports a change in selection. This is a transitional event—the call
+event.getValueIsAdjusting()
+
+returns true if the selection is not yet final. Then, when the mouse button goes up,
+there is another event, this time with getValueIsAdjusting returning false. If you are
+not interested in the transitional events, you can wait for the event for which
+getValueIsAdjusting is false. However, if you want to give the user instant feedback
+as soon as the mouse button is clicked, you need to process all events.
+Once you are notified that an event has happened, you will want to find out
+what items are currently selected. If your list is in single-selection mode, call
+getSelectedValue to get the value as the list element type. Otherwise, call the
+
+From the Library of Hristo Dimov Hristov
+
+10.1 Lists
+
+585
+
+getSelectedValuesList method which returns a list containing all selected items. You
+
+can process it in the usual way:
+for (String value : wordList.getSelectedValuesList())
+// do something with value
+
+NOTE: List components do not react to double clicks from a mouse. As envisioned by the designers of Swing, you use a list to select an item, then click a
+button to make something happen. However, some interfaces allow a user to
+double-click on a list item as a shortcut for selecting the item and invoking the
+default action. If you want to implement this behavior, you have to add a mouse
+listener to the list box, then trap the mouse event as follows:
+public void mouseClicked(MouseEvent evt)
+{
+if (evt.getClickCount() == 2)
+{
+JList source = (JList) evt.getSource();
+Object[] selection = source.getSelectedValuesList();
+doAction(selection);
+}
+}
+
+Listing 10.1 is the listing of the frame containing a list box filled with strings.
+Notice how the valueChanged method builds up the message string from the selected
+items.
+
+Listing 10.1
+1
+
+list/ListFrame.java
+
+package list;
+
+2
+3
+
+import java.awt.*;
+
+4
+5
+
+import javax.swing.*;
+
+6
+7
+8
+9
+10
+11
+12
+13
+14
+
+/**
+* This frame contains a word list and a label that shows a sentence made up from the chosen
+* words. Note that you can select multiple words with Ctrl+click and Shift+click.
+*/
+class ListFrame extends JFrame
+{
+private static final int DEFAULT_WIDTH = 400;
+private static final int DEFAULT_HEIGHT = 300;
+
+15
+16
+
+private JPanel listPanel;
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+586
+
+Chapter 10
+
+Advanced Swing
+
+Listing 10.1 (Continued)
+17
+18
+19
+20
+21
+22
+
+private JList<String> wordList;
+private JLabel label;
+private JPanel buttonPanel;
+private ButtonGroup group;
+private String prefix = "The ";
+private String suffix = "fox jumps over the lazy dog.";
+
+23
+24
+25
+26
+
+public ListFrame()
+{
+setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+
+27
+
+String[] words = { "quick", "brown", "hungry", "wild", "silent", "huge", "private",
+"abstract", "static", "final" };
+
+28
+29
+30
+
+wordList = new JList<>(words);
+wordList.setVisibleRowCount(4);
+JScrollPane scrollPane = new JScrollPane(wordList);
+
+31
+32
+33
+34
+
+listPanel = new JPanel();
+listPanel.add(scrollPane);
+wordList.addListSelectionListener(event ->
+{
+StringBuilder text = new StringBuilder(prefix);
+for (String value : wordList.getSelectedValuesList())
+{
+text.append(value);
+text.append(" ");
+}
+text.append(suffix);
+
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+
+label.setText(text.toString());
+});
+
+47
+48
+49
+
+buttonPanel = new JPanel();
+group = new ButtonGroup();
+makeButton("Vertical", JList.VERTICAL);
+makeButton("Vertical Wrap", JList.VERTICAL_WRAP);
+makeButton("Horizontal Wrap", JList.HORIZONTAL_WRAP);
+
+50
+51
+52
+53
+54
+55
+
+add(listPanel, BorderLayout.NORTH);
+label = new JLabel(prefix + suffix);
+add(label, BorderLayout.CENTER);
+add(buttonPanel, BorderLayout.SOUTH);
+
+56
+57
+58
+59
+60
+
+}
+
+61
+62
+63
+64
+
+/**
+* Makes a radio button to set the layout orientation.
+* @param label the button label
+
+From the Library of Hristo Dimov Hristov
+
+10.1 Lists
+
+* @param orientation the orientation for the list
+*/
+private void makeButton(String label, final int orientation)
+{
+JRadioButton button = new JRadioButton(label);
+buttonPanel.add(button);
+if (group.getButtonCount() == 0) button.setSelected(true);
+group.add(button);
+button.addActionListener(event ->
+{
+wordList.setLayoutOrientation(orientation);
+listPanel.revalidate();
+});
+}
+
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+
+587
+
+}
+
+javax.swing.JList<E> 1.2
+
+• JList(E[] items)
+constructs a list that displays these items.
+• int getVisibleRowCount()
+• void setVisibleRowCount(int c)
+gets or sets the preferred number of rows in the list that can be displayed without
+a scroll bar.
+• int getLayoutOrientation() 1.4
+• void setLayoutOrientation(int orientation) 1.4
+gets or sets the layout orientation.
+Parameters:
+
+orientation
+
+One of VERTICAL, VERTICAL_WRAP, HORIZONTAL_WRAP
+
+• int getSelectionMode()
+• void setSelectionMode(int mode)
+gets or sets the mode that determines whether single-item or multiple-item selections
+are allowed.
+Parameters:
+
+mode
+
+One of SINGLE_SELECTION, SINGLE_INTERVAL_SELECTION,
+MULTIPLE_INTERVAL_SELECTION
+
+• void addListSelectionListener(ListSelectionListener listener)
+adds to the list a listener that’s notified each time a change to the selection occurs.
+• List<E> getSelectedValuesList() 7
+returns the selected values or an empty list if the selection is empty.
+• E getSelectedValue()
+returns the first selected value or null if the selection is empty.
+
+From the Library of Hristo Dimov Hristov
+
+588
+
+Chapter 10
+
+Advanced Swing
+
+javax.swing.event.ListSelectionListener 1.2
+
+• void valueChanged(ListSelectionEvent e)
+is called whenever the list selection changes.
+
+10.1.2 List Models
+In the preceding section, you saw the most common method for using a list
+component:
+1.
+2.
+3.
+
+Specify a fixed set of strings for display in the list.
+Place the list inside a scroll pane.
+Trap the list selection events.
+
+In the remainder of this section on lists, we cover more complex situations that
+require a bit more finesse:
+• Very long lists
+• Lists with changing contents
+• Lists that don’t contain strings
+In the first example, we constructed a JList component that held a fixed collection
+of strings. However, the collection of choices in a list box is not always fixed. How
+do we add or remove items in the list box? Somewhat surprisingly, there are no
+methods in the JList class to achieve this. Instead, you have to understand a little
+more about the internal design of the list component. The list component uses
+the model-view-controller design pattern to separate the visual appearance (a
+column of items that are rendered in some way) from the underlying data
+(a collection of objects).
+The JList class is responsible for the visual appearance of the data. It actually
+knows very little about how the data are stored—all it knows is that it can retrieve
+the data through some object that implements the ListModel interface:
+public interface ListModel<E>
+{
+int getSize();
+E getElementAt(int i);
+void addListDataListener(ListDataListener l);
+void removeListDataListener(ListDataListener l);
+}
+
+From the Library of Hristo Dimov Hristov
+
+10.1 Lists
+
+589
+
+Through this interface, the JList can get a count of elements and retrieve any
+of them. Also, the JList object can add itself as a ListDataListener. That way, if the
+collection of elements changes, the JList gets notified so it can repaint itself.
+Why is this generality useful? Why doesn’t the JList object simply store an array
+of objects?
+Note that the interface doesn’t specify how the objects are stored. In particular,
+it doesn’t force them to be stored at all! The getElementAt method is free to recompute
+each value whenever it is called. This is potentially useful if you want to show a
+very large collection without having to store the values.
+Here is a somewhat silly example: We let the user choose among all three-letter
+words in a list box (see Figure 10.3).
+
+Figure 10.3 Choosing from a very long list of selections
+There are 26 × 26 × 26 = 17,576 three-letter combinations. Instead of storing
+all these combinations, we recompute them as requested when the user scrolls
+through them.
+This turns out to be easy to implement. The tedious part, adding and removing
+listeners, has been done for us in the AbstractListModel class, which we extend. We
+only need to supply the getSize and getElementAt methods:
+class WordListModel extends AbstractListModel<String>
+{
+public WordListModel(int n) { length = n; }
+public int getSize() { return (int) Math.pow(26, length); }
+
+From the Library of Hristo Dimov Hristov
+
+590
+
+Chapter 10
+
+Advanced Swing
+
+public String getElementAt(int n)
+{
+// compute nth string
+...
+}
+...
+}
+
+The computation of the nth string is a bit technical—you’ll find the details in
+Listing 10.3.
+Now that we have a model, we can simply build a list that lets the user scroll
+through the elements supplied by the model:
+JList<String> wordList = new JList<>(new WordListModel(3));
+wordList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+JScrollPane scrollPane = new JScrollPane(wordList);
+
+The point is that the strings are never stored. Only those strings that the user
+actually requests to see are generated.
+We must make one other setting: tell the list component that all items have a fixed
+width and height. The easiest way to set the cell dimensions is to specify a prototype
+cell value:
+wordList.setPrototypeCellValue("www");
+
+The prototype cell value is used to determine the size for all cells. (We use the
+string “www” because, in most fonts, “w” is the widest lowercase letter.)
+Alternatively, you can set a fixed cell size:
+wordList.setFixedCellWidth(50);
+wordList.setFixedCellHeight(15);
+
+If you don’t set a prototype value or a fixed cell size, the list component computes
+the width and height of each item. That can take a long time.
+Listing 10.2 shows the frame class of the example program.
+As a practical matter, very long lists are rarely useful. It is extremely cumbersome
+for a user to scroll through a huge selection. For that reason, we believe that the
+list control has been overengineered. A selection that can be comfortably managed
+on the screen is certainly small enough to be stored directly in the list component.
+That arrangement would have saved programmers the pain of dealing with the
+list model as a separate entity. On the other hand, the JList class is consistent with
+the JTree and JTable classes where this generality is useful.
+
+From the Library of Hristo Dimov Hristov
+
+10.1 Lists
+
+Listing 10.2
+1
+
+591
+
+longList/LongListFrame.java
+
+package longList;
+
+2
+3
+
+import java.awt.*;
+
+4
+5
+
+import javax.swing.*;
+
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+
+/**
+* This frame contains a long word list and a label that shows a sentence made up from the chosen
+* word.
+*/
+public class LongListFrame extends JFrame
+{
+private JList<String> wordList;
+private JLabel label;
+private String prefix = "The quick brown ";
+private String suffix = " jumps over the lazy dog.";
+
+17
+
+public LongListFrame()
+{
+wordList = new JList<String>(new WordListModel(3));
+wordList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+wordList.setPrototypeCellValue("www");
+JScrollPane scrollPane = new JScrollPane(wordList);
+
+18
+19
+20
+21
+22
+23
+24
+
+JPanel p = new JPanel();
+p.add(scrollPane);
+wordList.addListSelectionListener(event -> setSubject(wordList.getSelectedValue()));
+
+25
+26
+27
+28
+
+Container contentPane = getContentPane();
+contentPane.add(p, BorderLayout.NORTH);
+label = new JLabel(prefix + suffix);
+contentPane.add(label, BorderLayout.CENTER);
+setSubject("fox");
+pack();
+
+29
+30
+31
+32
+33
+34
+
+}
+
+35
+36
+
+/**
+* Sets the subject in the label.
+* @param word the new subject that jumps over the lazy dog
+*/
+public void setSubject(String word)
+{
+StringBuilder text = new StringBuilder(prefix);
+text.append(word);
+text.append(suffix);
+label.setText(text.toString());
+}
+
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+
+}
+
+From the Library of Hristo Dimov Hristov
+
+592
+
+Chapter 10
+
+Listing 10.3
+1
+
+Advanced Swing
+
+longList/WordListModel.java
+
+package longList;
+
+2
+3
+
+import javax.swing.*;
+
+4
+5
+6
+7
+8
+9
+10
+11
+12
+
+/**
+* A model that dynamically generates n-letter words.
+*/
+public class WordListModel extends AbstractListModel<String>
+{
+private int length;
+public static final char FIRST = 'a';
+public static final char LAST = 'z';
+
+13
+
+/**
+* Constructs the model.
+* @param n the word length
+*/
+public WordListModel(int n)
+{
+length = n;
+}
+
+14
+15
+16
+17
+18
+19
+20
+21
+22
+
+public int getSize()
+{
+return (int) Math.pow(LAST - FIRST + 1, length);
+}
+
+23
+24
+25
+26
+27
+
+public String getElementAt(int n)
+{
+StringBuilder r = new StringBuilder();
+
+28
+29
+30
+31
+
+for (int i = 0; i < length; i++)
+{
+char c = (char) (FIRST + n % (LAST - FIRST + 1));
+r.insert(0, c);
+n = n / (LAST - FIRST + 1);
+}
+return r.toString();
+
+32
+33
+34
+35
+36
+37
+38
+
+}
+
+39
+40
+
+}
+
+From the Library of Hristo Dimov Hristov
+
+10.1 Lists
+
+593
+
+javax.swing.JList<E> 1.2
+
+• JList(ListModel<E> dataModel)
+constructs a list that displays the elements in the specified model.
+• E getPrototypeCellValue()
+• void setPrototypeCellValue(E newValue)
+gets or sets the prototype cell value used to determine the width and height of each
+cell in the list. The default is null, which forces the size of each cell to be measured.
+• void setFixedCellWidth(int width)
+• void setFixedCellHeight(int height)
+if the width or height is greater than zero, specifies the width or height (in pixels)
+of every cell in the list. The default value is -1, which forces the size of each cell to
+be measured.
+
+javax.swing.ListModel<E> 1.2
+
+• int getSize()
+returns the number of elements of the model.
+• E getElementAt(int position)
+returns an element of the model at the given position.
+
+10.1.3 Inserting and Removing Values
+You cannot directly edit the collection of list values. Instead, you must access the
+model and then add or remove elements. That, too, is easier said than done. Suppose you want to add more values to a list. You can obtain a reference to the
+model:
+ListModel<String> model = list.getModel();
+
+But that does you no good—as you saw in the preceding section, the ListModel interface has no methods to insert or remove elements because, after all, the whole
+point of having a list model is that it does not need to store the elements.
+Let’s try it the other way around. One of the constructors of JList takes a vector
+of objects:
+
+From the Library of Hristo Dimov Hristov
+
+594
+
+Chapter 10
+
+Advanced Swing
+
+Vector<String> values = new Vector<String>();
+values.addElement("quick");
+values.addElement("brown");
+...
+JList<String> list = new JList<>(values);
+
+You can now edit the vector and add or remove elements, but the list does not
+know that this is happening, so it cannot react to the changes. In particular, the
+list does not update its view when you add the values. Therefore, this constructor
+is not very useful.
+Instead, you should construct a DefaultListModel object, fill it with the initial values,
+and associate it with the list. The DefaultListModel class implements the ListModel
+interface and manages a collection of objects.
+DefaultListModel<String> model = new DefaultListModel<>();
+model.addElement("quick");
+model.addElement("brown");
+...
+JList<String> list = new JList<>(model);
+
+Now you can add or remove values from the model object. The model object then
+notifies the list of the changes, and the list repaints itself.
+model.removeElement("quick");
+model.addElement("slow");
+
+For historical reasons, the DefaultListModel class doesn’t use the same method names
+as the collection classes.
+Internally, the default list model uses a vector to store the values.
+CAUTION: There are JList constructors that construct a list from an array or
+vector of objects or strings. You might think that these constructors use a
+DefaultListModel to store these values. That is not the case—the constructors build
+a trivial model that can access the values without any provisions for notification
+if the content changes. For example, here is the code for the constructor that
+constructs a JList from a Vector:
+public JList(final Vector<? extends E> listData)
+{
+this (new AbstractListModel<E>()
+{
+public int getSize() { return listData.size(); }
+public E getElementAt(int i) { return listData.elementAt(i); }
+});
+}
+
+From the Library of Hristo Dimov Hristov
+
+10.1 Lists
+
+595
+
+That means, if you change the contents of the vector after the list is constructed,
+the list might show a confusing mix of old and new values until it is completely
+repainted. (The keyword final in the preceding constructor does not prevent you
+from changing the vector elsewhere—it only means that the constructor itself
+won’t modify the value of the listData reference; the keyword is required because
+the listData object is used in the inner class.)
+
+javax.swing.JList<E> 1.2
+
+• ListModel<E> getModel()
+gets the model of this list.
+
+javax.swing.DefaultListModel<E> 1.2
+
+• void addElement(E obj)
+adds the object to the end of the model.
+• boolean removeElement(Object obj)
+removes the first occurrence of the object from the model. Returns true if the object
+was contained in the model, false otherwise.
+
+10.1.4 Rendering Values
+So far, all lists you have seen in this chapter contained strings. It is actually just
+as easy to show a list of icons—simply pass an array or vector filled with Icon
+objects. More interestingly, you can easily represent your list values with any
+drawing whatsoever.
+Although the JList class can display strings and icons automatically, you need
+to install a list cell renderer into the JList object for all custom drawing. A list cell
+renderer is any class that implements the following interface:
+interface ListCellRenderer<E>
+{
+Component getListCellRendererComponent(JList<? extends E> list,
+E value, int index, boolean isSelected, boolean cellHasFocus);
+}
+
+This method is called for each cell. It returns a component that paints the cell
+contents. The component is placed at the appropriate location whenever a
+cell needs to be rendered.
+
+From the Library of Hristo Dimov Hristov
+
+596
+
+Chapter 10
+
+Advanced Swing
+
+One way to implement a cell renderer is to create a class that extends JComponent,
+like this:
+class MyCellRenderer extends JComponent implements ListCellRenderer<Type>
+{
+public Component getListCellRendererComponent(JList<? extends Type> list,
+Type value, int index, boolean isSelected, boolean cellHasFocus)
+{
+stash away information needed for painting and size measurement
+return this;
+}
+public void paintComponent(Graphics g)
+{
+paint code
+}
+public Dimension getPreferredSize()
+{
+size measurement code
+}
+instance fields
+}
+
+In Listing 10.4, we display the font choices graphically by showing the actual
+appearance of each font (see Figure 10.4). In the paintComponent method, we display
+each name in its own font. We also need to make sure to match the usual colors
+of the look-and-feel of the JList class. We obtain these colors by calling the
+getForeground/getBackground and getSelectionForeground/getSelectionBackground methods of
+the JList class. In the getPreferredSize method, we need to measure the size of the
+string, using the techniques that you saw in Volume I, Chapter 10.
+
+Figure 10.4 A list box with rendered cells
+
+From the Library of Hristo Dimov Hristov
+
+10.1 Lists
+
+597
+
+To install the cell renderer, simply call the setCellRenderer method:
+fontList.setCellRenderer(new FontCellRenderer());
+
+Now all list cells are drawn with the custom renderer.
+Actually, a simpler method for writing custom renderers works in many cases.
+If the rendered image just contains text, an icon, and possibly a change of color,
+you can get by with configuring a JLabel. For example, to show the font name in
+its own font, we can use the following renderer:
+class FontCellRenderer extends JLabel implements ListCellRenderer<Font>
+{
+public Component getListCellRendererComponent(JList<? extends Font> list,
+Font value, int index, boolean isSelected, boolean cellHasFocus)
+{
+Font font = (Font) value;
+setText(font.getFamily());
+setFont(font);
+setOpaque(true);
+setBackground(isSelected ? list.getSelectionBackground() : list.getBackground());
+setForeground(isSelected ? list.getSelectionForeground() : list.getForeground());
+return this;
+}
+}
+
+Note that here we don’t write any paintComponent or getPreferredSize methods; the JLabel
+class already implements these methods to our satisfaction. All we do is configure
+the label appropriately by setting its text, font, and color.
+This code is a convenient shortcut for those cases where an existing component—in
+this case, JLabel—already provides all functionality needed to render a cell value.
+We could have used a JLabel in our sample program, but we gave you the more
+general code so you can modify it if you need to do arbitrary drawings in list
+cells.
+
+CAUTION: It is not a good idea to construct a new component in each call
+to getListCellRendererComponent. If the user scrolls through many list entries, a
+new component would be constructed every time. Reconfiguring an existing
+component is safe and much more efficient.
+
+From the Library of Hristo Dimov Hristov
+
+598
+
+Chapter 10
+
+Listing 10.4
+1
+
+Advanced Swing
+
+listRendering/FontCellRenderer.java
+
+package listRendering;
+
+2
+3
+4
+
+import java.awt.*;
+import javax.swing.*;
+
+5
+6
+7
+8
+9
+10
+11
+12
+13
+
+/**
+* A cell renderer for Font objects that renders the font name in its own font.
+*/
+public class FontCellRenderer extends JComponent implements ListCellRenderer<Font>
+{
+private Font font;
+private Color background;
+private Color foreground;
+
+14
+
+public Component getListCellRendererComponent(JList<? extends Font> list,
+Font value, int index, boolean isSelected, boolean cellHasFocus)
+{
+font = value;
+background = isSelected ? list.getSelectionBackground() : list.getBackground();
+foreground = isSelected ? list.getSelectionForeground() : list.getForeground();
+return this;
+}
+
+15
+16
+17
+18
+19
+20
+21
+22
+23
+
+public void paintComponent(Graphics g)
+{
+String text = font.getFamily();
+FontMetrics fm = g.getFontMetrics(font);
+g.setColor(background);
+g.fillRect(0, 0, getWidth(), getHeight());
+g.setColor(foreground);
+g.setFont(font);
+g.drawString(text, 0, fm.getAscent());
+}
+
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+
+public Dimension getPreferredSize()
+{
+String text = font.getFamily();
+Graphics g = getGraphics();
+FontMetrics fm = g.getFontMetrics(font);
+return new Dimension(fm.stringWidth(text), fm.getHeight());
+}
+
+35
+36
+37
+38
+39
+40
+41
+42
+
+}
+
+From the Library of Hristo Dimov Hristov
+

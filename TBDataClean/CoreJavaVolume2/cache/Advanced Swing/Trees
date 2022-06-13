@@ -1,0 +1,2548 @@
+
+639
+
+10.3 Trees
+Every computer user who has worked with a hierarchical file system has seen
+tree displays. Of course, directories and files form only one of the many examples
+of tree-like organizations. Many tree structures arise in everyday life, such as the
+hierarchy of countries, states, and cities shown in Figure 10.15.
+As programmers, we often need to display tree structures. Fortunately, the Swing
+library has a JTree class for this purpose. The JTree class (together with its helper
+classes) takes care of laying out the tree and processing user requests for expanding
+and collapsing nodes. In this section, you will learn how to put the JTree class
+to use.
+As with the other complex Swing components, we must focus on the common
+and useful cases and cannot cover every nuance. If you want to achieve something
+unusual, we recommend that you consult Graphic Java™, Third Edition, by David
+M. Geary or Core Swing by Kim Topley.
+Before going any further, let’s settle on some terminology (see Figure 10.16). A
+tree is composed of nodes. Every node is either a leaf or it has child nodes. Every
+node, with the exception of the root node, has exactly one parent. A tree has exactly
+one root node. Sometimes you have a collection of trees, each with its own root
+node. Such a collection is called a forest.
+
+Figure 10.15 A hierarchy of countries, states, and cities
+
+From the Library of Hristo Dimov Hristov
+
+640
+
+Chapter 10
+
+Advanced Swing
+
+Figure 10.16 Tree terminology
+
+10.3.1 Simple Trees
+In our first example program, we will simply display a tree with a few nodes (see
+Figure 10.18 on p. 642). As with many other Swing components, you need to
+provide a model of the data, and the component displays it for you. To construct
+a JTree, supply the tree model in the constructor:
+TreeModel model = . . .;
+JTree tree = new JTree(model);
+
+NOTE: There are also constructors that construct trees out of a collection of
+elements:
+JTree(Object[] nodes)
+JTree(Vector<?> nodes)
+JTree(Hashtable<?, ?> nodes) // the values become the nodes
+
+These constructors are not very useful. They merely build a forest of trees, each
+with a single node. The third constructor seems particularly useless because
+the nodes appear in the seemingly random order determined by the hash codes
+of the keys.
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+641
+
+How do you obtain a tree model? You can construct your own model by creating
+a class that implements the TreeModel interface. You will see later in this chapter
+how to do that. For now, we will stick with the DefaultTreeModel that the Swing library
+supplies.
+To construct a default tree model, you must supply a root node.
+TreeNode root = . . .;
+DefaultTreeModel model = new DefaultTreeModel(root);
+TreeNode is another interface. Populate the default tree model with objects of any
+
+class that implements the interface. For now, we will use the concrete node class
+that Swing supplies—namely, DefaultMutableTreeNode. This class implements the
+MutableTreeNode interface, a subinterface of TreeNode (see Figure 10.17).
+
+Figure 10.17 Tree classes
+
+From the Library of Hristo Dimov Hristov
+
+642
+
+Chapter 10
+
+Advanced Swing
+
+A default mutable tree node holds an object—the user object. The tree renders
+the user objects for all nodes. Unless you specify a renderer, the tree displays the
+string that is the result of the toString method.
+In our first example, we use strings as user objects. In practice, you would usually
+populate a tree with more expressive user objects. For example, when displaying
+a directory tree, it makes sense to use File objects for the nodes.
+You can specify the user object in the constructor, or you can set it later with the
+setUserObject method.
+DefaultMutableTreeNode node = new DefaultMutableTreeNode("Texas");
+...
+node.setUserObject("California");
+
+Next, you need to establish the parent/child relationships between the nodes.
+Start with the root node and use the add method to add the children:
+DefaultMutableTreeNode root = new DefaultMutableTreeNode("World");
+DefaultMutableTreeNode country = new DefaultMutableTreeNode("USA");
+root.add(country);
+DefaultMutableTreeNode state = new DefaultMutableTreeNode("California");
+country.add(state);
+
+Figure 10.18 illustrates how the tree will look.
+
+Figure 10.18 A simple tree
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+643
+
+Link up all nodes in this fashion. Then, construct a DefaultTreeModel with the root
+node. Finally, construct a JTree with the tree model.
+DefaultTreeModel treeModel = new DefaultTreeModel(root);
+JTree tree = new JTree(treeModel);
+
+Or, as a shortcut, you can simply pass the root node to the JTree constructor. Then
+the tree automatically constructs a default tree model:
+JTree tree = new JTree(root);
+
+Listing 10.12 contains the complete code.
+
+Listing 10.12
+1
+
+tree/SimpleTreeFrame.java
+
+package tree;
+
+2
+3
+4
+
+import javax.swing.*;
+import javax.swing.tree.*;
+
+5
+6
+7
+8
+9
+10
+11
+12
+
+/**
+* This frame contains a simple tree that displays a manually constructed tree model.
+*/
+public class SimpleTreeFrame extends JFrame
+{
+private static final int DEFAULT_WIDTH = 300;
+private static final int DEFAULT_HEIGHT = 200;
+
+13
+14
+15
+16
+
+public SimpleTreeFrame()
+{
+setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+
+17
+18
+
+// set up tree model data
+
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+
+DefaultMutableTreeNode root = new DefaultMutableTreeNode("World");
+DefaultMutableTreeNode country = new DefaultMutableTreeNode("USA");
+root.add(country);
+DefaultMutableTreeNode state = new DefaultMutableTreeNode("California");
+country.add(state);
+DefaultMutableTreeNode city = new DefaultMutableTreeNode("San Jose");
+state.add(city);
+city = new DefaultMutableTreeNode("Cupertino");
+state.add(city);
+state = new DefaultMutableTreeNode("Michigan");
+country.add(state);
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+644
+
+Chapter 10
+
+Advanced Swing
+
+Listing 10.12 (Continued)
+city = new DefaultMutableTreeNode("Ann Arbor");
+state.add(city);
+country = new DefaultMutableTreeNode("Germany");
+root.add(country);
+state = new DefaultMutableTreeNode("Schleswig-Holstein");
+country.add(state);
+city = new DefaultMutableTreeNode("Kiel");
+state.add(city);
+
+31
+32
+33
+34
+35
+36
+37
+38
+39
+
+// construct tree and put it in a scroll pane
+
+40
+41
+
+JTree tree = new JTree(root);
+add(new JScrollPane(tree));
+
+42
+43
+
+}
+
+44
+45
+
+}
+
+When you run the program, the tree first looks as in Figure 10.19. Only the root
+node and its children are visible. Click on the circle icons (the handles) to open up
+the subtrees. The line sticking out from the handle icon points to the right when the
+subtree is collapsed and down when the subtree is expanded (see Figure 10.20).
+We don’t know what the designers of the Metal look-and-feel had in mind, but we
+think of the icon as a door handle. You push down on the handle to open the
+subtree.
+
+Figure 10.19 The initial tree display
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+645
+
+Figure 10.20 Collapsed and expanded subtrees
+NOTE: Of course, the display of the tree depends on the selected look-and-feel.
+We just described the Metal look-and-feel. In the Windows look-and-feel, the
+handles have the more familiar look—a “-” or “+” in a box (see Figure 10.21).
+
+Figure 10.21 A tree with the Windows look-and-feel
+You can use the following magic incantation to turn off the lines joining parents
+and children (see Figure 10.22):
+tree.putClientProperty("JTree.lineStyle", "None");
+
+From the Library of Hristo Dimov Hristov
+
+646
+
+Chapter 10
+
+Advanced Swing
+
+Figure 10.22 A tree with no connecting lines
+Conversely, to make sure that the lines are shown, use
+tree.putClientProperty("JTree.lineStyle", "Angled");
+
+Another line style, "Horizontal", is shown in Figure 10.23. The tree is displayed with
+horizontal lines separating only the children of the root. We aren’t quite sure
+what it is good for.
+
+Figure 10.23 A tree with the horizontal line style
+By default, there is no handle for collapsing the root of the tree. If you like, you
+can add one with the call
+tree.setShowsRootHandles(true);
+
+Figure 10.24 shows the result. Now you can collapse the entire tree into the
+root node.
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+647
+
+Figure 10.24 A tree with a root handle
+Conversely, you can hide the root altogether. You will thus display a forest—a
+set of trees, each with its own root. You still must join all trees in the forest to
+a common root; then, hide the root with the instruction
+tree.setRootVisible(false);
+
+Look at Figure 10.25. There appear to be two roots, labeled “USA” and “Germany.”
+The actual root that joins the two is made invisible.
+
+Figure 10.25 A forest
+Let’s turn from the root to the leaves of the tree. Note that the leaves have an icon
+different from the other nodes (see Figure 10.26).
+
+From the Library of Hristo Dimov Hristov
+
+648
+
+Chapter 10
+
+Advanced Swing
+
+Figure 10.26 Leaf and folder icons
+When the tree is displayed, each node is drawn with an icon. There are actually
+three kinds of icons: a leaf icon, an opened nonleaf icon, and a closed nonleaf
+icon. For simplicity, we refer to the last two as folder icons.
+The node renderer needs to know which icon to use for each node. By default,
+the decision process works like this: If the isLeaf method of a node returns
+true, then the leaf icon is used; otherwise, a folder icon is used.
+The isLeaf method of the DefaultMutableTreeNode class returns true if the node has no
+children. Thus, nodes with children get folder icons, and nodes without children
+get leaf icons.
+Sometimes, that behavior is not appropriate. Suppose we added a node “Montana”
+to our sample tree, but we’re at a loss as to what cities to add. We would not want
+the state node to get a leaf icon because conceptually only the cities are leaves.
+The JTree class has no idea which nodes should be leaves. It asks the tree model.
+If a childless node isn’t automatically a conceptual leaf, you can ask the tree
+model to use a different criterion for leafiness—namely, to query the “allows
+children” node property.
+For those nodes that should not have children, call
+node.setAllowsChildren(false);
+
+Then, tell the tree model to ask the value of the “allows children” property to
+determine whether a node should be displayed with a leaf icon. Use the
+setAsksAllowsChildren method of the DefaultTreeModel class to set this behavior:
+model.setAsksAllowsChildren(true);
+
+With this decision criterion, nodes that allow children get folder icons, and nodes
+that don’t allow children get leaf icons.
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+649
+
+Alternatively, if you construct the tree from the root node, supply the setting for
+the “asks allows children” property in the constructor.
+JTree tree = new JTree(root, true); // nodes that don't allow children get leaf icons
+
+javax.swing.JTree 1.2
+
+• JTree(TreeModel model)
+constructs a tree from a tree model.
+• JTree(TreeNode root)
+• JTree(TreeNode root, boolean asksAllowChildren)
+constructs a tree with a default tree model that displays the root and its children.
+Parameters:
+
+root
+
+The root node
+
+asksAllowsChildren
+
+true to use the “allows children” node property
+
+for determining whether a node is a leaf
+• void setShowsRootHandles(boolean b)
+if b is true, the root node has a handle for collapsing or expanding its children.
+• void setRootVisible(boolean b)
+if b is true, then the root node is displayed. Otherwise, it is hidden.
+
+javax.swing.tree.TreeNode 1.2
+
+• boolean isLeaf()
+returns true if this node is conceptually a leaf.
+• boolean getAllowsChildren()
+returns true if this node can have child nodes.
+
+javax.swing.tree.MutableTreeNode 1.2
+
+• void setUserObject(Object userObject)
+sets the “user object” that the tree node uses for rendering.
+
+javax.swing.tree.TreeModel 1.2
+
+• boolean isLeaf(Object node)
+returns true if node should be displayed as a leaf node.
+
+From the Library of Hristo Dimov Hristov
+
+650
+
+Chapter 10
+
+Advanced Swing
+
+javax.swing.tree.DefaultTreeModel 1.2
+
+• void setAsksAllowsChildren(boolean b)
+if b is true, nodes are displayed as leaves when their getAllowsChildren method returns
+false. Otherwise, they are displayed as leaves when their isLeaf method returns true.
+
+javax.swing.tree.DefaultMutableTreeNode 1.2
+
+• DefaultMutableTreeNode(Object userObject)
+constructs a mutable tree node with the given user object.
+• void add(MutableTreeNode child)
+adds a node as the last child of this node.
+• void setAllowsChildren(boolean b)
+if b is true, children can be added to this node.
+
+javax.swing.JComponent 1.2
+
+• void putClientProperty(Object key, Object value)
+adds a key/value pair to a small table that each component manages. This is an
+“escape hatch” mechanism that some Swing components use for storing properties
+specific to a look-and-feel.
+
+10.3.2 Editing Trees and Tree Paths
+In the next example program, you will see how to edit a tree. Figure 10.27 shows
+the user interface. If you click the Add Sibling or Add Child button, the program
+adds a new node (with title New) to the tree. If you click the Delete button, the
+program deletes the currently selected node.
+To implement this behavior, you need to find out which tree node is currently
+selected. The JTree class has a surprising way of identifying nodes in a tree. It does
+not deal with tree nodes but with paths of objects, called tree paths. A tree path
+starts at the root and consists of a sequence of child nodes (see Figure 10.28).
+You might wonder why the JTree class needs the whole path. Couldn’t it just get
+a TreeNode and keep calling the getParent method? In fact, the JTree class knows
+nothing about the TreeNode interface. That interface is never used by the TreeModel
+interface; it is only used by the DefaultTreeModel implementation. You can have other
+tree models in which the nodes do not implement the TreeNode interface at all. If
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+651
+
+Figure 10.27 Editing a tree
+
+Figure 10.28 A tree path
+you use a tree model that manages other types of objects, those objects might not
+have getParent and getChild methods. They would of course need to have some other
+connection to each other. It is the job of the tree model to link nodes together. The
+JTree class itself has no clue about the nature of their linkage. For that reason,
+the JTree class always needs to work with complete paths.
+The TreePath class manages a sequence of Object (not TreeNode!) references. A number
+of JTree methods return TreePath objects. When you have a tree path, you usually
+just need to know the terminal node, which you can get with the getLastPathComponent
+method. For example, to find out the currently selected node in a tree, use the
+getSelectionPath method of the JTree class. You will get a TreePath object back, from
+which you can retrieve the actual node.
+TreePath selectionPath = tree.getSelectionPath();
+DefaultMutableTreeNode selectedNode
+= (DefaultMutableTreeNode) selectionPath.getLastPathComponent();
+
+From the Library of Hristo Dimov Hristov
+
+652
+
+Chapter 10
+
+Advanced Swing
+
+Actually, since this particular query is so common, there is a convenience method
+that gives the selected node immediately:
+DefaultMutableTreeNode selectedNode
+= (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
+
+This method is not called getSelectedNode because the tree does not know that it
+contains nodes—its tree model deals only with paths of objects.
+NOTE: Tree paths are one of the two ways in which the JTree class describes
+nodes. Quite a few JTree methods take or return an integer index—the row position. A row position is simply the row number (starting with 0) of the node in the
+tree display. Only visible nodes have row numbers, and the row number of a
+node changes if other nodes before it are expanded, collapsed, or modified. For
+that reason, you should avoid row positions. All JTree methods that use rows
+have equivalents that use tree paths instead.
+
+Once you have the selected node, you can edit it. However, do not simply add
+children to a tree node:
+selectedNode.add(newNode); // No!
+
+If you change the structure of the nodes, you change the model but the associated
+view is not notified. You could send out a notification yourself, but if you use the
+insertNodeInto method of the DefaultTreeModel class, the model class takes care of that.
+For example, the following call appends a new node as the last child of the selected
+node and notifies the tree view:
+model.insertNodeInto(newNode, selectedNode, selectedNode.getChildCount());
+
+The analogous call removeNodeFromParent removes a node and notifies the view:
+model.removeNodeFromParent(selectedNode);
+
+If you keep the node structure in place but change the user object, you should
+call the following method:
+model.nodeChanged(changedNode);
+
+The automatic notification is a major advantage of using the DefaultTreeModel. If you
+supply your own tree model, you have to implement automatic notification by
+hand. (See Core Swing by Kim Topley for details.)
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+653
+
+CAUTION: The DefaultTreeModel class has a reload method that reloads the entire
+model. However, don’t call reload simply to update the tree after making a few
+changes. When the tree is regenerated, all nodes beyond the root’s children are
+collapsed again. It will be quite disconcerting to your users if they have to keep
+expanding the tree after every change.
+
+When the view is notified of a change in the node structure, it updates the display
+but does not automatically expand a node to show newly added children. In
+particular, if a user in our sample program adds a new child node to a node for
+which children are currently collapsed, the new node is silently added to the
+collapsed subtree. This gives the user no feedback that the command was actually
+carried out. In such a case, you should make a special effort to expand all parent
+nodes so that the newly added node becomes visible. Use the makeVisible method
+of the JTree class for this purpose. The makeVisible method expects a tree path leading
+to the node that should become visible.
+Thus, you need to construct a tree path from the root to the newly inserted node.
+To get a tree path, first call the getPathToRoot method of the DefaultTreeModel class. It
+returns a TreeNode[] array of all nodes from a node to the root node. Pass that array
+to a TreePath constructor.
+For example, here is how you make the new node visible:
+TreeNode[] nodes = model.getPathToRoot(newNode);
+TreePath path = new TreePath(nodes);
+tree.makeVisible(path);
+
+NOTE: It is curious that the DefaultTreeModel class feigns almost complete ignorance
+of the TreePath class, even though its job is to communicate with a JTree. The JTree
+class uses tree paths a lot, and it never uses arrays of node objects.
+
+But now suppose your tree is contained inside a scroll pane. After the tree node
+expansion, the new node might still not be visible because it falls outside the
+viewport. To overcome that problem, call
+tree.scrollPathToVisible(path);
+
+instead of calling makeVisible. This call expands all nodes along the path and tells
+the ambient scroll pane to scroll the node at the end of the path into view (see
+Figure 10.29).
+
+From the Library of Hristo Dimov Hristov
+
+654
+
+Chapter 10
+
+Advanced Swing
+
+Figure 10.29 The scroll pane scrolls to display a new node.
+By default, tree nodes cannot be edited. However, if you call
+tree.setEditable(true);
+
+the user can edit a node simply by double-clicking, editing the string, and
+pressing the Enter key. Double-clicking invokes the default cell editor, which is
+implemented by the DefaultCellEditor class (see Figure 10.30). It is possible to install
+other cell editors, using the same process that you have seen in our discussion of
+table cell editors.
+
+Figure 10.30 The default cell editor
+Listing 10.13 shows the complete source code of the tree editing program. Run
+the program, add a few nodes, and edit them by double-clicking them. Observe
+how collapsed nodes expand to show added children and how the scroll pane
+keeps added nodes in the viewport.
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+Listing 10.13
+1
+
+655
+
+treeEdit/TreeEditFrame.java
+
+package treeEdit;
+
+2
+3
+
+import java.awt.*;
+
+4
+5
+6
+
+import javax.swing.*;
+import javax.swing.tree.*;
+
+7
+8
+9
+10
+11
+12
+13
+14
+
+/**
+* A frame with a tree and buttons to edit the tree.
+*/
+public class TreeEditFrame extends JFrame
+{
+private static final int DEFAULT_WIDTH = 400;
+private static final int DEFAULT_HEIGHT = 200;
+
+15
+16
+17
+
+private DefaultTreeModel model;
+private JTree tree;
+
+18
+19
+20
+21
+
+public TreeEditFrame()
+{
+setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+
+22
+
+// construct tree
+
+23
+24
+
+TreeNode root = makeSampleTree();
+model = new DefaultTreeModel(root);
+tree = new JTree(model);
+tree.setEditable(true);
+
+25
+26
+27
+28
+29
+
+// add scroll pane with tree
+
+30
+31
+
+JScrollPane scrollPane = new JScrollPane(tree);
+add(scrollPane, BorderLayout.CENTER);
+
+32
+33
+34
+
+makeButtons();
+
+35
+36
+
+}
+
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+
+public TreeNode makeSampleTree()
+{
+DefaultMutableTreeNode root = new DefaultMutableTreeNode("World");
+DefaultMutableTreeNode country = new DefaultMutableTreeNode("USA");
+root.add(country);
+DefaultMutableTreeNode state = new DefaultMutableTreeNode("California");
+country.add(state);
+DefaultMutableTreeNode city = new DefaultMutableTreeNode("San Jose");
+state.add(city);
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+656
+
+Chapter 10
+
+Advanced Swing
+
+Listing 10.13 (Continued)
+city = new DefaultMutableTreeNode("San Diego");
+state.add(city);
+state = new DefaultMutableTreeNode("Michigan");
+country.add(state);
+city = new DefaultMutableTreeNode("Ann Arbor");
+state.add(city);
+country = new DefaultMutableTreeNode("Germany");
+root.add(country);
+state = new DefaultMutableTreeNode("Schleswig-Holstein");
+country.add(state);
+city = new DefaultMutableTreeNode("Kiel");
+state.add(city);
+return root;
+
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+
+}
+
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+
+/**
+* Makes the buttons to add a sibling, add a child, and delete a node.
+*/
+public void makeButtons()
+{
+JPanel panel = new JPanel();
+JButton addSiblingButton = new JButton("Add Sibling");
+addSiblingButton.addActionListener(event ->
+{
+DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) tree
+.getLastSelectedPathComponent();
+
+73
+74
+
+if (selectedNode == null) return;
+
+75
+76
+
+DefaultMutableTreeNode parent = (DefaultMutableTreeNode) selectedNode.getParent();
+
+77
+78
+
+if (parent == null) return;
+
+79
+80
+
+DefaultMutableTreeNode newNode = new DefaultMutableTreeNode("New");
+
+81
+82
+83
+
+int selectedIndex = parent.getIndex(selectedNode);
+model.insertNodeInto(newNode, parent, selectedIndex + 1);
+
+84
+85
+
+// now display new node
+
+86
+87
+88
+89
+90
+91
+
+TreeNode[] nodes = model.getPathToRoot(newNode);
+TreePath path = new TreePath(nodes);
+tree.scrollPathToVisible(path);
+});
+panel.add(addSiblingButton);
+
+92
+93
+
+JButton addChildButton = new JButton("Add Child");
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+657
+
+addChildButton.addActionListener(event ->
+{
+DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) tree
+.getLastSelectedPathComponent();
+
+94
+95
+96
+97
+98
+
+if (selectedNode == null) return;
+
+99
+100
+
+DefaultMutableTreeNode newNode = new DefaultMutableTreeNode("New");
+model.insertNodeInto(newNode, selectedNode, selectedNode.getChildCount());
+
+101
+102
+103
+
+// now display new node
+
+104
+105
+
+TreeNode[] nodes = model.getPathToRoot(newNode);
+TreePath path = new TreePath(nodes);
+tree.scrollPathToVisible(path);
+});
+panel.add(addChildButton);
+
+106
+107
+108
+109
+110
+111
+
+JButton deleteButton = new JButton("Delete");
+deleteButton.addActionListener(event ->
+{
+DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) tree
+.getLastSelectedPathComponent();
+
+112
+113
+114
+115
+116
+117
+
+if (selectedNode != null && selectedNode.getParent() != null) model
+.removeNodeFromParent(selectedNode);
+});
+panel.add(deleteButton);
+add(panel, BorderLayout.SOUTH);
+
+118
+119
+120
+121
+122
+
+}
+
+123
+124
+
+}
+
+javax.swing.JTree 1.2
+
+• TreePath getSelectionPath()
+gets the path to the currently selected node, or the path to the first selected node if
+multiple nodes are selected. Returns null if no node is selected.
+• Object getLastSelectedPathComponent()
+gets the node object that represents the currently selected node, or the first node if
+multiple nodes are selected. Returns null if no node is selected.
+• void makeVisible(TreePath path)
+expands all nodes along the path.
+• void scrollPathToVisible(TreePath path)
+expands all nodes along the path and, if the tree is contained in a scroll pane, scrolls
+to ensure that the last node on the path is visible.
+
+From the Library of Hristo Dimov Hristov
+
+658
+
+Chapter 10
+
+Advanced Swing
+
+javax.swing.tree.TreePath 1.2
+
+• Object getLastPathComponent()
+gets the last object on this path—that is, the node object that the path represents.
+
+javax.swing.tree.TreeNode 1.2
+
+• TreeNode getParent()
+returns the parent node of this node.
+• TreeNode getChildAt(int index)
+looks up the child node at the given index. The index must be between 0 and
+getChildCount() - 1.
+• int getChildCount()
+returns the number of children of this node.
+• Enumeration children()
+returns an enumeration object that iterates through all children of this node.
+
+javax.swing.tree.DefaultTreeModel 1.2
+
+• void insertNodeInto(MutableTreeNode newChild, MutableTreeNode parent, int index)
+inserts newChild as a new child node of parent at the given index and notifies the tree
+model listeners.
+• void removeNodeFromParent(MutableTreeNode node)
+removes node from this model and notifies the tree model listeners.
+• void nodeChanged(TreeNode node)
+notifies the tree model listeners that node has changed.
+• void nodesChanged(TreeNode parent, int[] changedChildIndexes)
+notifies the tree model listeners that all child nodes of parent with the given indexes
+have changed.
+• void reload()
+reloads all nodes into the model. This is a drastic operation that you should use
+only if the nodes have changed completely because of some outside influence.
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+659
+
+10.3.3 Node Enumeration
+Sometimes you need to find a node in a tree by starting at the root and visiting
+all children until you have found a match. The DefaultMutableTreeNode class has several
+convenience methods for iterating through nodes.
+The breadthFirstEnumeration and depthFirstEnumeration methods return enumeration objects
+whose nextElement method visits all children of the current node, using either
+a breadth-first or depth-first traversal. Figure 10.31 shows the traversals for a
+sample tree—the node labels indicate the order in which the nodes are traversed.
+
+Figure 10.31 Tree traversal orders
+Breadth-first enumeration is the easiest to visualize. The tree is traversed in layers.
+The root is visited first, followed by all of its children, then the grandchildren,
+and so on.
+To visualize depth-first enumeration, imagine a rat trapped in a tree-shaped maze.
+It rushes along the first path until it comes to a leaf. Then, it backtracks and turns
+around to the next path, and so on.
+Computer scientists also call this postorder traversal because the search process
+visits the children before visiting the parents. The postOrderEnumeration method is a
+synonym for depthFirstEnumeration. For completeness, there is also a preOrderEnumeration,
+a depth-first search that enumerates parents before the children.
+Here is the typical usage pattern:
+
+From the Library of Hristo Dimov Hristov
+
+660
+
+Chapter 10
+
+Advanced Swing
+
+Enumeration breadthFirst = node.breadthFirstEnumeration();
+while (breadthFirst.hasMoreElements())
+do something with breadthFirst.nextElement();
+
+Finally, a related method, pathFromAncestorEnumeration, finds a path from an ancestor to
+a given node and enumerates the nodes along that path. That’s no big deal—it
+just keeps calling getParent until the ancestor is found and then presents the path
+in reverse order.
+In our next example program, we put node enumeration to work. The program
+displays inheritance trees of classes. Type the name of a class into the text field
+on the bottom of the frame. The class and all of its superclasses are added to the
+tree (see Figure 10.32).
+
+Figure 10.32 An inheritance tree
+In this example, we take advantage of the fact that the user objects of the tree
+nodes can be objects of any type. Since our nodes describe classes, we store Class
+objects in the nodes.
+We don’t want to add the same class object twice, so we need to check whether
+a class already exists in the tree. The following method finds the node with a
+given user object if it exists in the tree.
+public DefaultMutableTreeNode findUserObject(Object obj)
+{
+Enumeration e = root.breadthFirstEnumeration();
+while (e.hasMoreElements())
+{
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+661
+
+DefaultMutableTreeNode node = (DefaultMutableTreeNode) e.nextElement();
+if (node.getUserObject().equals(obj))
+return node;
+}
+return null;
+}
+
+10.3.4 Rendering Nodes
+In your applications, you will often need to change the way a tree component
+draws the nodes. The most common change is, of course, to choose different icons
+for nodes and leaves. Other changes might involve changing the font of the
+node labels or drawing images at the nodes. All these changes are possible by
+installing a new tree cell renderer into the tree. By default, the JTree class uses
+DefaultTreeCellRenderer objects to draw each node. The DefaultTreeCellRenderer class extends
+the JLabel class. The label contains the node icon and the node label.
+NOTE: The cell renderer does not draw the “handles” for expanding and collapsing subtrees. The handles are part of the look-and-feel, and it is recommended
+that you do not change them.
+
+You can customize the display in three ways.
+• You can change the icons, font, and background color used by a
+DefaultTreeCellRenderer. These settings are used for all nodes in the tree.
+• You can install a renderer that extends the DefaultTreeCellRenderer class and vary
+the icons, fonts, and background color for each node.
+• You can install a renderer that implements the TreeCellRenderer interface to draw
+a custom image for each node.
+Let us look at these possibilities one by one. The easiest customization is to construct a DefaultTreeCellRenderer object, change the icons, and install it into the tree:
+DefaultTreeCellRenderer renderer = new DefaultTreeCellRenderer();
+renderer.setLeafIcon(new ImageIcon("blue-ball.gif")); // used for leaf nodes
+renderer.setClosedIcon(new ImageIcon("red-ball.gif")); // used for collapsed nodes
+renderer.setOpenIcon(new ImageIcon("yellow-ball.gif")); // used for expanded nodes
+tree.setCellRenderer(renderer);
+
+You can see the effect in Figure 10.32. We just use the “ball” icons as
+placeholders—presumably your user interface designer would supply you with
+appropriate icons to use for your applications.
+We don’t recommend that you change the font or background color for an entire
+tree—that is really the job of the look-and-feel.
+
+From the Library of Hristo Dimov Hristov
+
+662
+
+Chapter 10
+
+Advanced Swing
+
+However, it can be useful to change the font of some nodes in a tree to highlight
+them. If you look carefully at Figure 10.32, you will notice that the abstract classes
+are set in italics.
+To change the appearance of individual nodes, install a tree cell renderer. Tree
+cell renderers are very similar to the list cell renderers we discussed earlier in this
+chapter. The TreeCellRenderer interface has a single method:
+Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected,
+boolean expanded, boolean leaf, int row, boolean hasFocus)
+
+The getTreeCellRendererComponent method of the DefaultTreeCellRenderer class returns this—in
+other words, a label. (The DefaultTreeCellRenderer class extends the JLabel class.) To
+customize the component, extend the DefaultTreeCellRenderer class. Override the
+getTreeCellRendererComponent method as follows: Call the superclass method so it can
+prepare the label data, customize the label properties, and finally return this.
+class MyTreeCellRenderer extends DefaultTreeCellRenderer
+{
+public Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected,
+boolean expanded, boolean leaf, int row, boolean hasFocus)
+{
+Component comp = super.getTreeCellRendererComponent(tree, value, selected,
+expanded, leaf, row, hasFocus);
+DefaultMutableTreeNode node = (DefaultMutableTreeNode) value;
+look at node.getUserObject();
+Font font = appropriate font;
+comp.setFont(font);
+return comp;
+}
+};
+
+CAUTION: The value parameter of the getTreeCellRendererComponent method is the
+node object, not the user object! Recall that the user object is a feature of the
+DefaultMutableTreeNode, and that a JTree can contain nodes of an arbitrary type. If
+your tree uses DefaultMutableTreeNode nodes, you must retrieve the user object in
+a second step, as we did in the preceding code sample.
+
+CAUTION: The DefaultTreeCellRenderer uses the same label object for all nodes,
+only changing the label text for each node. If you change the font for a particular
+node, you must set it back to its default value when the method is called again.
+Otherwise, all subsequent nodes will be drawn in the changed font! Look at the
+code in Listing 10.14 to see how to restore the font to the default.
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+663
+
+We do not show an example of a tree cell renderer that draws arbitrary graphics.
+If you need this capability, you can adapt the list cell renderer in Listing 10.4; the
+technique is entirely analogous.
+The ClassNameTreeCellRenderer in Listing 10.14 sets the class name in either the normal
+or italic font, depending on the ABSTRACT modifier of the Class object. We don’t want
+to set a particular font because we don’t want to change whatever font the lookand-feel normally uses for labels. For that reason, we use the font from the
+label and derive an italic font from it. Recall that only a single shared JLabel object
+is returned by all calls. We need to hang on to the original font and restore it in
+the next call to the getTreeCellRendererComponent method.
+Also, note how we change the node icons in the ClassTreeFrame constructor.
+javax.swing.tree.DefaultMutableTreeNode 1.2
+
+•
+•
+•
+•
+
+Enumeration breadthFirstEnumeration()
+Enumeration depthFirstEnumeration()
+Enumeration preOrderEnumeration()
+Enumeration postOrderEnumeration()
+
+returns enumeration objects for visiting all nodes of the tree model in a particular
+order. In breadth-first traversal, children that are closer to the root are visited before
+those that are farther away. In depth-first traversal, all children of a node are completely enumerated before its siblings are visited. The postOrderEnumeration method is
+a synonym for depthFirstEnumeration.The preorder traversal is identical to the postorder
+traversal except that parents are enumerated before their children.
+
+javax.swing.tree.TreeCellRenderer 1.2
+
+• Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected, boolean
+expanded, boolean leaf, int row, boolean hasFocus)
+
+returns a component whose paint method is invoked to render a tree cell.
+Parameters:
+
+tree
+
+The tree containing the node to be rendered
+
+value
+
+The node to be rendered
+
+selected
+
+true if the node is currently selected
+
+expanded
+
+true if the children of the node are visible
+
+leaf
+
+true if the node needs to be displayed as a leaf
+
+row
+
+The display row containing the node
+
+hasFocus
+
+true if the node currently has input focus
+
+From the Library of Hristo Dimov Hristov
+
+664
+
+Chapter 10
+
+Advanced Swing
+
+javax.swing.tree.DefaultTreeCellRenderer 1.2
+
+• void setLeafIcon(Icon icon)
+• void setOpenIcon(Icon icon)
+• void setClosedIcon(Icon icon)
+sets the icon to show for a leaf node, an expanded node, and a collapsed node.
+
+10.3.5 Listening to Tree Events
+Most commonly, a tree component is paired with some other component. When
+the user selects tree nodes, some information shows up in another window. See
+Figure 10.33 for an example. When the user selects a class, the instance and static
+variables of that class are displayed in the text area to the right.
+
+Figure 10.33 A class browser
+To obtain this behavior, you need to install a tree selection listener. The listener
+must implement the TreeSelectionListener interface—an interface with a single method:
+void valueChanged(TreeSelectionEvent event)
+
+That method is called whenever the user selects or deselects tree nodes.
+Add the listener to the tree in the normal way:
+tree.addTreeSelectionListener(listener);
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+665
+
+You can specify whether the user is allowed to select a single node, a contiguous
+range of nodes, or an arbitrary, potentially discontiguous, set of nodes. The JTree
+class uses a TreeSelectionModel to manage node selection. You need to retrieve the
+model to set the selection state to one of SINGLE_TREE_SELECTION, CONTIGUOUS_TREE_SELECTION,
+or DISCONTIGUOUS_TREE_SELECTION. (Discontiguous selection mode is the default.) For
+example, in our class browser, we want to allow selection of only a single class:
+int mode = TreeSelectionModel.SINGLE_TREE_SELECTION;
+tree.getSelectionModel().setSelectionMode(mode);
+
+Apart from setting the selection mode, you need not worry about the tree selection
+model.
+
+NOTE: How the user selects multiple items depends on the look-and-feel. In the
+Metal look-and-feel, hold down the Ctrl key while clicking an item to add it to the
+selection, or to remove it if it is currently selected. Hold down the Shift key while
+clicking an item to select a range of items, extending from the previously selected
+item to the new item.
+
+To find out the current selection, query the tree with the getSelectionPaths method:
+TreePath[] selectedPaths = tree.getSelectionPaths();
+
+If you restricted the user to single-item selection, you can use the convenience
+method getSelectionPath which returns the first selected path or null if no path was
+selected.
+CAUTION: The TreeSelectionEvent class has a getPaths method that returns an array
+of TreePath objects, but that array describes selection changes, not the current
+selection.
+
+Listing 10.14 shows the frame class for the class tree program. The program displays inheritance hierarchies and customizes the display to show abstract classes
+in italics. (See Listing 10.15 for the cell renderer.) You can type the name of any
+class into the text field at the bottom of the frame. Press the Enter key or click the
+Add button to add the class and its superclasses to the tree. You must enter
+the full package name, such as java.util.ArrayList.
+This program is a bit tricky because it uses reflection to construct the class
+tree. This work is done inside the addClass method. (The details are not that important. We use the class tree in this example because inheritance yields a nice supply
+of trees without laborious coding. When you display trees in your applications,
+you will have your own source of hierarchical data.) The method uses the
+
+From the Library of Hristo Dimov Hristov
+
+666
+
+Chapter 10
+
+Advanced Swing
+
+breadth-first search algorithm to find whether the current class is already in the
+tree by calling the findUserObject method that we implemented in the preceding
+section. If the class is not already in the tree, we add the superclasses to the tree,
+then make the new class node a child and make that node visible.
+When you select a tree node, the text area to the right is filled with the fields of
+the selected class. In the frame constructor, we restrict the user to single-item selection and add a tree selection listener. When the valueChanged method is called, we
+ignore its event parameter and simply ask the tree for the current selection path.
+As always, we need to get the last node of the path and look up its user object.
+We then call the getFieldDescription method which uses reflection to assemble a string
+with all fields of the selected class.
+
+Listing 10.14
+1
+
+treeRender/ClassTreeFrame.java
+
+package treeRender;
+
+2
+3
+4
+5
+6
+
+import java.awt.*;
+import java.awt.event.*;
+import java.lang.reflect.*;
+import java.util.*;
+
+7
+8
+9
+
+import javax.swing.*;
+import javax.swing.tree.*;
+
+10
+11
+12
+13
+14
+15
+16
+17
+18
+
+/**
+* This frame displays the class tree, a text field, and an "Add" button to add more classes
+* into the tree.
+*/
+public class ClassTreeFrame extends JFrame
+{
+private static final int DEFAULT_WIDTH = 400;
+private static final int DEFAULT_HEIGHT = 300;
+
+19
+20
+21
+22
+23
+24
+
+private DefaultMutableTreeNode root;
+private DefaultTreeModel model;
+private JTree tree;
+private JTextField textField;
+private JTextArea textArea;
+
+25
+26
+27
+28
+
+public ClassTreeFrame()
+{
+setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+
+29
+30
+31
+32
+33
+
+// the root of the class tree is Object
+root = new DefaultMutableTreeNode(java.lang.Object.class);
+model = new DefaultTreeModel(root);
+tree = new JTree(model);
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+667
+
+34
+
+// add this class to populate the tree with some data
+addClass(getClass());
+
+35
+36
+37
+
+// set up node icons
+ClassNameTreeCellRenderer renderer = new ClassNameTreeCellRenderer();
+renderer.setClosedIcon(new ImageIcon(getClass().getResource("red-ball.gif")));
+renderer.setOpenIcon(new ImageIcon(getClass().getResource("yellow-ball.gif")));
+renderer.setLeafIcon(new ImageIcon(getClass().getResource("blue-ball.gif")));
+tree.setCellRenderer(renderer);
+
+38
+39
+40
+41
+42
+43
+44
+
+// set up selection mode
+tree.addTreeSelectionListener(event ->
+{
+// the user selected a different node--update description
+TreePath path = tree.getSelectionPath();
+if (path == null) return;
+DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) path
+.getLastPathComponent();
+Class<?> c = (Class<?>) selectedNode.getUserObject();
+String description = getFieldDescription(c);
+textArea.setText(description);
+});
+int mode = TreeSelectionModel.SINGLE_TREE_SELECTION;
+tree.getSelectionModel().setSelectionMode(mode);
+
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+
+// this text area holds the class description
+textArea = new JTextArea();
+
+60
+61
+62
+
+// add tree and text area
+JPanel panel = new JPanel();
+panel.setLayout(new GridLayout(1, 2));
+panel.add(new JScrollPane(tree));
+panel.add(new JScrollPane(textArea));
+
+63
+64
+65
+66
+67
+68
+
+add(panel, BorderLayout.CENTER);
+
+69
+70
+
+addTextField();
+
+71
+72
+
+}
+
+73
+74
+75
+76
+77
+78
+79
+
+/**
+* Add the text field and "Add" button to add a new class.
+*/
+public void addTextField()
+{
+JPanel panel = new JPanel();
+
+80
+81
+82
+
+ActionListener addListener = event ->
+{
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+668
+
+Chapter 10
+
+Advanced Swing
+
+Listing 10.14 (Continued)
+// add the class whose name is in the text field
+try
+{
+String text = textField.getText();
+addClass(Class.forName(text)); // clear text field to indicate success
+textField.setText("");
+}
+catch (ClassNotFoundException e)
+{
+JOptionPane.showMessageDialog(null, "Class not found");
+}
+
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+
+};
+
+94
+95
+
+// new class names are typed into this text field
+textField = new JTextField(20);
+textField.addActionListener(addListener);
+panel.add(textField);
+
+96
+97
+98
+99
+100
+
+JButton addButton = new JButton("Add");
+addButton.addActionListener(addListener);
+panel.add(addButton);
+
+101
+102
+103
+104
+
+add(panel, BorderLayout.SOUTH);
+
+105
+106
+
+}
+
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+
+/**
+* Finds an object in the tree.
+* @param obj the object to find
+* @return the node containing the object or null if the object is not present in the tree
+*/
+@SuppressWarnings("unchecked")
+public DefaultMutableTreeNode findUserObject(Object obj)
+{
+// find the node containing a user object
+Enumeration<TreeNode> e = (Enumeration<TreeNode>) root.breadthFirstEnumeration();
+while (e.hasMoreElements())
+{
+DefaultMutableTreeNode node = (DefaultMutableTreeNode) e.nextElement();
+if (node.getUserObject().equals(obj)) return node;
+}
+return null;
+}
+
+125
+126
+127
+128
+129
+
+/**
+* Adds a new class and any parent classes that aren't yet part of the tree
+* @param c the class to add
+* @return the newly added node
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+130
+131
+132
+133
+
+669
+
+*/
+public DefaultMutableTreeNode addClass(Class<?> c)
+{
+// add a new class to the tree
+
+134
+
+// skip non-class types
+if (c.isInterface() || c.isPrimitive()) return null;
+
+135
+136
+137
+
+// if the class is already in the tree, return its node
+DefaultMutableTreeNode node = findUserObject(c);
+if (node != null) return node;
+
+138
+139
+140
+141
+
+// class isn't present--first add class parent recursively
+
+142
+143
+
+Class<?> s = c.getSuperclass();
+
+144
+145
+
+DefaultMutableTreeNode parent;
+if (s == null) parent = root;
+else parent = addClass(s);
+
+146
+147
+148
+149
+
+// add the class as a child to the parent
+DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(c);
+model.insertNodeInto(newNode, parent, parent.getChildCount());
+
+150
+151
+152
+153
+
+// make node visible
+TreePath path = new TreePath(model.getPathToRoot(newNode));
+tree.makeVisible(path);
+
+154
+155
+156
+157
+
+return newNode;
+
+158
+159
+
+}
+
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+
+/**
+* Returns a description of the fields of a class.
+* @param the class to be described
+* @return a string containing all field types and names
+*/
+public static String getFieldDescription(Class<?> c)
+{
+// use reflection to find types and names of fields
+StringBuilder r = new StringBuilder();
+Field[] fields = c.getDeclaredFields();
+for (int i = 0; i < fields.length; i++)
+{
+Field f = fields[i];
+if ((f.getModifiers() & Modifier.STATIC) != 0) r.append("static ");
+r.append(f.getType().getName());
+r.append(" ");
+r.append(f.getName());
+r.append("\n");
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+670
+
+Chapter 10
+
+Advanced Swing
+
+Listing 10.14 (Continued)
+}
+return r.toString();
+
+179
+180
+
+}
+
+181
+182
+
+}
+
+Listing 10.15
+1
+
+treeRender/ClassNameTreeCellRenderer.java
+
+package treeRender;
+
+2
+3
+4
+5
+6
+
+import java.awt.*;
+import java.lang.reflect.*;
+import javax.swing.*;
+import javax.swing.tree.*;
+
+7
+8
+9
+10
+11
+12
+13
+14
+
+/**
+* This class renders a class name either in plain or italic. Abstract classes are italic.
+*/
+public class ClassNameTreeCellRenderer extends DefaultTreeCellRenderer
+{
+private Font plainFont = null;
+private Font italicFont = null;
+
+15
+
+public Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected,
+boolean expanded, boolean leaf, int row, boolean hasFocus)
+{
+super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
+// get the user object
+DefaultMutableTreeNode node = (DefaultMutableTreeNode) value;
+Class<?> c = (Class<?>) node.getUserObject();
+
+16
+17
+18
+19
+20
+21
+22
+23
+
+// the first time, derive italic font from plain font
+if (plainFont == null)
+{
+plainFont = getFont();
+// the tree cell renderer is sometimes called with a label that has a null font
+if (plainFont != null) italicFont = plainFont.deriveFont(Font.ITALIC);
+}
+
+24
+25
+26
+27
+28
+29
+30
+31
+
+// set font to italic if the class is abstract, plain otherwise
+if ((c.getModifiers() & Modifier.ABSTRACT) == 0) setFont(plainFont);
+else setFont(italicFont);
+return this;
+
+32
+33
+34
+35
+
+}
+
+36
+37
+
+}
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+671
+
+javax.swing.JTree 1.2
+
+• TreePath getSelectionPath()
+• TreePath[] getSelectionPaths()
+returns the first selected path, or an array of paths to all selected nodes. If no paths
+are selected, both methods return null.
+
+javax.swing.event.TreeSelectionListener 1.2
+
+• void valueChanged(TreeSelectionEvent event)
+is called whenever nodes are selected or deselected.
+
+javax.swing.event.TreeSelectionEvent 1.2
+
+• TreePath getPath()
+• TreePath[] getPaths()
+gets the first path or all paths that have changed in this selection event. If you want
+to know the current selection, not the selection change, call JTree.getSelectionPaths
+instead.
+
+10.3.6 Custom Tree Models
+In the final example, we implement a program that inspects the contents of an
+object, just like a debugger does (see Figure 10.34).
+Before going further, compile and run the example program. Each node corresponds to an instance field. If the field is an object, expand it to see its instance
+fields. The program inspects the contents of the frame window. If you poke around
+a few of the instance fields, you should be able to find some familiar classes. You’ll
+also gain some respect for how complex the Swing user interface components are
+under the hood.
+What’s remarkable about the program is that the tree does not use the
+DefaultTreeModel. If you already have data that are hierarchically organized, you
+might not want to build a duplicate tree and worry about keeping both trees
+synchronized. That is the situation in our case—the inspected objects are already
+linked to each other through the object references, so there is no need to replicate
+the linking structure.
+
+From the Library of Hristo Dimov Hristov
+
+672
+
+Chapter 10
+
+Advanced Swing
+
+Figure 10.34 An object inspection tree
+The TreeModel interface has only a handful of methods. The first group of methods
+enables the JTree to find the tree nodes by first getting the root, then the children.
+The JTree class calls these methods only when the user actually expands a node.
+Object getRoot()
+int getChildCount(Object parent)
+Object getChild(Object parent, int index)
+
+This example shows why the TreeModel interface, like the JTree class itself, does not
+need an explicit notion of nodes. The root and its children can be any objects. The
+TreeModel is responsible for telling the JTree how they are connected.
+The next method of the TreeModel interface is the reverse of getChild:
+int getIndexOfChild(Object parent, Object child)
+
+Actually, this method can be implemented in terms of the first three—see the
+code in Listing 10.16.
+The tree model tells the JTree which nodes should be displayed as leaves:
+boolean isLeaf(Object node)
+
+If your code changes the tree model, the tree needs to be notified so that it can
+redraw itself. The tree adds itself as a TreeModelListener to the model. Thus, the
+model must support the usual listener management methods:
+void addTreeModelListener(TreeModelListener l)
+void removeTreeModelListener(TreeModelListener l)
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+673
+
+You can see the implementations for these methods in Listing 10.17.
+When the model modifies the tree contents, it calls one of the four methods of the
+TreeModelListener interface:
+void treeNodesChanged(TreeModelEvent e)
+void treeNodesInserted(TreeModelEvent e)
+void treeNodesRemoved(TreeModelEvent e)
+void treeStructureChanged(TreeModelEvent e)
+
+The TreeModelEvent object describes the location of the change. The details of assembling a tree model event that describes an insertion or removal event are quite
+technical. You only need to worry about firing these events if your tree can actually have nodes added and removed. In Listing 10.16, we show how to fire one
+event by replacing the root with a new object.
+TIP: To simplify the code for event firing, use the javax.swing.EventListenerList
+convenience class that collects listeners. The last three methods of Listing 10.17
+show how to use the class.
+
+Finally, if the user edits a tree node, your model is called with the change:
+void valueForPathChanged(TreePath path, Object newValue)
+
+If you don’t allow editing, this method is never called.
+If you don’t need to support editing, constructing a tree model is easily done.
+Implement the three methods
+Object getRoot()
+int getChildCount(Object parent)
+Object getChild(Object parent, int index)
+
+These methods describe the structure of the tree. Supply routine implementations
+of the other five methods, as in Listing 10.16. You are then ready to display your
+tree.
+Now let’s turn to the implementation of the example program. Our tree will
+contain objects of type Variable.
+NOTE: Had we used the DefaultTreeModel, our nodes would have been objects of
+type DefaultMutableTreeNode with user objects of type Variable.
+
+For example, suppose you inspect the variable
+Employee joe;
+
+From the Library of Hristo Dimov Hristov
+
+674
+
+Chapter 10
+
+Advanced Swing
+
+That variable has a type Employee.class, a name "joe", and a value—the value of the
+object reference joe. In Listing 10.18, we define a class Variable that describes a
+variable in a program:
+Variable v = new Variable(Employee.class, "joe", joe);
+
+If the type of the variable is a primitive type, you must use an object wrapper for
+the value.
+new Variable(double.class, "salary", new Double(salary));
+
+If the type of the variable is a class, the variable has fields. Using reflection, we
+enumerate all fields and collect them in an ArrayList. Since the getFields method of
+the Class class does not return the fields of the superclass, we need to call getFields
+on all superclasses as well. You can find the code in the Variable constructor. The
+getFields method of our Variable class returns the array of fields. Finally, the toString
+method of the Variable class formats the node label. The label always contains the
+variable type and name. If the variable is not a class, the label also contains
+the value.
+
+NOTE: If the type is an array, we do not display the elements of the array. This
+would not be difficult to do; we leave it as the proverbial “exercise for the reader.”
+
+Let’s move on to the tree model. The first two methods are simple.
+public Object getRoot()
+{
+return root;
+}
+public int getChildCount(Object parent)
+{
+return ((Variable) parent).getFields().size();
+}
+
+The getChild method returns a new Variable object that describes the field with the
+given index. The getType and getName methods of the Field class yield the field type
+and name. By using reflection, you can read the field value as f.get(parentValue).
+That method can throw an IllegalAccessException. However, we made all fields
+accessible in the Variable constructor, so this won’t happen in practice.
+Here is the complete code of the getChild method:
+public Object getChild(Object parent, int index)
+{
+ArrayList fields = ((Variable) parent).getFields();
+Field f = (Field) fields.get(index);
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+675
+
+Object parentValue = ((Variable) parent).getValue();
+try
+{
+return new Variable(f.getType(), f.getName(), f.get(parentValue));
+}
+catch (IllegalAccessException e)
+{
+return null;
+}
+}
+
+These three methods reveal the structure of the object tree to the JTree component.
+The remaining methods are routine—see the source code in Listing 10.17.
+There is one remarkable fact about this tree model: It actually describes an infinite
+tree. You can verify this by following one of the WeakReference objects. Click on the
+variable named referent. It leads you right back to the original object. You get an
+identical subtree, and you can open its WeakReference object again, ad infinitum. Of
+course, you cannot store an infinite set of nodes; the tree model simply generates
+the nodes on demand as the user expands the parents. Listing 10.16 shows the
+frame class of the sample program.
+
+Listing 10.16
+1
+
+treeModel/ObjectInspectorFrame.java
+
+package treeModel;
+
+2
+3
+4
+
+import java.awt.*;
+import javax.swing.*;
+
+5
+6
+7
+8
+9
+10
+11
+12
+13
+
+/**
+* This frame holds the object tree.
+*/
+public class ObjectInspectorFrame extends JFrame
+{
+private JTree tree;
+private static final int DEFAULT_WIDTH = 400;
+private static final int DEFAULT_HEIGHT = 300;
+
+14
+15
+16
+17
+
+public ObjectInspectorFrame()
+{
+setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+
+18
+19
+
+// we inspect this frame object
+
+20
+21
+22
+23
+
+Variable v = new Variable(getClass(), "this", this);
+ObjectTreeModel model = new ObjectTreeModel();
+model.setRoot(v);
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+676
+
+Chapter 10
+
+Advanced Swing
+
+Listing 10.16 (Continued)
+24
+
+// construct and show tree
+
+25
+26
+
+tree = new JTree(model);
+add(new JScrollPane(tree), BorderLayout.CENTER);
+
+27
+28
+
+}
+
+29
+30
+
+}
+
+Listing 10.17
+1
+
+treeModel/ObjectTreeModel.java
+
+package treeModel;
+
+2
+3
+4
+5
+6
+
+import java.lang.reflect.*;
+import java.util.*;
+import javax.swing.event.*;
+import javax.swing.tree.*;
+
+7
+8
+9
+10
+11
+12
+13
+14
+15
+
+/**
+* This tree model describes the tree structure of a Java object. Children are the objects that
+* are stored in instance variables.
+*/
+public class ObjectTreeModel implements TreeModel
+{
+private Variable root;
+private EventListenerList listenerList = new EventListenerList();
+
+16
+17
+18
+19
+20
+21
+22
+23
+
+/**
+* Constructs an empty tree.
+*/
+public ObjectTreeModel()
+{
+root = null;
+}
+
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+
+/**
+* Sets the root to a given variable.
+* @param v the variable that is being described by this tree
+*/
+public void setRoot(Variable v)
+{
+Variable oldRoot = v;
+root = v;
+fireTreeStructureChanged(oldRoot);
+}
+
+35
+36
+
+public Object getRoot()
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+37
+
+{
+return root;
+
+38
+39
+
+677
+
+}
+
+40
+41
+42
+43
+44
+
+public int getChildCount(Object parent)
+{
+return ((Variable) parent).getFields().size();
+}
+
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+
+public Object getChild(Object parent, int index)
+{
+ArrayList<Field> fields = ((Variable) parent).getFields();
+Field f = (Field) fields.get(index);
+Object parentValue = ((Variable) parent).getValue();
+try
+{
+return new Variable(f.getType(), f.getName(), f.get(parentValue));
+}
+catch (IllegalAccessException e)
+{
+return null;
+}
+}
+
+60
+61
+62
+63
+64
+65
+66
+67
+
+public int getIndexOfChild(Object parent, Object child)
+{
+int n = getChildCount(parent);
+for (int i = 0; i < n; i++)
+if (getChild(parent, i).equals(child)) return i;
+return -1;
+}
+
+68
+69
+70
+71
+72
+
+public boolean isLeaf(Object node)
+{
+return getChildCount(node) == 0;
+}
+
+73
+74
+75
+76
+
+public void valueForPathChanged(TreePath path, Object newValue)
+{
+}
+
+77
+78
+79
+80
+81
+
+public void addTreeModelListener(TreeModelListener l)
+{
+listenerList.add(TreeModelListener.class, l);
+}
+
+82
+83
+84
+
+public void removeTreeModelListener(TreeModelListener l)
+{
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+678
+
+Chapter 10
+
+Advanced Swing
+
+Listing 10.17 (Continued)
+listenerList.remove(TreeModelListener.class, l);
+
+85
+
+}
+
+86
+87
+
+protected void fireTreeStructureChanged(Object oldRoot)
+{
+TreeModelEvent event = new TreeModelEvent(this, new Object[] { oldRoot });
+for (TreeModelListener l : listenerList.getListeners(TreeModelListener.class))
+l.treeStructureChanged(event);
+}
+
+88
+89
+90
+91
+92
+93
+94
+
+}
+
+Listing 10.18
+1
+
+treeModel/Variable.java
+
+package treeModel;
+
+2
+3
+4
+
+import java.lang.reflect.*;
+import java.util.*;
+
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+
+/**
+* A variable with a type, name, and value.
+*/
+public class Variable
+{
+private Class<?> type;
+private String name;
+private Object value;
+private ArrayList<Field> fields;
+
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+
+/**
+* Construct a variable.
+* @param aType the type
+* @param aName the name
+* @param aValue the value
+*/
+public Variable(Class<?> aType, String aName, Object aValue)
+{
+type = aType;
+name = aName;
+value = aValue;
+fields = new ArrayList<>();
+
+28
+29
+
+// find all fields if we have a class type except we don't expand strings and null values
+
+30
+31
+32
+33
+
+if (!type.isPrimitive() && !type.isArray() && !type.equals(String.class) && value != null)
+{
+// get fields from the class and all superclasses
+
+From the Library of Hristo Dimov Hristov
+
+10.3 Trees
+
+679
+
+for (Class<?> c = value.getClass(); c != null; c = c.getSuperclass())
+{
+Field[] fs = c.getDeclaredFields();
+AccessibleObject.setAccessible(fs, true);
+
+34
+35
+36
+37
+38
+
+// get all nonstatic fields
+for (Field f : fs)
+if ((f.getModifiers() & Modifier.STATIC) == 0) fields.add(f);
+
+39
+40
+41
+
+}
+
+42
+
+}
+
+43
+
+}
+
+44
+45
+
+/**
+* Gets the value of this variable.
+* @return the value
+*/
+public Object getValue()
+{
+return value;
+}
+
+46
+47
+48
+49
+50
+51
+52
+53
+54
+
+/**
+* Gets all nonstatic fields of this variable.
+* @return an array list of variables describing the fields
+*/
+public ArrayList<Field> getFields()
+{
+return fields;
+}
+
+55
+56
+57
+58
+59
+60
+61
+62
+63
+
+public String toString()
+{
+String r = type + " " + name;
+if (type.isPrimitive()) r += "=" + value;
+else if (type.equals(String.class)) r += "=" + value;
+else if (value == null) r += "=null";
+return r;
+}
+
+64
+65
+66
+67
+68
+69
+70
+71
+72
+
+}
+
+javax.swing.tree.TreeModel 1.2
+
+• Object getRoot()
+returns the root node.
+• int getChildCount(Object parent)
+gets the number of children of the parent node.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+680
+
+Chapter 10
+
+Advanced Swing
+
+javax.swing.tree.TreeModel 1.2 (Continued)
+
+• Object getChild(Object parent, int index)
+gets the child node of the parent node at the given index.
+• int getIndexOfChild(Object parent, Object child)
+gets the index of the child node in the parent node, or -1 if child is not a child of parent
+in this tree model.
+• boolean isLeaf(Object node)
+returns true if node is conceptually a leaf of the tree.
+• void addTreeModelListener(TreeModelListener l)
+• void removeTreeModelListener(TreeModelListener l)
+adds or removes listeners that are notified when the information in the tree model
+changes.
+• void valueForPathChanged(TreePath path, Object newValue)
+is called when a cell editor has modified the value of a node.
+Parameters:
+
+path
+
+The path to the node that has been edited
+
+newValue
+
+The replacement value returned by the editor
+
+javax.swing.event.TreeModelListener 1.2
+
+•
+•
+•
+•
+
+void treeNodesChanged(TreeModelEvent e)
+void treeNodesInserted(TreeModelEvent e)
+void treeNodesRemoved(TreeModelEvent e)
+void treeStructureChanged(TreeModelEvent e)
+
+is called by the tree model when the tree has been modified.
+
+javax.swing.event.TreeModelEvent 1.2
+
+• TreeModelEvent(Object eventSource, TreePath node)
+constructs a tree model event.
+Parameters:
+
+eventSource
+
+The tree model generating this event
+
+node
+
+The path to the node that is being changed
+
+From the Library of Hristo Dimov Hristov
+

@@ -1,0 +1,8 @@
+  The "Summary" section of the Holding Your Objects chapter showed a simplified diagram of the Java containers library. Here is a more complete diagram of the collections library, including abstract classes and legacy components (with the exception of Queue implementations): 
+  Full Container Taxonomy     Java SE5 adds: 
+  • The Queue interface (which LinkedList has been modified to implement, as you saw in Holding Your Objects) and its implementations PriorityQueue and various flavors of BlockingQueue that will be shown in the Concurrency chapter. 
+  • A ConcurrentMap interface and its implementation ConcurrentHashMap, also for use in threading and shown in the Concurrency chapter. 
+  • CopyOnWriteArrayList and CopyOnWriteArraySet, also for concurrency. 
+  • EnumSet and EnumMap, special implementations of Set and Map for use with enums, and shown in the Enumerated Types chapter. 
+  • Several utilities in the Collections class. 
+  The long-dashed boxes represent abstract classes, and you can see a number of classes whose names begin with "Abstract." These can seem a bit confusing at first, but they are simply tools that partially implement a particular interface. If you were making your own Set, for example, you wouldn’t start with the Set interface and implement all the methods; instead, you’d inherit from AbstractSet and do the minimal necessary work to make your new class. However, the containers library contains enough functionality to satisfy your needs virtually all the time, so you can usually ignore any class that begins with "Abstract." 

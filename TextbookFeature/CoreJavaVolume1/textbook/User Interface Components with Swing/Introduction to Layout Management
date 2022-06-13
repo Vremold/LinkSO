@@ -1,0 +1,44 @@
+  Before we go on to discussing individual Swing components, such as text fields and radio buttons, we briefly cover how to arrange these components inside a frame. 
+  Of course, Java development environments have drag-and-drop GUI builders. 
+  Nevertheless, it is important to know exactly what goes on "under the hood" 
+  because even the best of these tools will usually require hand-tweaking. 
+11.2.1 Layout Managers
+  Let’s start by reviewing the program from Listing 10.4 that used buttons to change the background color of a frame. 
+  The buttons are contained in a JPanel object and are managed by the flow layout manager, the default layout manager for a panel. Figure 11.4 shows what happens when you add more buttons to the panel. As you can see, a new row is started when there is no more room. 
+  Figure 11.4 A panel with six buttons managed by a flow layout Moreover, the buttons stay centered in the panel, even when the user resizes the frame (see Figure 11.5). 
+  Figure 11.5 Changing the panel size rearranges the buttons automatically. 
+  In general, components are placed inside containers, and a layout manager determines the positions and sizes of components in a container. 
+  Buttons, text fields, and other user interface elements extend the class Component. Components can be placed inside containers, such as panels. 
+  Containers can themselves be put inside other containers, so the class Container extends Component. Figure 11.6 shows the inheritance   hierarchy for Component. 
+  Figure 11.6 Inheritance hierarchy for the Component class   Note Unfortunately, the inheritance hierarchy is somewhat unclean in two respects. First, top-level windows, such as JFrame, are subclasses of Container and hence Component, but they cannot be placed inside other containers. Moreover, JComponent is a subclass of Container, not Component. Therefore one can add other components into a JButton. (However, those components would not be displayed.) Each container has a default layout manager, but you can always set your own. For example, the statement   panel.setLayout(new GridLayout(4, 4)); 
+  uses the GridLayout class to lay out the components in four rows and four columns. When you add components to the container, the add method of the container passes the component and any placement directions to the layout manager. 
+  java.awt.Container 1.0 void setLayout(LayoutManager m) sets the layout manager for this container. 
+  Component add(Component c) Component add(Component c, Object constraints) 1.1 adds a component to this container and returns the component reference. 
+  java.awt.FlowLayout 1.0 FlowLayout() FlowLayout(int align) FlowLayout(int align, int hgap, int vgap) constructs a new FlowLayout. The align parameter is one of LEFT, CENTER, or RIGHT. 
+11.2.2 Border Layout
+  The border layout manager is the default layout manager of the content pane of every JFrame. Unlike the flow layout manager, which completely controls the position of each component, the border layout manager lets you choose where you want to place each component. You can choose to place the component in the center, north, south, east, or west of the content pane   (see Figure 11.7). 
+  Figure 11.7 Border layout For example: frame.add(component, BorderLayout.SOUTH); 
+  The edge components are laid out first, and the remaining available space is occupied by the center. When the container is resized, the dimensions of the edge components are unchanged, but the center component changes its size. 
+  Add components by specifying a constant CENTER, NORTH, SOUTH, EAST, or WEST of the BorderLayout class. Not all of the positions need to be occupied. If you don’t supply any value, CENTER is assumed. 
+  Note The BorderLayout constants are defined as strings. For example, BorderLayout.SOUTH is defined as the string "South". This is safer than using strings. If you accidentally misspell a string, for example, frame.add(component, "south"), the compiler won’t catch that error. 
+  Unlike the flow layout, the border layout grows all components to fill the available space. (The flow layout leaves each component at its preferred size.) This is a problem when you add a button: frame.add(yellowButton, BorderLayout.SOUTH); // don't   Figure 11.8 shows what happens when you use the preceding code fragment. 
+  The button has grown to fill the entire southern region of the frame. And, if you were to add another button to the southern region, it would just displace the first button. 
+  Figure 11.8 A single button managed by a border layout To solve this problem, use additional panels. For example, look at Figure 11.9. The three buttons at the bottom of the screen are all contained in a panel. The panel is put into the southern region of the content pane. 
+  Figure 11.9 Panel placed at the southern region of the frame To achieve this configuration, first create a new JPanel object, then add the individual buttons to the panel. The default layout manager for a panel is a FlowLayout, which is a good choice for this situation. Add the individual buttons to the panel, using the add method you have seen before. The position and size of the buttons is under the control of the FlowLayout manager. This means the buttons stay centered within the panel and do not expand to fill the entire panel area. Finally, add the panel to the content pane of the frame. 
+  var panel = new JPanel(); 
+  panel.add(yellowButton); 
+  panel.add(blueButton); 
+  panel.add(redButton); 
+  frame.add(panel, BorderLayout.SOUTH); 
+  The border layout expands the size of the panel to fill the entire southern region. 
+  java.awt.BorderLayout 1.0 BorderLayout() BorderLayout(int hgap, int vgap) constructs a new BorderLayout. 
+11.2.3 Grid Layout
+  The grid layout arranges all components in rows and columns like a spreadsheet. All components are given the same size. The calculator program in Figure 11.10 uses a grid layout to arrange the calculator buttons. When you resize the window, the buttons grow and shrink, but all buttons have identical sizes. 
+  Figure 11.10 A calculator In the constructor of the grid layout object, you specify how many rows and columns you need. 
+  panel.setLayout(new GridLayout(4, 4)); 
+  Add the components, starting with the first entry in the first row, then the second entry in the first row, and so on. 
+  panel.add(new JButton("1")); 
+  panel.add(new JButton("2")); 
+  Of course, few applications have as rigid a layout as the face of a calculator. 
+  In practice, small grids (usually with just one row or one column) can be useful to organize partial areas of a window. For example, if you want to have a row of buttons of identical sizes, you can put the buttons inside a panel that is governed by a grid layout with a single row. 
+  java.awt.GridLayout 1.0   GridLayout(int rows, int columns) GridLayout(int rows, int columns, int hgap, int vgap) constructs a new GridLayout. One of rows and columns (but not both) may be zero, denoting an arbitrary number of components per row or column. 

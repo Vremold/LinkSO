@@ -1,0 +1,77 @@
+
+797
+
+11.5 Paint
+When you fill a shape, its inside is covered with paint. Use the setPaint method to
+set the paint style to an object whose class implements the Paint interface. The Java
+2D API provides three such classes:
+• The Color class implements the Paint interface. To fill shapes with a solid color,
+simply call setPaint with a Color object, such as
+g2.setPaint(Color.red);
+
+• The GradientPaint class varies colors by interpolating between two given color
+values (see Figure 11.15).
+
+Figure 11.15 Gradient paint
+• The TexturePaint class fills an area with repetitions of an image (see Figure 11.16).
+
+Figure 11.16 Texture paint
+You can construct a GradientPaint object by specifying two points and the colors
+that you want at these two points.
+g2.setPaint(new GradientPaint(p1, Color.RED, p2, Color.YELLOW));
+
+From the Library of Hristo Dimov Hristov
+
+798
+
+Chapter 11
+
+Advanced AWT
+
+Colors are interpolated along the line joining the two points. Colors are constant
+along lines perpendicular to that joining line. Points beyond an end point of the
+line are given the color at the end point.
+Alternatively, if you call the GradientPaint constructor with true for the cyclic
+parameter,
+g2.setPaint(new GradientPaint(p1, Color.RED, p2, Color.YELLOW, true));
+
+then the color variation cycles and keeps varying beyond the end points.
+To construct a TexturePaint object, specify a BufferedImage and an anchor rectangle.
+g2.setPaint(new TexturePaint(bufferedImage, anchorRectangle));
+
+We will introduce the BufferedImage class later in this chapter when we discuss images
+in detail. The simplest way of obtaining a buffered image is to read an image file:
+bufferedImage = ImageIO.read(new File("blue-ball.gif"));
+
+The anchor rectangle is extended indefinitely in x and y directions to tile the entire
+coordinate plane. The image is scaled to fit into the anchor and then replicated
+into each tile.
+java.awt.Graphics2D 1.2
+
+• void setPaint(Paint s)
+sets the paint of this graphics context to the given object that implements the Paint
+interface.
+
+java.awt.GradientPaint 1.2
+
+•
+•
+•
+•
+
+GradientPaint(float x1, float y1, Color color1, float x2, float y2, Color color2)
+GradientPaint(float x1, float y1, Color color1, float x2, float y2, Color color2, boolean cyclic)
+GradientPaint(Point2D p1, Color color1, Point2D p2, Color color2)
+GradientPaint(Point2D p1, Color color1, Point2D p2, Color color2, boolean cyclic)
+
+constructs a gradient paint object that fills shapes with color such that the start
+point is colored with color1, the end point is colored with color2, and the colors in
+between are linearly interpolated. Colors are constant along lines perpendicular to
+the line joining the start and the end point. By default, the gradient paint is not
+cyclic—that is, points beyond the start and end points are colored with the same
+color as the start and end point. If the gradient paint is cyclic, then colors continue
+to be interpolated, first returning to the starting point color and then repeating
+indefinitely in both directions.
+
+From the Library of Hristo Dimov Hristov
+

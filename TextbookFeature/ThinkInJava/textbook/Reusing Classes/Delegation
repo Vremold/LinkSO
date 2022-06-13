@@ -1,0 +1,6 @@
+  A third relationship, which is not directly supported by Java, is called delegation. This is midway between inheritance and composition, because you place a member object in the class you’re building (like composition), but at the same time you expose all the methods from the member object in your new class (like inheritance). For example, a spaceship needs a control module: 
+  One way to build a spaceship is to use inheritance: 
+  However, a SpaceShip isn’t really “a type of” SpaceShipControls, even if, for example, you “tell” a SpaceShip to go forward( ). It’s more accurate to say that a SpaceShip contains SpaceShipControls, and at the same time all the methods in SpaceShipControls are exposed in a SpaceShip. Delegation solves the dilemma: 
+  You can see how the methods are forwarded to the underlying controls object, and the interface is thus the same as it is with inheritance. However, you have more control with delegation because you can choose to provide only a subset of the methods in the member object. 
+  Although the Java language doesn’t support delegation, development tools often do. The above example, for instance, was automatically generated using the JetBrains Idea IDE. 
+  Exercise 11: (3) Modify Detergent.java so that it uses delegation. 

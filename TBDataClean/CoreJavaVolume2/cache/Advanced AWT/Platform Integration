@@ -1,0 +1,1219 @@
+
+921
+
+javax.swing.text.JTextComponent.DropLocation 6
+
+• int getIndex()
+the index at which to insert the data.
+
+11.15 Platform Integration
+We finish this chapter with several features for making Java applications feel
+more like native applications. The splash screen feature allows your application
+to display a splash screen as the virtual machine starts up. The java.awt.Desktop class
+lets you launch native applications such as the default browser and e-mail program. Finally, you now have access to the system tray and can clutter it up with
+icons, just like so many native applications do.
+
+11.15.1 Splash Screens
+A common complaint about Java applications is their long startup time. The Java
+virtual machine takes some time to load all required classes, particularly for a
+Swing application that needs to pull in large amounts of Swing and AWT library
+code. Users dislike applications that take a long time to bring up an initial screen,
+and they might even try launching the application multiple times if they suspect
+the first launch was unsuccessful. The remedy is a splash screen—a small window
+that appears quickly, telling the user that the application has been launched
+successfully.
+Of course, you can put up a window as soon as your main method starts. However,
+the main method is only launched after the class loader has loaded all dependent
+classes, which might take a while.
+Instead, you can ask the virtual machine to show an image immediately on launch.
+There are two mechanisms for specifying that image. You can use the -splash
+command-line option:
+java -splash:myimage.png MyApp
+
+Alternatively, you can specify it in the manifest of a JAR file:
+Main-Class: MyApp
+SplashScreen-Image: myimage.gif
+
+The image is displayed immediately and automatically disappears when the first
+AWT window is made visible. You can supply any GIF, JPEG, or PNG image.
+Animation (in GIF) and transparency (GIF and PNG) are supported.
+
+From the Library of Hristo Dimov Hristov
+
+922
+
+Chapter 11
+
+Advanced AWT
+
+If your application is ready to go as soon as it reaches main, you can skip the remainder of this section. However, many applications use a plugin architecture
+in which a small core loads a set of plugins at startup. Eclipse and NetBeans are
+typical examples. In that case, you can indicate the loading progress on the splash
+screen.
+There are two approaches. You can draw directly on the splash screen, or you
+can replace it with a borderless frame with identical contents and then draw inside
+the frame. Our sample program shows both techniques.
+To draw directly on the splash screen, get a reference to the splash screen and
+get its graphics context and dimensions:
+SplashScreen splash = SplashScreen.getSplashScreen();
+Graphics2D g2 = splash.createGraphics();
+Rectangle bounds = splash.getBounds();
+
+You can now draw in the usual way. When you are done, call update to ensure that
+the drawing is refreshed. Our sample program draws a simple progress bar, as
+seen in the left image in Figure 11.47.
+g.fillRect(x, y, width * percent / 100, height);
+splash.update();
+
+Figure 11.47 The initial splash screen and a borderless follow-up window
+
+From the Library of Hristo Dimov Hristov
+
+11.15 Platform Integration
+
+923
+
+NOTE: The splash screen is a singleton object. You cannot construct your own.
+If no splash screen was set on the command line or in the manifest, the
+getSplashScreen method returns null.
+
+Drawing directly on the splash screen has a drawback. It is tedious to compute
+all pixel positions, and your progress indicator won’t match the native progress
+bar. To avoid these problems, you can replace the initial splash screen with a
+follow-up window of the same size and content as soon as the main method starts.
+That window can contain arbitrary Swing components.
+Our sample program in Listing 11.23 demonstrates this technique. The right image
+in Figure 11.47 shows a borderless frame with a panel that paints the splash screen
+and contains a JProgressBar. Now we have full access to the Swing API and can
+easily add message strings without having to fuss with pixel positions.
+Note that we do not need to remove the initial splash screen. It is automatically
+removed as soon as the follow-up window is made visible.
+
+CAUTION: Unfortunately, there is a noticeable flash when the splash screen is
+replaced by the follow-up window.
+
+Listing 11.23
+1
+
+splashScreen/SplashScreenTest.java
+
+package splashScreen;
+
+2
+3
+4
+5
+
+import java.awt.*;
+import java.util.List;
+import javax.swing.*;
+
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+
+/**
+* This program demonstrates the splash screen API.
+* @version 1.01 2016-05-10
+* @author Cay Horstmann
+*/
+public class SplashScreenTest
+{
+private static final int DEFAULT_WIDTH = 300;
+private static final int DEFAULT_HEIGHT = 300;
+
+16
+17
+
+private static SplashScreen splash;
+
+18
+
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+924
+
+Chapter 11
+
+Advanced AWT
+
+Listing 11.23 (Continued)
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+
+private static void drawOnSplash(int percent)
+{
+Rectangle bounds = splash.getBounds();
+Graphics2D g = splash.createGraphics();
+int height = 20;
+int x = 2;
+int y = bounds.height - height - 2;
+int width = bounds.width - 4;
+Color brightPurple = new Color(76, 36, 121);
+g.setColor(brightPurple);
+g.fillRect(x, y, width * percent / 100, height);
+splash.update();
+}
+
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+
+/**
+* This method draws on the splash screen.
+*/
+private static void init1()
+{
+splash = SplashScreen.getSplashScreen();
+if (splash == null)
+{
+System.err.println("Did you specify a splash image with -splash or in the manifest?");
+System.exit(1);
+}
+
+44
+
+try
+{
+for (int i = 0; i <= 100; i++)
+{
+drawOnSplash(i);
+Thread.sleep(100); // simulate startup work
+}
+}
+catch (InterruptedException e)
+{
+}
+
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+
+}
+
+57
+58
+59
+60
+61
+62
+63
+
+/**
+* This method displays a frame with the same image as the splash screen.
+*/
+private static void init2()
+{
+final Image img = new ImageIcon(splash.getImageURL()).getImage();
+
+64
+
+From the Library of Hristo Dimov Hristov
+
+11.15 Platform Integration
+
+65
+66
+
+925
+
+final JFrame splashFrame = new JFrame();
+splashFrame.setUndecorated(true);
+
+67
+68
+69
+70
+71
+72
+73
+74
+
+final JPanel splashPanel = new JPanel()
+{
+public void paintComponent(Graphics g)
+{
+g.drawImage(img, 0, 0, null);
+}
+};
+
+75
+76
+77
+78
+79
+
+final JProgressBar progressBar = new JProgressBar();
+progressBar.setStringPainted(true);
+splashPanel.setLayout(new BorderLayout());
+splashPanel.add(progressBar, BorderLayout.SOUTH);
+
+80
+81
+82
+83
+
+splashFrame.add(splashPanel);
+splashFrame.setBounds(splash.getBounds());
+splashFrame.setVisible(true);
+
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+
+new SwingWorker<Void, Integer>()
+{
+protected Void doInBackground() throws Exception
+{
+try
+{
+for (int i = 0; i <= 100; i++)
+{
+publish(i);
+Thread.sleep(100);
+}
+}
+catch (InterruptedException e)
+{
+}
+return null;
+}
+
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+
+protected void process(List<Integer> chunks)
+{
+for (Integer chunk : chunks)
+{
+progressBar.setString("Loading module " + chunk);
+progressBar.setValue(chunk);
+splashPanel.repaint(); // because img is loaded asynchronously
+}
+}
+
+112
+
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+926
+
+Chapter 11
+
+Advanced AWT
+
+Listing 11.23 (Continued)
+protected void done()
+{
+splashFrame.setVisible(false);
+
+113
+114
+115
+116
+
+JFrame frame = new JFrame();
+frame.setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+frame.setTitle("SplashScreenTest");
+frame.setVisible(true);
+
+117
+118
+119
+120
+121
+
+}
+}.execute();
+
+122
+123
+
+}
+
+124
+125
+
+public static void main(String args[])
+{
+init1();
+EventQueue.invokeLater(() -> init2());
+}
+
+126
+127
+128
+129
+130
+131
+
+}
+
+java.awt.SplashScreen 6
+
+• static SplashScreen getSplashScreen()
+gets a reference to the splash screen, or null if no splash screen is present.
+• URL getImageURL()
+• void setImageURL(URL imageURL)
+gets or sets the URL of the splash screen image. Setting the image updates the splash
+screen.
+• Rectangle getBounds()
+gets the bounds of the splash screen.
+• Graphics2D createGraphics()
+gets a graphics context for drawing on the splash screen.
+• void update()
+updates the display of the splash screen.
+• void close()
+closes the splash screen. The splash screen is automatically closed when the first
+AWT window is made visible.
+
+From the Library of Hristo Dimov Hristov
+
+11.15 Platform Integration
+
+927
+
+11.15.2 Launching Desktop Applications
+The java.awt.Desktop class lets you launch the default browser and e-mail program.
+You can also open, edit, and print files, using the applications that are registered
+for the file type.
+The API is very straightforward. First, call the static isDesktopSupported method. If it
+returns true, the current platform supports the launching of desktop applications.
+Then call the static getDesktop method to obtain a Desktop instance.
+Not all desktop environments support all API operations. For example, in the
+Gnome desktop on Linux, it is possible to open files, but you cannot print them.
+(There is no support for “verbs” in file associations.) To find out what is supported
+on your platform, call the isSupported method, passing a value in the Desktop.Action
+enumeration. Our sample program contains tests such as the following:
+if (desktop.isSupported(Desktop.Action.PRINT)) printButton.setEnabled(true);
+
+To open, edit, or print a file, first check that the action is supported, and then call
+the open, edit, or print method. To launch the browser, pass a URI. (See Chapter 4
+for more information on URIs.) You can simply call the URI constructor with a
+string containing an http or https URL.
+To launch the default e-mail program, you need to construct a URI of a particular
+format, namely
+mailto:recipient?query
+
+Here recipient is the e-mail address of the recipient, such as president@whitehouse.gov,
+and query contains &-separated name=value pairs, with percent-encoded values.
+(Percent encoding is essentially the same as the URL encoding algorithm
+described in Chapter 4, but a space is encoded as %20, not +). An example is
+subject=dinner%20RSVP&bcc=putin%40kremvax.ru. The format is documented in RFC 2368
+(www.ietf.org/rfc/rfc2368.txt). Unfortunately, the URI class does not know anything
+about mailto URIs, so you have to assemble and encode your own.
+Our sample program in Listing 11.24 lets you open, edit, or print a file of your
+choice, browse a URL, or launch your e-mail program (see Figure 11.48).
+
+From the Library of Hristo Dimov Hristov
+
+928
+
+Chapter 11
+
+Advanced AWT
+
+Figure 11.48 Launching a desktop application
+Listing 11.24
+1
+
+desktopApp/DesktopAppFrame.java
+
+package desktopApp;
+
+2
+3
+4
+5
+
+import java.awt.*;
+import java.io.*;
+import java.net.*;
+
+6
+7
+
+import javax.swing.*;
+
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+
+class DesktopAppFrame extends JFrame
+{
+public DesktopAppFrame()
+{
+setLayout(new GridBagLayout());
+final JFileChooser chooser = new JFileChooser();
+JButton fileChooserButton = new JButton("...");
+final JTextField fileField = new JTextField(20);
+fileField.setEditable(false);
+JButton openButton = new JButton("Open");
+
+From the Library of Hristo Dimov Hristov
+
+11.15 Platform Integration
+
+19
+20
+21
+22
+23
+24
+25
+
+929
+
+JButton editButton = new JButton("Edit");
+JButton printButton = new JButton("Print");
+final JTextField browseField = new JTextField();
+JButton browseButton = new JButton("Browse");
+final JTextField toField = new JTextField();
+final JTextField subjectField = new JTextField();
+JButton mailButton = new JButton("Mail");
+
+26
+27
+28
+29
+30
+31
+
+openButton.setEnabled(false);
+editButton.setEnabled(false);
+printButton.setEnabled(false);
+browseButton.setEnabled(false);
+mailButton.setEnabled(false);
+
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+
+if (Desktop.isDesktopSupported())
+{
+Desktop desktop = Desktop.getDesktop();
+if (desktop.isSupported(Desktop.Action.OPEN)) openButton.setEnabled(true);
+if (desktop.isSupported(Desktop.Action.EDIT)) editButton.setEnabled(true);
+if (desktop.isSupported(Desktop.Action.PRINT)) printButton.setEnabled(true);
+if (desktop.isSupported(Desktop.Action.BROWSE)) browseButton.setEnabled(true);
+if (desktop.isSupported(Desktop.Action.MAIL)) mailButton.setEnabled(true);
+}
+
+42
+43
+44
+45
+46
+47
+
+fileChooserButton.addActionListener(event ->
+{
+if (chooser.showOpenDialog(DesktopAppFrame.this) == JFileChooser.APPROVE_OPTION)
+fileField.setText(chooser.getSelectedFile().getAbsolutePath());
+});
+
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+
+openButton.addActionListener(event ->
+{
+try
+{
+Desktop.getDesktop().open(chooser.getSelectedFile());
+}
+catch (IOException ex)
+{
+ex.printStackTrace();
+}
+});
+
+60
+61
+62
+63
+64
+65
+66
+
+editButton.addActionListener(event ->
+{
+try
+{
+Desktop.getDesktop().edit(chooser.getSelectedFile());
+}
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+930
+
+Chapter 11
+
+Advanced AWT
+
+Listing 11.24 (Continued)
+67
+68
+69
+70
+71
+
+catch (IOException ex)
+{
+ex.printStackTrace();
+}
+});
+
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+
+printButton.addActionListener(event ->
+{
+try
+{
+Desktop.getDesktop().print(chooser.getSelectedFile());
+}
+catch (IOException ex)
+{
+ex.printStackTrace();
+}
+});
+
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+
+browseButton.addActionListener(event ->
+{
+try
+{
+Desktop.getDesktop().browse(new URI(browseField.getText()));
+}
+catch (URISyntaxException | IOException ex)
+{
+ex.printStackTrace();
+}
+});
+
+96
+97
+98
+99
+100
+101
+102
+
+mailButton.addActionListener(event ->
+{
+try
+{
+String subject = percentEncode(subjectField.getText());
+URI uri = new URI("mailto:" + toField.getText() + "?subject=" + subject);
+
+103
+104
+105
+106
+107
+108
+109
+110
+111
+
+System.out.println(uri);
+Desktop.getDesktop().mail(uri);
+}
+catch (URISyntaxException | IOException ex)
+{
+ex.printStackTrace();
+}
+});
+
+112
+
+From the Library of Hristo Dimov Hristov
+
+11.15 Platform Integration
+
+931
+
+JPanel buttonPanel = new JPanel();
+((FlowLayout) buttonPanel.getLayout()).setHgap(2);
+buttonPanel.add(openButton);
+buttonPanel.add(editButton);
+buttonPanel.add(printButton);
+
+113
+114
+115
+116
+117
+118
+
+add(fileChooserButton, new GBC(0, 0).setAnchor(GBC.EAST).setInsets(2));
+add(fileField, new GBC(1, 0).setFill(GBC.HORIZONTAL));
+add(buttonPanel, new GBC(2, 0).setAnchor(GBC.WEST).setInsets(0));
+add(browseField, new GBC(1, 1).setFill(GBC.HORIZONTAL));
+add(browseButton, new GBC(2, 1).setAnchor(GBC.WEST).setInsets(2));
+add(new JLabel("To:"), new GBC(0, 2).setAnchor(GBC.EAST).setInsets(5, 2, 5, 2));
+add(toField, new GBC(1, 2).setFill(GBC.HORIZONTAL));
+add(mailButton, new GBC(2, 2).setAnchor(GBC.WEST).setInsets(2));
+add(new JLabel("Subject:"), new GBC(0, 3).setAnchor(GBC.EAST).setInsets(5, 2, 5, 2));
+add(subjectField, new GBC(1, 3).setFill(GBC.HORIZONTAL));
+
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+
+pack();
+
+130
+
+}
+
+131
+132
+
+private static String percentEncode(String s)
+{
+try
+{
+return URLEncoder.encode(s, "UTF-8").replaceAll("[+]", "%20");
+}
+catch (UnsupportedEncodingException ex)
+{
+return null; // UTF-8 is always supported
+}
+}
+
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+
+}
+
+java.awt.Desktop 6
+
+• static boolean isDesktopSupported()
+returns true if launching desktop applications is supported on this platform.
+• static Desktop getDesktop()
+returns the Desktop object for launching desktop operations. Throws an
+UnsupportedOperationException if this platform does not support launching desktop
+operations.
+• boolean isSupported(Desktop.Action action)
+returns true if the given action is supported. action is one of OPEN, EDIT, PRINT, BROWSE,
+or MAIL.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+932
+
+Chapter 11
+
+Advanced AWT
+
+java.awt.Desktop 6 (Continued)
+
+• void open(File file)
+launches the application that is registered for viewing the given file.
+• void edit(File file)
+launches the application that is registered for editing the given file.
+• void print(File file)
+prints the given file.
+• void browse(URI uri)
+launches the default browser with the given URI.
+• void mail()
+• void mail(URI uri)
+launches the default mailer. The second version can be used to fill in parts of the
+e-mail message.
+
+11.15.3 The System Tray
+Many desktop environments have an area for icons of programs that run in the
+background and occasionally notify users of events. In Windows, this area is
+called the system tray, and the icons are called tray icons. The Java API adopts the
+same terminology. A typical example of such a program is a monitor that checks
+for software updates. If new updates are available, the monitor program can
+change the appearance of the icon or display a message near the icon.
+Frankly, the system tray is somewhat overused, and computer users are not
+usually filled with joy when they discover yet another tray icon. Our sample
+system tray application—a program that dispenses virtual fortune cookies—is
+no exception to that rule.
+The java.awt.SystemTray class is the cross-platform conduit to the system tray. As in
+the Desktop class discussed in the preceding section, you first call the static isSupported
+method to check that the local Java platform supports the system tray. If so, you
+get a SystemTray singleton by calling the static getSystemTray method.
+The most important method of the SystemTray class is the add method that lets you
+add a TrayIcon instance. A tray icon has three key properties:
+• The icon image
+• The tooltip that is visible when the mouse hovers over the icon
+
+From the Library of Hristo Dimov Hristov
+
+11.15 Platform Integration
+
+933
+
+• The pop-up menu that is displayed when the user clicks on the icon with the
+right mouse button
+The pop-up menu is an instance of the PopupMenu class of the AWT library, representing a native pop-up menu, not a Swing menu. Fill it out with AWT MenuItem
+instances, each having an action listener just like the Swing counterpart.
+Finally, a tray icon can display notifications to the user (see Figure 11.49). Call
+the displayMessage method of the TrayIcon class and specify the caption, message, and
+message type.
+trayIcon.displayMessage("Your Fortune", fortunes.get(index), TrayIcon.MessageType.INFO);
+
+Figure 11.49 A notification from a tray icon
+Listing 11.25 shows the application that places a fortune cookie icon into the
+system tray. The program reads a fortune cookie file (from the venerable UNIX
+fortune program) in which each fortune is terminated by a line containing a %
+character. It displays a message every ten seconds. Mercifully, there is a pop-up
+menu with a command to exit the application. If only all tray icons were so
+considerate!
+
+From the Library of Hristo Dimov Hristov
+
+934
+
+Chapter 11
+
+Advanced AWT
+
+Listing 11.25
+1
+
+systemTray/SystemTrayTest.java
+
+package systemTray;
+
+2
+3
+4
+5
+6
+
+import java.awt.*;
+import java.io.*;
+import java.util.*;
+import java.util.List;
+
+7
+8
+9
+
+import javax.swing.*;
+import javax.swing.Timer;
+
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+
+/**
+* This program demonstrates the system tray API.
+* @version 1.02 2016-05-10
+* @author Cay Horstmann
+*/
+public class SystemTrayTest
+{
+public static void main(String[] args)
+{
+SystemTrayApp app = new SystemTrayApp();
+app.init();
+}
+}
+
+24
+25
+26
+27
+28
+29
+
+class SystemTrayApp
+{
+public void init()
+{
+final TrayIcon trayIcon;
+
+30
+31
+32
+33
+34
+35
+
+if (!SystemTray.isSupported())
+{
+System.err.println("System tray is not supported.");
+return;
+}
+
+36
+37
+38
+
+SystemTray tray = SystemTray.getSystemTray();
+Image image = new ImageIcon(getClass().getResource("cookie.png")).getImage();
+
+39
+40
+41
+42
+43
+
+PopupMenu popup = new PopupMenu();
+MenuItem exitItem = new MenuItem("Exit");
+exitItem.addActionListener(event -> System.exit(0));
+popup.add(exitItem);
+
+44
+45
+
+trayIcon = new TrayIcon(image, "Your Fortune", popup);
+
+46
+47
+
+trayIcon.setImageAutoSize(true);
+
+From the Library of Hristo Dimov Hristov
+
+11.15 Platform Integration
+
+935
+
+trayIcon.addActionListener(event ->
+{
+trayIcon.displayMessage("How do I turn this off?",
+"Right-click on the fortune cookie and select Exit.",
+TrayIcon.MessageType.INFO);
+});
+
+48
+49
+50
+51
+52
+53
+54
+
+try
+{
+tray.add(trayIcon);
+}
+catch (AWTException e)
+{
+System.err.println("TrayIcon could not be added.");
+return;
+}
+
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+
+final List<String> fortunes = readFortunes();
+Timer timer = new Timer(10000, event ->
+{
+int index = (int) (fortunes.size() * Math.random());
+trayIcon.displayMessage("Your Fortune", fortunes.get(index),
+TrayIcon.MessageType.INFO);
+});
+timer.start();
+
+65
+66
+67
+68
+69
+70
+71
+72
+73
+
+}
+
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+
+private List<String> readFortunes()
+{
+List<String> fortunes = new ArrayList<>();
+try (InputStream inStream = getClass().getResourceAsStream("fortunes"))
+{
+Scanner in = new Scanner(inStream, "UTF-8");
+StringBuilder fortune = new StringBuilder();
+while (in.hasNextLine())
+{
+String line = in.nextLine();
+if (line.equals("%"))
+{
+fortunes.add(fortune.toString());
+fortune = new StringBuilder();
+}
+else
+{
+fortune.append(line);
+fortune.append(' ');
+}
+}
+}
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+936
+
+Chapter 11
+
+Advanced AWT
+
+Listing 11.25 (Continued)
+catch (IOException ex)
+{
+ex.printStackTrace();
+}
+return fortunes;
+
+97
+98
+99
+100
+101
+
+}
+
+102
+103
+
+}
+
+java.awt.SystemTray 6
+
+• static boolean isSupported()
+returns true if system tray access is supported on this platform.
+• static SystemTray getSystemTray()
+returns the SystemTray object for accessing the system tray. Throws an
+UnsupportedOperationException if this platform does not support system tray access.
+• Dimension getTrayIconSize()
+gets the dimensions for an icon in the system tray.
+• void add(TrayIcon trayIcon)
+• void remove(TrayIcon trayIcon)
+adds or removes a system tray icon.
+
+java.awt.TrayIcon 6
+
+• TrayIcon(Image image)
+• TrayIcon(Image image, String tooltip)
+• TrayIcon(Image image, String tooltip, PopupMenu popupMenu)
+constructs a tray icon with the given image, tooltip, and pop-up menu.
+•
+•
+•
+•
+•
+•
+
+Image getImage()
+void setImage(Image image)
+String getTooltip()
+void setTooltip(String tooltip)
+PopupMenu getPopupMenu()
+void setPopupMenu(PopupMenu popupMenu)
+
+gets or sets the image, tooltip, or pop-up menu of this tooltip.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+11.15 Platform Integration
+
+937
+
+java.awt.TrayIcon 6 (Continued)
+
+• boolean isImageAutoSize()
+• void setImageAutoSize(boolean autosize)
+gets or sets the imageAutoSize property. If set, the image is scaled to fit the tooltip icon
+area; if not (the default), it is cropped (if too large) or centered (if too small).
+• void displayMessage(String caption, String text, TrayIcon.MessageType messageType)
+displays a message near the tray icon. The message type is one of INFO, WARNING, ERROR,
+or NONE.
+• public void addActionListener(ActionListener listener)
+• public void removeActionListener(ActionListener listener)
+adds or removes an action listener when the listener called is platform-dependent.
+Typical cases are clicking on a notification or double-clicking on the tray icon.
+
+You have now reached the end of this long chapter covering advanced AWT
+features. In the final chapter, we will turn to a different aspect of Java programming: interacting, on the same machine, with “native” code in a different
+programming language.
+
+From the Library of Hristo Dimov Hristov
+
+This page intentionally left blank
+
+From the Library of Hristo Dimov Hristov
+

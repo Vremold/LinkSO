@@ -1,0 +1,37 @@
+  There’s one rather mind-bending idiom that appears periodically in Java generics. Here’s what it looks like: 
+  class SelfBounded<T extends SelfBounded<T>> { // ... 
+  This has the dizzying effect of two mirrors pointed at each other, a kind of infinite reflection. The class SelfBounded takes a generic argument T, T is constrained by a bound, and that bound is SelfBounded, with T as an argument. 
+  This is difficult to parse when you first see it, and it emphasizes that the extends keyword, when used with bounds, is definitely different than when it is used to create subclasses. 
+Curiously recurring generics
+  To understand what a self-bounded type means, let’s start with a simpler version of the idiom, without the self-bound. 
+  You can’t inherit directly from a generic parameter. However, you can inherit from a class that uses that generic parameter in its own definition. That is, you can say: 
+  This could be called curiously recurring generics (CRG) after Jim Coplien’s Curiously Recurring Template Pattern in C++. The "curiously recurring" part refers to the fact that your class appears, rather curiously, in its own base class. 
+  To understand what this means, try saying it aloud: "I’m creating a new class that inherits from a generic type that takes my class name as its parameter." What can the generic base type accomplish when given the derived class name? Well, generics in Java are about arguments and return types, so it can produce a base class that uses the derived type for its arguments and return types. It can also use the derived type for field types, even though those will be erased to Object. Here’s a generic class that expresses this: 
+  It’s an ordinary generic type with methods that both accept and produce objects of the parameter type, along with a method that operates on the stored field (although it only performs Object operations on that field). 
+  We can use BasicHolder in a curiously recurring generic: 
+  Notice something important here: The new class Subtype takes arguments and returns values of Subtype, not just the base class BasicHolder. This is the essence of CRG: The base class substitutes the derived class for its parameters. This means that the generic base class becomes a kind of template for common functionality for all its derived classes, but this functionality will use the derived type for all of its arguments and return values. That is, the exact type instead of the base type will be used in the resulting class. So in Subtype, both the argument to set( ) and the return type of get( ) are exactly Subtypes. 
+Self-bounding
+  The BasicHolder can use any type as its generic parameter, as seen here: 
+  Self-bounding takes the extra step of forcing the generic to be used as its own bound argument. Look at how the resulting class can and can’t be used: 
+  What self-bounding does is require the use of the class in an inheritance relationship like this: 
+  class A extends SelfBounded<A> {} 
+  This forces you to pass the class that you are defining as a parameter to the base class. 
+  What’s the added value in self-bounding the parameter? The type parameter must be the same as the class being defined. As you can see in the definition of class B, you can also derive from a SelfBounded that uses a parameter of another SelfBounded, although the predominant use seems to be the one that you see for class A. The attempt to define E shows that you cannot use a type parameter that is not a SelfBounded. 
+  Unfortunately, F compiles without warnings, so the self-bounding idiom is not enforceable. If it’s really important, it may require an external tool to ensure that raw types are not being used in place of parameterized types. 
+  Notice that you can remove the constraint and all the classes will still compile, but E will also compile: 
+  So clearly, the self-bounding constraint serves only to force the inheritance relationship. If you use self-bounding, you know that the type parameter used by the class will be the same basic type as the class that’s using that parameter. It forces anyone using that class to follow that form. 
+  It’s also possible to use self-bounding for generic methods: 
+  This prevents the method from being applied to anything but a self-bounded argument of the form shown. 
+Argument covariance
+  The value of self-bounding types is that they produce covariant argument types—method argument types vary to follow the subclasses. 
+  Although self-bounding types also produce return types that are the same as the subclass type, this is not so important because covariant return types were introduced in Java SE5: 
+  The get( ) method in DerivedGetter overrides get( ) in OrdinaryGetter and returns a type that is derived from the type returned by OrdinaryGetter.get( ). Although this is a    perfectly logical thing to do—a derived type method should be able to return a more specific type than the base type method that it’s overriding—it was illegal in earlier versions of Java. 
+  A self-bounded generic does in fact produce the exact derived type as a return value, as seen here with get( ): 
+  Notice that this code would not have compiled unless covariant return types were included in Java SE5. 
+  In non-generic code, however, the argument types cannot be made to vary with the subtypes: 
+  Both set(derived) and set(base) are legal, so DerivedSetter.set( ) is not overriding OrdinarySetter.set( ), but instead it is overloading that method. From the output, you can see that there are two methods in DerivedSetter, so the base-class version is still available, thus verifying that it has been overloaded. 
+  However, with self-bounding types, there is only one method in the derived class, and that method takes the derived type as its argument, not the base type: 
+  The compiler doesn’t recognize the attempt to pass in the base type as an argument to set( ), because there is no method with that signature. The argument has, in effect, been overridden. 
+  Without self-bounding, the ordinary inheritance mechanism steps in, and you get overloading, just as with the non-generic case: 
+  This code mimics OrdinaryArguments.java; in that example, DerivedSetter inherits from OrdinarySetter which contains a set(Base). Here, DerivedGS inherits from GenericSetter<Base> which also contains a set(Base), created by the generic. And just like OrdinaryArguments.java, you can see from the output that DerivedGS contains two overloaded versions of set( ). Without self-bounding, you overload on argument types. If you use self-bounding, you only end up with one version of a method, which takes the exact argument type. 
+  Exercise 34: (4) Create a self-bounded generic type that contains an abstract method that takes an argument of the generic type parameter and produces a return value of the    generic type parameter. In a non-abstract method of the class, call the abstract method and return its result. Inherit from the self-bounded type and test the resulting class. 

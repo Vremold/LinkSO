@@ -1,0 +1,148 @@
+  You now know how to throw an exception. It is pretty easy: You throw it and you forget it. Of course, some code has to catch the exception. Catching exceptions requires more planning. That’s what the next sections will cover. 
+7.2.1 Catching an Exception
+  If an exception occurs that is not caught anywhere, the program will terminate and print a message to the console, giving the type of the exception and a stack trace. GUI programs (both applets and applications) catch exceptions, print stack trace messages, and then go back to the user interface processing loop. (When you are debugging a GUI program, it is a good idea   to keep the console on the screen and not minimized.) To catch an exception, set up a try/catch block. The simplest form of the try block is as follows: try { code more code more code } 
+  catch (ExceptionType e) { handler for this type } 
+  If any code inside the try block throws an exception of the class specified in the catch clause, then 1. The program skips the remainder of the code in the try block. 
+  2. The program executes the handler code inside the catch clause. 
+  If none of the code inside the try block throws an exception, then the program skips the catch clause. 
+  If any of the code in a method throws an exception of a type other than the one named in the catch clause, this method exits immediately. (Hopefully, one of its callers has already provided a catch clause for that type.) To show this at work, here’s some fairly typical code for reading in data: public void read(String filename) { try { var in = new FileInputStream(filename); 
+  int b; 
+  while ((b = in.read()) != -1) { process input } 
+  } 
+  catch (IOException exception) {   exception.printStackTrace(); 
+  } 
+  } 
+  Notice that most of the code in the try clause is straightforward: It reads and processes bytes until we encounter the end of the file. As you can see by looking at the Java API, there is the possibility that the read method will throw an IOException. In that case, we skip out of the entire while loop, enter the catch clause, and generate a stack trace. For a toy program, that seems like a reasonable way to deal with this exception. What other choice do you have? 
+  Often, the best choice is to do nothing at all and simply pass the exception on to the caller. If an error occurs in the read method, let the caller of the read method worry about it! If we take that approach, then we have to advertise the fact that the method may throw an IOException. 
+  public void read(String filename) throws IOException { var in = new FileInputStream(filename); 
+  int b; 
+  while ((b = in.read()) != -1) { process input } 
+  } 
+  Remember, the compiler strictly enforces the throws specifiers. If you call a method that throws a checked exception, you must either handle it or pass it on. 
+  Which of the two is better? As a general rule, you should catch those exceptions that you know how to handle and propagate those that you do not know how to handle. 
+  When you propagate an exception, you must add a throws specifier to alert the caller that an exception may be thrown. 
+  Look at the Java API documentation to see what methods throw which exceptions. Then decide whether you should handle them or add them to the throws list. There is nothing embarrassing about the latter choice. It is better to direct an exception to a competent handler than to squelch it. 
+  Please keep in mind that there is, as we mentioned earlier, one exception to this rule. If you are writing a method that overrides a superclass method which throws no exceptions (such as paintComponent in JComponent), then you must catch each checked exception in your method’s code. You are not allowed to add more throws specifiers to a subclass method than are present in the superclass method. 
+  is catch (Exception& e) // C++   There is no analog to the C++ catch (. . .). This is not needed in Java because all exceptions derive from a common superclass. 
+7.2.2 Catching Multiple Exceptions
+  You can catch multiple exception types in a try block and handle each type differently. Use a separate catch clause for each type, as in the following example: try { code that might throw exceptions } 
+  catch (FileNotFoundException e) { emergency action for missing files } 
+  catch (UnknownHostException e) { emergency action for unknown hosts } 
+  catch (IOException e)   { emergency action for all other I/O problems } 
+  The exception object may contain information about the nature of the exception. To find out more about the object, try e.getMessage()   to get the detailed error message (if there is one), or e.getClass().getName()   to get the actual type of the exception object. 
+  As of Java 7, you can catch multiple exception types in the same catch clause. For example, suppose that the action for missing files and unknown hosts is the same. Then you can combine the catch clauses: try { code that might throw exceptions } 
+  catch (FileNotFoundException | UnknownHostException e) { emergency action for missing files and unknown hosts } 
+  catch (IOException e) { emergency action for all other I/O problems } 
+  This feature is only needed when catching exception types that are not subclasses of one another. 
+  Note When you catch multiple exceptions, the exception variable is implicitly final. For example, you cannot assign a different value to e in the body of the clause catch (FileNotFoundException | UnknownHostException e) { . 
+  . . } 
+  Note Catching multiple exceptions doesn’t just make your code look simpler but also more efficient. The generated bytecodes contain a single block for the shared catch clause. 
+7.2.3 Rethrowing and Chaining Exceptions
+  You can throw an exception in a catch clause. Typically, you do this when you want to change the exception type. If you build a subsystem that other programmers use, it makes a lot of sense to use an exception type that indicates a failure of the subsystem. An example of such an exception type is the ServletException. The code that executes a servlet may not want to know in minute detail what went wrong, but it definitely wants to know that the servlet was at fault. 
+  Here is how you can catch an exception and rethrow it: try { access the database } 
+  catch (SQLException e) { throw new ServletException("database error: " + e.getMessage()); 
+  } 
+  Here, the ServletException is constructed with the message text of the exception. 
+  However, it is a better idea to set the original exception as the "cause" of the new exception: try { access the database   } 
+  catch (SQLException original) { var e = new ServletException("database error"); 
+  e.initCause(original); 
+  throw e; 
+  } 
+  When the exception is caught, the original exception can be retrieved: Throwable original = caughtException.getCause(); 
+  This wrapping technique is highly recommended. It allows you to throw high-level exceptions in subsystems without losing the details of the original failure. 
+  Tip The wrapping technique is also useful if a checked exception occurs in a method that is not allowed to throw a checked exception. You can catch the checked exception and wrap it into a runtime exception. 
+  Sometimes, you just want to log an exception and rethrow it without any change: try { access the database } 
+  catch (Exception e) { logger.log(level, message, e); 
+  throw e; 
+  } 
+  Before Java 7, there was a problem with this approach. Suppose the code is inside a method   public void updateRecord() throws SQLException   The Java compiler looked at the throw statement inside the catch block, then at the type of e, and complained that this method might throw any Exception, not just a SQLException. This has now been improved. The compiler now tracks the fact that e originates from the try block. Provided that the only checked exceptions in that block are SQLException instances, and provided that e is not changed in the catch block, it is valid to declare the enclosing method as throws SQLException. 
+7.2.4 The finally Clause
+  When your code throws an exception, it stops processing the remaining code in your method and exits the method. This is a problem if the method has acquired some local resource, which only this method knows about, and that resource must be cleaned up. One solution is to catch all exceptions, carry out the cleanup, and rethrow the exceptions. But this solution is tedious because you need to clean up the resource allocation in two places—in the normal code and in the exception code. The finally clause can solve this problem. 
+  Note Since Java 7, there is a more elegant solution, the try-withresources statement that you will see in the following section. We discuss the finally mechanism in detail because it is the conceptual foundation. But in practice, you will probably use trywith-resources statements more often than finally clauses. 
+  The code in the finally clause executes whether or not an exception was caught. In the following example, the program will close the input stream under all circumstances: var in = new FileInputStream(. . .); 
+  try { // 1   code that might throw exceptions // 2 } 
+  catch (IOException e) { // 3 show error message // 4 } 
+  finally { // 5 in.close(); 
+  } 
+  // 6   Let us look at the three possible situations in which the program will execute the finally clause. 
+  1. The code throws no exceptions. In this case, the program first executes all the code in the try block. Then, it executes the code in the finally clause. Afterwards, execution continues with the first statement after the finally clause. In other words, execution passes through points 1, 2, 5, and 6. 
+  2. The code throws an exception that is caught in a catch clause—in our case, an IOException. For this, the program executes all code in the try block, up to the point at which the exception was thrown. The remaining code in the try block is skipped. The program then executes the code in the matching catch clause, and then the code in the finally clause. 
+  If the catch clause does not throw an exception, the program executes the first line after the finally clause. In this scenario, execution passes through points 1, 3, 4, 5, and 6. 
+  If the catch clause throws an exception, then the exception is thrown back to the caller of this method, and execution passes through points 1, 3, and 5 only. 
+  3. The code throws an exception that is not caught in any catch clause. 
+  Here, the program executes all code in the try block until the exception is thrown. The remaining code in the try block is skipped. Then, the   code in the finally clause is executed, and the exception is thrown back to the caller of this method. Execution passes through points 1 and 5 only. 
+  You can use the finally clause without a catch clause. For example, consider the following try statement: InputStream in = . . .; 
+  try { code that might throw exceptions } 
+  finally { in.close(); 
+  } 
+  The in.close() statement in the finally clause is executed whether or not an exception is encountered in the try block. Of course, if an exception is encountered, it is rethrown and must be caught in another catch clause. 
+  InputStream in = . . .; 
+  try { try { code that might throw exceptions } 
+  finally { in.close(); 
+  } 
+  } 
+  catch (IOException e) { show error message } 
+  The inner try block has a single responsibility: to make sure that the input stream is closed. The outer try block has a single responsibility: to ensure that errors are reported. Not only is this solution clearer, it is also more functional: Errors in the finally clause are reported. 
+  Caution A finally clause can yield unexpected results when it contains return statements. Suppose you exit the middle of a try block with a return statement. Before the method returns, the finally block is executed. If the finally block also contains a return statement, then it masks the original return value. Consider this example: public static int parseInt(String s) { try { return Integer.parseInt(s); 
+  } 
+  finally { return 0; // ERROR } 
+  } 
+  It looks as if in the call parseInt("42"), the body of the try block returns the integer 42. However, the finally clause is executed before the method actually returns and causes the method to return 0, ignoring the original return value. 
+  And it gets worse. Consider the call parseInt("zero"). The Integer.parseInt method throws a NumberFormatException. Then the finally clause is executed, and the return statement swallows the exception! 
+  The body of the finally clause is intended for cleaning up resources. 
+  Don’t put statements that change the control flow (return, throw, break, continue) inside a finally clause. 
+7.2.5 The try-with-Resources Statement
+  As of Java 7, there is a useful shortcut to the code pattern   open a resource try { work with the resource } 
+  finally { close the resource } 
+  provided the resource belongs to a class that implements the AutoCloseable interface. That interface has a single method void close() throws Exception   Note There is also a Closeable interface. It is a subinterface of AutoCloseable, also with a single close method. However, that method is declared to throw an IOException. 
+  In its simplest variant, the try-with-resources statement has the form try (Resource res = . . .) { work with res } 
+  When the try block exits, then res.close() is called automatically. 
+  Here is a typical example—reading all words of a file: try (var in = new Scanner( new FileInputStream("/usr/share/dict/words"), StandardCharsets.UTF_8)) { while (in.hasNext()) System.out.println(in.next()); 
+  } 
+  When the block exits normally, or when there was an exception, the in.close() method is called, exactly as if you had used a finally   block. 
+  You can specify multiple resources. For example, try (var in = new Scanner( new FileInputStream("/usr/share/dict/words"), StandardCharsets.UTF_8); 
+  var out = new PrintWriter("out.txt", StandardCharsets.UTF_8)) { while (in.hasNext()) out.println(in.next().toUpperCase()); 
+  } 
+  No matter how the block exits, both in and out are closed. If you programmed this by hand, you would have needed two nested try/finally statements. 
+  As of Java 9, you can provide previously declared effectively final variables in the try header: public static void printAll(String[] lines, PrintWriter out) { try (out) { // effectively final variable for (String line : lines) out.println(line); 
+  } // out.close() called here } 
+  A difficulty arises when the try block throws an exception and the close method also throws an exception. The try-with-resources statement handles this situation quite elegantly. The original exception is rethrown, and any exceptions thrown by close methods are considered "suppressed." They are automatically caught and added to the original exception with the addSuppressed method. If you are interested in them, call the getSuppressed method which yields an array of the suppressed expressions from close methods. 
+  You don’t want to program this by hand. Use the try-with-resources statement whenever you need to close a resource. 
+  Note   A try-with-resources statement can itself have catch clauses and even a finally clause. These are executed after closing the resources. 
+7.2.6 Analyzing Stack Trace Elements
+  A stack trace is a listing of all pending method calls at a particular point in the execution of a program. You have almost certainly seen stack trace listings—they are displayed whenever a Java program terminates with an uncaught exception. 
+  You can access the text description of a stack trace by calling the printStackTrace method of the Throwable class. 
+  var t = new Throwable(); 
+  var out = new StringWriter(); 
+  t.printStackTrace(new PrintWriter(out)); 
+  String description = out.toString(); 
+  A more flexible approach is the StackWalker class that yields a stream of StackWalker.StackFrame instances, each describing one stack frame. 
+  You can iterate over the stack frames with this call: StackWalker walker = StackWalker.getInstance(); 
+  walker.forEach(frame -> analyze frame)   If you want to process the Stream<StackWalker.StackFrame> lazily, call walker.walk(stream -> process stream)   Stream processing is described in detail in Chapter 1 of Volume II. 
+  The StackWalker.StackFrame class has methods to obtain the file name and line number, as well as the class object and method name, of the executing line of code. The toString method yields a formatted string containing all of this information. 
+  Note Prior to Java 9, the Throwable.getStackTrace method yielded a StackTraceElement[] array with similar information as the stream of StackWalker.StackFrame instances. 
+  However, that call is less efficient since it captures the entire stack even though the caller may only need a few frames, and it only provides access to the class names, but not the class objects, of the pending methods. 
+  Listing 7.1 prints the stack trace of a recursive factorial function. For example, if you compute factorial(3), the printout is factorial(3): stackTrace.StackTraceTest.factorial(StackTraceTest.java:20) stackTrace.StackTraceTest.main(StackTraceTest.java:36) factorial(2): stackTrace.StackTraceTest.factorial(StackTraceTest.java:20) stackTrace.StackTraceTest.factorial(StackTraceTest.java:26) stackTrace.StackTraceTest.main(StackTraceTest.java:36) factorial(1): stackTrace.StackTraceTest.factorial(StackTraceTest.java:20) stackTrace.StackTraceTest.factorial(StackTraceTest.java:26) stackTrace.StackTraceTest.factorial(StackTraceTest.java:26) stackTrace.StackTraceTest.main(StackTraceTest.java:36) return 1 return 2 return 6   java.lang.Throwable 1.0 Throwable(Throwable cause) 1.4 Throwable(String message, Throwable cause) 1.4 constructs a Throwable with a given cause. 
+  Throwable initCause(Throwable cause) 1.4 sets the cause for this object or throws an exception if this object already has a cause. Returns this. 
+  Throwable getCause() 1.4 gets the exception object that was set as the cause for this object, or null if no cause was set. 
+  StackTraceElement[] getStackTrace() 1.4 gets the trace of the call stack at the time this object was constructed. 
+  void addSuppressed(Throwable t) 7 adds a "suppressed" exception to this exception. This happens in a trywith-resources statement where t is an exception thrown by a close method. 
+  Throwable[] getSuppressed() 7 gets all "suppressed" exceptions of this exception. Typically, these are exceptions thrown by a close method in a try-with-resources statement. 
+  java.lang.Exception 1.0 Exception(Throwable cause) 1.4 Exception(String message, Throwable cause) constructs an Exception with a given cause. 
+  java.lang.RuntimeException 1.0 RuntimeException(Throwable cause) 1.4 RuntimeException(String message, Throwable cause) 1.4 constructs a RuntimeException with a given cause. 
+  java.lang.StackWalker 9 static StackWalker getInstance() static StackWalker getInstance(StackWalker.Option option)   static StackWalker getInstance(Set<StackWalker.Option> options) Gets a StackWalker instance. The options include RETAIN_CLASS_REFERENCE, SHOW_HIDDEN_FRAMES, and SHOW_REFLECT_FRAMES from the StackWalker.Option enumeration. 
+  forEach(Consumer<? super StackWalker.StackFrame> action) carries out the given action on each stack frame, starting with the most recently called method. 
+  walk(Function<? super Stream<StackWalker.StackFrame>,? extends T> function) applies the given function to the stream of stack frames and returns the result of the function. 
+  java.lang.StackWalker.StackFrame 9 String getFileName() gets the name of the source file containing the execution point of this element, or null if the information is not available. 
+  int getLineNumber() gets the line number of the source file containing the execution point of this element, or -1 if the information is not available. 
+  String getClassName() gets the fully qualified name of the class whose method contains the execution point of this element. 
+  String getDeclaringClass() gets the Class object of the method containing the execution point of this element. An exception is thrown if the stack walker was not   constructed with the RETAIN_CLASS_REFERENCE option. 
+  String getMethodName() gets the name of the method containing the execution point of this element. The name of a constructor is <init>. The name of a static initializer is <clinit>. You can’t distinguish between overloaded methods with the same name. 
+  boolean isNativeMethod() returns true if the execution point of this element is inside a native method. 
+  String toString() returns a formatted string containing the class and method name and the file name and line number, if available. 
+  java.lang.StackTraceElement 1.4 String getFileName() gets the name of the source file containing the execution point of this element, or null if the information is not available. 
+  int getLineNumber() gets the line number of the source file containing the execution point of this element, or -1 if the information is not available. 
+  String getClassName() gets the fully qualified name of the class containing the execution point of this element. 
+  String getMethodName() gets the name of the method containing the execution point of this element. The name of a constructor is <init>. The name of a static initializer is <clinit>. You can’t distinguish between overloaded methods with the same name. 
+  boolean isNativeMethod() returns true if the execution point of this element is inside a native method. 
+  String toString() returns a formatted string containing the class and method name and the file name and line number, if available. 

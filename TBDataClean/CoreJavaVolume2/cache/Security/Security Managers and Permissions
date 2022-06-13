@@ -1,0 +1,1324 @@
+
+509
+
+9.2 Security Managers and Permissions
+Once a class has been loaded into the virtual machine and checked by the verifier,
+the second security mechanism of the Java platform springs into action: the security
+manager. This is the topic of the following sections.
+
+9.2.1 Permission Checking
+The security manager controls whether a specific operation is permitted.
+Operations checked by the security manager include the following:
+•
+•
+•
+•
+•
+•
+•
+•
+•
+
+Creating a new class loader
+Exiting the virtual machine
+Accessing a field of another class by using reflection
+Accessing a file
+Opening a socket connection
+Starting a print job
+Accessing the system clipboard
+Accessing the AWT event queue
+Bringing up a top-level window
+
+There are many other checks throughout the Java library.
+The default behavior when running Java applications is to install no security
+manager, so all these operations are permitted. The applet viewer, on the other
+hand, enforces a security policy that is quite restrictive.
+For example, applets are not allowed to exit the virtual machine. If they try calling
+the exit method, a security exception is thrown. Here is what happens in
+detail. The exit method of the Runtime class calls the checkExit method of the security
+manager. Here is the entire code of the exit method:
+public void exit(int status)
+{
+SecurityManager security = System.getSecurityManager();
+if (security != null)
+security.checkExit(status);
+exitInternal(status);
+}
+
+The security manager now checks if the exit request came from the browser or
+an individual applet. If the security manager agrees with the exit request, the
+checkExit method simply returns and normal processing continues. However, if
+
+From the Library of Hristo Dimov Hristov
+
+510
+
+Chapter 9
+
+Security
+
+the security manager doesn’t want to grant the request, the checkExit method throws
+a SecurityException.
+The exit method continues only if no exception occurred. It then calls the private
+native exitInternal method that actually terminates the virtual machine. There is no
+other way to terminate the virtual machine, and since the exitInternal method is
+private, it cannot be called from any other class. Thus, any code that attempts to
+exit the virtual machine must go through the exit method and thus through the
+checkExit security check without triggering a security exception.
+Clearly, the integrity of the security policy depends on careful coding. The
+providers of system services in the standard library must always consult
+the security manager before attempting any sensitive operation.
+The security manager of the Java platform allows both programmers and system
+administrators fine-grained control over individual security permissions. We will
+describe these features in the following section. First, we’ll summarize the Java 2
+platform security model. We’ll then show how you can control permissions with
+policy files. Finally, we’ll explain how you can define your own permission types.
+
+NOTE: It is possible to implement and install your own security manager, but
+you should not attempt this unless you are an expert in computer security. It is
+much safer to configure the standard security manager.
+
+9.2.2 Java Platform Security
+JDK 1.0 had a very simple security model: Local classes had full permissions, and
+remote classes were confined to the sandbox. Just like a child that can only play
+in a sandbox, remote code was only allowed to paint on the screen and interact
+with the user. The applet security manager denied all access to local resources.
+JDK 1.1 implemented a slight modification: Remote code that was signed by a
+trusted entity was granted the same permissions as local classes. However, both
+versions of the JDK used an all-or-nothing approach. Programs either had full
+access or they had to play in the sandbox.
+Starting with Java SE 1.2, the Java platform has a much more flexible mechanism.
+A security policy maps code sources to permission sets (see Figure 9.6).
+A code source is specified by a code base and a set of certificates. The code base
+specifies the origin of the code. For example, the code base of remote applet code
+is the HTTP URL from which the applet was loaded. The code base of code in a
+JAR file is the file’s URL. A certificate, if present, is an assurance by some party
+
+From the Library of Hristo Dimov Hristov
+
+9.2 Security Managers and Permissions
+
+511
+
+Figure 9.6 A security policy
+that the code has not been tampered with. We’ll cover certificates later in this
+chapter.
+A permission is any property that is checked by a security manager. The Java
+platform supports a number of permission classes, each encapsulating the details
+of a particular permission. For example, the following instance of the FilePermission
+class states that it is okay to read and write any file in the /tmp directory:
+FilePermission p = new FilePermission("/tmp/*", "read,write");
+
+More importantly, the default implementation of the Policy class reads permissions
+from a permission file. Inside a permission file, the same read permission is
+expressed as
+permission java.io.FilePermission "/tmp/*", "read,write";
+
+We’ll discuss permission files in the next section.
+Figure 9.7 shows the hierarchy of the permission classes that were supplied with
+Java SE 1.2. Many more permission classes have been added in subsequent Java
+releases.
+
+From the Library of Hristo Dimov Hristov
+
+512
+
+Chapter 9
+
+Security
+
+Figure 9.7 A part of the hierarchy of permission classes
+In the preceding section, you saw that the SecurityManager class has security check
+methods such as checkExit. These methods exist only for the convenience of the
+programmer and for backward compatibility. They all map into standard
+permission checks. For example, here is the source code for the checkExit method:
+public void checkExit()
+{
+checkPermission(new RuntimePermission("exitVM"));
+}
+
+Each class has a protection domain—an object that encapsulates both the code
+source and the collection of permissions of the class. When the SecurityManager needs
+to check a permission, it looks at the classes of all methods currently on the call
+stack. It then gets the protection domains of all classes and asks each protection
+domain if its permission collection allows the operation currently being checked.
+If all domains agree, the check passes. Otherwise, a SecurityException is thrown.
+Why do all methods on the call stack need to allow a particular operation? Let
+us work through an example. Suppose the init method of an applet wants to open
+a file. It might call
+Reader in = new FileReader(name);
+
+From the Library of Hristo Dimov Hristov
+
+9.2 Security Managers and Permissions
+
+513
+
+The FileReader constructor calls the FileInputStream constructor, which calls the
+checkRead method of the security manager, which finally calls checkPermission with a
+FilePermission(name, "read") object. Table 9.1 shows the call stack.
+
+Table 9.1 Call Stack During Permission Checking
+Class
+
+Method
+
+Code Source
+
+Permissions
+
+SecurityManager
+
+checkPermission
+
+null
+
+AllPermission
+
+SecurityManager
+
+checkRead
+
+null
+
+AllPermission
+
+FileInputStream
+
+Constructor
+
+null
+
+AllPermission
+
+FileReader
+
+Constructor
+
+null
+
+AllPermission
+
+Applet
+
+init
+
+Applet code source
+
+Applet permissions
+
+...
+
+The FileInputStream and SecurityManager classes are system classes for which CodeSource is
+null and the permissions consist of an instance of the AllPermission class, which allows
+all operations. Clearly, their permissions alone can’t determine the outcome of
+the check. As you can see, the checkPermission method must take into account the
+restricted permissions of the applet class. By checking the entire call stack,
+the security mechanism ensures that one class can never ask another class to
+carry out a sensitive operation on its behalf.
+
+NOTE: This brief discussion of permission checking explains the basic concepts.
+However, we omit a number of technical details here. With security, the devil
+lies in the details, and we encourage you to read the book by Li Gong for more
+information. For a more critical view of the Java platform’s security model, see
+the book Securing Java: Getting Down to Business with Mobile Code, Second
+Edition, by Gary McGraw and Ed W. Felten (Wiley, 1999). You can find an online
+version of that book at www.securingjava.com.
+
+java.lang.SecurityManager 1.0
+
+• void checkPermission(Permission p) 1.2
+checks whether this security manager grants the given permission. The method
+throws a SecurityException if the permission is not granted.
+
+From the Library of Hristo Dimov Hristov
+
+514
+
+Chapter 9
+
+Security
+
+java.lang.Class 1.0
+
+• ProtectionDomain getProtectionDomain() 1.2
+gets the protection domain for this class, or null if this class was loaded without a
+protection domain.
+
+java.security.ProtectionDomain 1.2
+
+• ProtectionDomain(CodeSource source, PermissionCollection permissions)
+constructs a protection domain with the given code source and permissions.
+• CodeSource getCodeSource()
+gets the code source of this protection domain.
+• boolean implies(Permission p)
+returns true if the given permission is allowed by this protection domain.
+
+java.security.CodeSource 1.2
+
+• Certificate[] getCertificates()
+gets the certificate chain for class file signatures associated with this code source.
+• URL getLocation()
+gets the code base of class files associated with this code source.
+
+9.2.3 Security Policy Files
+The policy manager reads policy files that contain instructions for mapping code
+sources to permissions. Here is a typical policy file:
+grant codeBase "http://www.horstmann.com/classes"
+{
+permission java.io.FilePermission "/tmp/*", "read,write";
+};
+
+This file grants permission to read and write files in the /tmp directory to all code
+that was downloaded from www.horstmann.com/classes.
+
+From the Library of Hristo Dimov Hristov
+
+9.2 Security Managers and Permissions
+
+515
+
+You can install policy files in standard locations. By default, there are two locations:
+• The file java.policy in the Java platform’s home directory
+• The file .java.policy (notice the period at the beginning of the file name) in the
+user’s home directory
+NOTE: You can change the locations of these files in the java.security
+configuration file in the jre/lib/security. The defaults are specified as
+policy.url.1=file:${java.home}/lib/security/java.policy
+policy.url.2=file:${user.home}/.java.policy
+
+A system administrator can modify the java.security file and specify policy URLs
+that reside on another server and cannot be edited by users. There can be any
+number of policy URLs (with consecutive numbers) in the policy file. The
+permissions of all files are combined.
+If you want to store policies outside the file system, you can implement a subclass
+of the Policy class that gathers the permissions. Then change the line
+policy.provider=sun.security.provider.PolicyFile
+
+in the java.security configuration file.
+
+During testing, we don’t like to constantly modify the standard policy files.
+Therefore, we prefer to explicitly name the policy file required for each application.
+Place the permissions into a separate file—say, MyApp.policy. To apply the policy,
+you have two choices. You can set a system property inside your applications’
+main method:
+System.setProperty("java.security.policy", "MyApp.policy");
+
+Alternatively, you can start the virtual machine as
+java -Djava.security.policy=MyApp.policy MyApp
+
+For applets, you should instead use
+appletviewer -J-Djava.security.policy=MyApplet.policy MyApplet.html
+
+(You can use the -J option of the appletviewer to pass any command-line argument
+to the virtual machine.)
+
+From the Library of Hristo Dimov Hristov
+
+516
+
+Chapter 9
+
+Security
+
+In these examples, the MyApp.policy file is added to the other policies in effect. If you
+add a second equal sign, such as
+java -Djava.security.policy==MyApp.policy MyApp
+
+then your application will use only the specified policy file, and the standard
+policy files will be ignored.
+CAUTION: An easy mistake during testing is to accidentally leave a .java.policy
+file that grants a lot of permissions, perhaps even AllPermission, in the home directory. If you find that your application doesn’t seem to pay attention to the restrictions in your policy file, check for a left-behind .java.policy file in your home
+directory. If you use a UNIX system, this is a particularly easy mistake to make
+because files with names that start with a period are not displayed by default.
+
+As you saw previously, Java applications by default do not install a security
+manager. Therefore, you won’t see the effect of policy files until you install one.
+You can, of course, add a line
+System.setSecurityManager(new SecurityManager());
+
+into your main method. Or you can add the command-line option -Djava.security.manager
+when starting the virtual machine.
+java -Djava.security.manager -Djava.security.policy=MyApp.policy MyApp
+
+In the remainder of this section, we’ll show you in detail how to describe permissions in the policy file. We’ll describe the entire policy file format, except for code
+certificates which we cover later in this chapter.
+A policy file contains a sequence of grant entries. Each entry has the following form:
+grant codesource
+{
+permission1;
+permission2;
+...
+};
+
+The code source contains a code base (which can be omitted if the entry applies
+to code from all sources) and the names of trusted principals and certificate
+signers (which can be omitted if signatures are not required for this entry).
+The code base is specified as
+codeBase "url"
+
+From the Library of Hristo Dimov Hristov
+
+9.2 Security Managers and Permissions
+
+517
+
+If the URL ends in a /, it refers to a directory. Otherwise, it is taken to be the name
+of a JAR file. For example,
+grant codeBase "www.horstmann.com/classes/" { . . . };
+grant codeBase "www.horstmann.com/classes/MyApp.jar" { . . . };
+
+The code base is a URL and should always contain forward slashes as file
+separators, even for file URLs in Windows. For example,
+grant codeBase "file:C:/myapps/classes/" { . . . };
+
+NOTE: Everyone knows that http URLs start with two slashes (http://). But there
+is enough confusion about file URLs, so the policy file reader accepts two forms
+of file URLs—namely, file://localFile and file:localFile . Furthermore, a slash before
+a Windows drive letter is optional. That is, all of the following are acceptable:
+file:C:/dir/filename.ext
+file:/C:/dir/filename.ext
+file://C:/dir/filename.ext
+file:///C:/dir/filename.ext
+
+Actually, in our tests, the file:////C:/dir/filename.ext is acceptable as well, and
+we have no explanation for that.
+
+The permissions have the following structure:
+permission className targetName, actionList;
+
+The className is the fully qualified class name of the permission class (such as
+java.io.FilePermission). The targetName is a permission-specific value—for example, a
+file or directory name for the file permission, or a host and port for a socket permission. The actionList is also permission-specific. It is a list of actions, such as read
+or connect, separated by commas. Some permission classes don’t need target names
+and action lists. Table 9.2 lists the commonly used permission classes and their
+actions.
+
+Table 9.2 Permissions and Their Associated Targets and Actions
+Permission
+
+Target
+
+Action
+
+java.io.FilePermission
+
+File target (see text)
+
+read, write,
+execute, delete
+
+java.net.SocketPermission
+
+Socket target (see text)
+
+accept, connect,
+listen, resolve
+
+java.util.PropertyPermission
+
+Property target (see text)
+
+read, write
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+518
+
+Chapter 9
+
+Security
+
+Table 9.2 (Continued)
+Permission
+
+Target
+
+Action
+
+java.lang.RuntimePermission
+
+createClassLoader
+getClassLoader
+setContextClassLoader
+enableContextClassLoaderOverride
+createSecurityManager
+setSecurityManager
+exitVM
+getenv.variableName
+shutdownHooks
+setFactory
+setIO
+modifyThread
+stopThread
+modifyThreadGroup
+getProtectionDomain
+readFileDescriptor
+writeFileDescriptor
+loadLibrary.libraryName
+accessClassInPackage.packageName
+defineClassInPackage.packageName
+accessDeclaredMembers.className
+queuePrintJob
+getStackTrace
+setDefaultUncaughtExceptionHandler
+preferences
+usePolicy
+
+None
+
+java.awt.AWTPermission
+
+showWindowWithoutWarningBanner
+accessClipboard
+accessEventQueue
+createRobot
+fullScreenExclusive
+listenToAllAWTEvents
+readDisplayPixels
+replaceKeyboardFocusManager
+watchMousePointer
+setWindowAlwaysOnTop
+setAppletStub
+
+None
+
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+9.2 Security Managers and Permissions
+
+519
+
+Table 9.2 (Continued)
+Permission
+
+Target
+
+Action
+
+java.net.NetPermission
+
+setDefaultAuthenticator
+specifyStreamHandler
+requestPasswordAuthentication
+setProxySelector
+getProxySelector
+setCookieHandler
+getCookieHandler
+setResponseCache
+getResponseCache
+
+None
+
+java.lang.reflect.ReflectPermission
+
+suppressAccessChecks
+
+None
+
+java.io.SerializablePermission
+
+enableSubclassImplementation
+enableSubstitution
+
+None
+
+java.security.SecurityPermission
+
+createAccessControlContext
+getDomainCombiner
+getPolicy
+setPolicy
+getProperty.keyName
+setProperty.keyName
+insertProvider.providerName
+removeProvider.providerName
+setSystemScope
+setIdentityPublicKey
+setIdentityInfo
+addIdentityCertificate
+removeIdentityCertificate
+printIdentity
+clearProviderProperties.providerName
+putProviderProperty.providerName
+removeProviderProperty.providerName
+getSignerPrivateKey
+setSignerKeyPair
+
+None
+
+java.security.AllPermission
+
+None
+
+None
+
+javax.audio.AudioPermission
+
+Play record
+
+None
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+520
+
+Chapter 9
+
+Security
+
+Table 9.2 (Continued)
+Permission
+
+Target
+
+Action
+
+javax.security.auth.AuthPermission
+
+doAs
+doAsPrivileged
+getSubject
+getSubjectFromDomainCombiner
+setReadOnly
+modifyPrincipals
+modifyPublicCredentials
+modifyPrivateCredentials
+refreshCredential
+destroyCredential
+createLoginContext.contextName
+getLoginConfiguration
+setLoginConfiguration
+refreshLoginConfiguration
+
+None
+
+java.util.logging.LoggingPermission
+
+control
+
+None
+
+java.sql.SQLPermission
+
+setLog
+
+None
+
+As you can see from Table 9.2, most permissions simply permit a particular operation. You can think of the operation as the target with an implied action "permit".
+These permission classes all extend the BasicPermission class (see Figure 9.7 on p. 512).
+However, the targets for the file, socket, and property permissions are more
+complex, and we need to investigate them in detail.
+File permission targets can have the following form:
+file
+directory/
+directory/*
+*
+directory/-
+
+<<ALL FILES>>
+
+A file
+A directory
+All files in the directory
+All files in the current directory
+All files in the directory or one of its subdirectories
+All files in the current directory or one of its subdirectories
+All files in the file system
+
+For example, the following permission entry gives access to all files in the directory
+/myapp and any of its subdirectories:
+permission java.io.FilePermission "/myapp/-", "read,write,delete";
+
+You must use the \\ escape sequence to denote a backslash in a Windows file name.
+permission java.io.FilePermission "c:\\myapp\\-", "read,write,delete";
+
+From the Library of Hristo Dimov Hristov
+
+9.2 Security Managers and Permissions
+
+521
+
+Socket permission targets consist of a host and a port range. Host specifications
+have the following form:
+hostname
+
+or
+
+localhost or
+
+IPaddress
+
+the empty string
+
+*.domainSuffix
+*
+
+A single host
+The local host
+Any host whose domain ends with the given
+suffix
+All hosts
+
+Port ranges are optional and have the form:
+:n
+:n:-n
+:n1-n2
+
+A single port
+All ports numbered
+
+n
+
+and above
+
+All ports numbered n and below
+All ports in the given range
+
+Here is an example:
+permission java.net.SocketPermission "*.horstmann.com:8000-8999", "connect";
+
+Finally, property permission targets can have one of two forms:
+property
+propertyPrefix.*
+
+A specific property
+All properties with the given prefix
+
+Examples are "java.home" and "java.vm.*".
+For example, the following permission entry allows a program to read all
+properties that start with java.vm:
+permission java.util.PropertyPermission "java.vm.*", "read";
+
+You can use system properties in policy files. The token ${property} is replaced by
+the property value. For example, ${user.home} is replaced by the home directory
+of the user. Here is a typical use of this system property in a permission entry:
+permission java.io.FilePermission "${user.home}", "read,write";
+
+To create platform-independent policy files, it is a good idea to use the file.separator
+property instead of explicit / or \\ separators. To make this simpler, the special
+notation ${/} is a shortcut for ${file.separator}. For example,
+permission java.io.FilePermission "${user.home}${/}-", "read,write";
+
+is a portable entry for granting permission to read and write in the user’s home
+directory and any of its subdirectories.
+
+From the Library of Hristo Dimov Hristov
+
+522
+
+Chapter 9
+
+Security
+
+NOTE: The JDK comes with a rudimentary tool, called policytool, that you can
+use to edit policy files (see Figure 9.8). Of course, this tool is not suitable for
+end users who would be completely mystified by most of the settings. We view
+it as a proof of concept for an administration tool that might be used by system
+administrators who prefer point-and-click over syntax. Still, what’s missing in it
+is a sensible set of categories (such as low, medium, or high security) that would
+be meaningful to nonexperts. As a general observation, we believe that the Java
+platform certainly contains all the pieces for a fine-grained security model but it
+could benefit from some polish in delivering these pieces to end users and system
+administrators.
+
+Figure 9.8 The policy tool
+
+9.2.4 Custom Permissions
+In this section, you’ll see how you can supply your own permission class that
+users can refer to in their policy files.
+To implement your permission class, extend the Permission class and supply the
+following methods:
+
+From the Library of Hristo Dimov Hristov
+
+9.2 Security Managers and Permissions
+
+•
+•
+•
+•
+•
+
+523
+
+A constructor with two String parameters, for the target and the action list
+String getActions()
+boolean equals(Object other)
+int hashCode()
+boolean implies(Permission other)
+
+The last method is the most important. Permissions have an ordering, in which
+more general permissions imply more specific ones. Consider the file permission
+p1 = new FilePermission("/tmp/-", "read, write");
+
+This permission allows reading and writing of any file in the /tmp directory and
+any of its subdirectories.
+This permission implies other, more specific permissions:
+p2 = new FilePermission("/tmp/-", "read");
+p3 = new FilePermission("/tmp/aFile", "read, write");
+p4 = new FilePermission("/tmp/aDirectory/-", "write");
+
+In other words, a file permission p1 implies another file permission p2 if
+1.
+2.
+
+The target file set of p1 contains the target file set of p2.
+The action set of p1 contains the action set of p2.
+
+Consider the following example of the use of the implies method. When the
+FileInputStream constructor wants to open a file for reading, it checks whether it has
+permission to do so. For that check, a specific file permission object is passed to
+the checkPermission method:
+checkPermission(new FilePermission(fileName, "read"));
+
+The security manager now asks all applicable permissions whether they imply
+this permission. If any one of them implies it, the check passes.
+In particular, the AllPermission implies all other permissions.
+If you define your own permission classes, you need to define a suitable notion
+of implication for your permission objects. Suppose, for example, that you define
+a TVPermission for a set-top box powered by Java technology. A permission
+new TVPermission("Tommy:2-12:1900-2200", "watch,record")
+
+might allow Tommy to watch and record television channels 2–12 between 19:00
+and 22:00. You need to implement the implies method so that this permission
+implies a more specific one, such as
+new TVPermission("Tommy:4:2000-2100", "watch")
+
+From the Library of Hristo Dimov Hristov
+
+524
+
+Chapter 9
+
+Security
+
+9.2.5 Implementation of a Permission Class
+In the next sample program, we implement a new permission for monitoring the
+insertion of text into a text area. The program ensures that you cannot add bad
+words such as sex, drugs, and C++ into a text area. We use a custom permission
+class so that the list of bad words can be supplied in a policy file.
+The following subclass of JTextArea asks the security manager whether it is okay
+to add new text:
+class WordCheckTextArea extends JTextArea
+{
+public void append(String text)
+{
+WordCheckPermission p = new WordCheckPermission(text, "insert");
+SecurityManager manager = System.getSecurityManager();
+if (manager != null) manager.checkPermission(p);
+super.append(text);
+}
+}
+
+If the security manager grants the WordCheckPermission, the text is appended. Otherwise,
+the checkPermission method throws an exception.
+Word check permissions have two possible actions: insert (the permission to insert
+a specific text) and avoid (the permission to add any text that avoids certain bad
+words). You should run this program with the following policy file:
+grant
+{
+permission permissions.WordCheckPermission "sex,drugs,C++", "avoid";
+};
+
+This policy file grants the permission to insert any text that avoids the bad words
+sex, drugs, and C++.
+When designing the WordCheckPermission class, we must pay particular attention to
+the implies method. Here are the rules that control whether permission p1 implies
+permission p2:
+• If p1 has action avoid and p2 has action insert, then the target of p2 must avoid
+all words in p1. For example, the permission
+permissions.WordCheckPermission "sex,drugs,C++", "avoid"
+
+implies the permission
+permissions.WordCheckPermission "Mary had a little lamb", "insert"
+
+From the Library of Hristo Dimov Hristov
+
+9.2 Security Managers and Permissions
+
+525
+
+• If p1 and p2 both have action avoid, then the word set of p2 must contain all
+words in the word set of p1. For example, the permission
+permissions.WordCheckPermission "sex,drugs", "avoid"
+
+implies the permission
+permissions.WordCheckPermission "sex,drugs,C++", "avoid"
+
+• If p1 and p2 both have action insert, then the text of p1 must contain the text of
+p2. For example, the permission
+permissions.WordCheckPermission "Mary had a little lamb", "insert"
+
+implies the permission
+permissions.WordCheckPermission "a little lamb", "insert"
+
+You can find the implementation of this class in Listing 9.4.
+Note that to retrieve the permission target, you need to use the confusingly named
+getName method of the Permission class.
+Since permissions are described by a pair of strings in policy files, permission
+classes need to be prepared to parse these strings. In particular, we use the following method to transform the comma-separated list of bad words of an avoid
+permission into a genuine Set:
+public Set<String> badWordSet()
+{
+Set<String> set = new HashSet<String>();
+set.addAll(Arrays.asList(getName().split(",")));
+return set;
+}
+
+This code allows us to use the equals and containsAll methods to compare sets. As
+you saw in Chapter 3, the equals method of a set class finds two sets to be equal if
+they contain the same elements in any order. For example, the sets resulting from
+"sex,drugs,C++" and "C++,drugs,sex" are equal.
+CAUTION: Make sure that your permission class is a public class. The policy
+file loader cannot load classes with package visibility outside the boot class path,
+and it silently ignores any classes that it cannot find.
+
+The program in Listing 9.5 shows how the WordCheckPermission class works. Type any
+text into the text field and click the Insert button. If the security check passes,
+the text is appended to the text area. If not, an error message is displayed (see
+Figure 9.9).
+
+From the Library of Hristo Dimov Hristov
+
+526
+
+Chapter 9
+
+Security
+
+Figure 9.9 The PermissionTest program
+CAUTION: If you carefully look at Figure 9.9, you will see that the message
+window has a warning triangle, which is supposed to warn viewers that this
+window may have been popped up without permission. The warning started out
+as an ominous “Untrusted Java Applet Window” label, got watered down several
+times in successive JDK releases, and has now become essentially useless for
+alerting users. The warning is turned off by the showWindowWithoutWarningBanner target
+of the java.awt.AWTPermission. If you like, you can edit the policy file to grant that
+permission.
+
+You have now seen how to configure Java platform security. Most commonly,
+you will simply tweak the standard permissions. For additional control, you can
+define custom permissions that can be configured in the same way as the standard
+permissions.
+
+Listing 9.4
+1
+
+permissions/WordCheckPermission.java
+
+package permissions;
+
+2
+3
+4
+
+import java.security.*;
+import java.util.*;
+
+5
+
+From the Library of Hristo Dimov Hristov
+
+9.2 Security Managers and Permissions
+
+6
+7
+8
+9
+10
+11
+
+527
+
+/**
+* A permission that checks for bad words.
+*/
+public class WordCheckPermission extends Permission
+{
+private String action;
+
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+
+/**
+* Constructs a word check permission.
+* @param target a comma separated word list
+* @param anAction "insert" or "avoid"
+*/
+public WordCheckPermission(String target, String anAction)
+{
+super(target);
+action = anAction;
+}
+
+23
+24
+25
+26
+27
+
+public String getActions()
+{
+return action;
+}
+
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+
+public boolean equals(Object other)
+{
+if (other == null) return false;
+if (!getClass().equals(other.getClass())) return false;
+WordCheckPermission b = (WordCheckPermission) other;
+if (!Objects.equals(action, b.action)) return false;
+if ("insert".equals(action)) return Objects.equals(getName(), b.getName());
+else if ("avoid".equals(action)) return badWordSet().equals(b.badWordSet());
+else return false;
+}
+
+39
+40
+41
+42
+43
+
+public int hashCode()
+{
+return Objects.hash(getName(), action);
+}
+
+44
+45
+46
+47
+48
+49
+50
+51
+52
+
+public boolean implies(Permission other)
+{
+if (!(other instanceof WordCheckPermission)) return false;
+WordCheckPermission b = (WordCheckPermission) other;
+if (action.equals("insert"))
+{
+return b.action.equals("insert") && getName().indexOf(b.getName()) >= 0;
+}
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+528
+
+Chapter 9
+
+Security
+
+Listing 9.4 (Continued)
+else if (action.equals("avoid"))
+{
+if (b.action.equals("avoid")) return b.badWordSet().containsAll(badWordSet());
+else if (b.action.equals("insert"))
+{
+for (String badWord : badWordSet())
+if (b.getName().indexOf(badWord) >= 0) return false;
+return true;
+}
+else return false;
+}
+else return false;
+
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+
+}
+
+65
+66
+
+/**
+* Gets the bad words that this permission rule describes.
+* @return a set of the bad words
+*/
+public Set<String> badWordSet()
+{
+Set<String> set = new HashSet<>();
+set.addAll(Arrays.asList(getName().split(",")));
+return set;
+}
+
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+
+}
+
+Listing 9.5
+1
+
+permissions/PermissionTest.java
+
+package permissions;
+
+2
+3
+
+import java.awt.*;
+
+4
+5
+
+import javax.swing.*;
+
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+
+/**
+* This class demonstrates the custom WordCheckPermission.
+* @version 1.04 2016-05-10
+* @author Cay Horstmann
+*/
+public class PermissionTest
+{
+public static void main(String[] args)
+{
+System.setProperty("java.security.policy", "permissions/PermissionTest.policy");
+System.setSecurityManager(new SecurityManager());
+
+From the Library of Hristo Dimov Hristov
+
+9.2 Security Managers and Permissions
+
+EventQueue.invokeLater(() ->
+{
+JFrame frame = new PermissionTestFrame();
+frame.setTitle("PermissionTest");
+frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+frame.setVisible(true);
+});
+
+18
+19
+20
+21
+22
+23
+24
+
+}
+
+25
+26
+
+529
+
+}
+
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+
+/**
+* This frame contains a text field for inserting words into a text area that is protected from
+* "bad words".
+*/
+class PermissionTestFrame extends JFrame
+{
+private JTextField textField;
+private WordCheckTextArea textArea;
+private static final int TEXT_ROWS = 20;
+private static final int TEXT_COLUMNS = 60;
+
+38
+39
+40
+41
+42
+43
+44
+45
+46
+
+public PermissionTestFrame()
+{
+textField = new JTextField(20);
+JPanel panel = new JPanel();
+panel.add(textField);
+JButton openButton = new JButton("Insert");
+panel.add(openButton);
+openButton.addActionListener(event -> insertWords(textField.getText()));
+
+47
+
+add(panel, BorderLayout.NORTH);
+
+48
+49
+
+textArea = new WordCheckTextArea();
+textArea.setRows(TEXT_ROWS);
+textArea.setColumns(TEXT_COLUMNS);
+add(new JScrollPane(textArea), BorderLayout.CENTER);
+pack();
+
+50
+51
+52
+53
+54
+55
+
+}
+
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+
+/**
+* Tries to insert words into the text area. Displays a dialog if the attempt fails.
+* @param words the words to insert
+*/
+public void insertWords(String words)
+{
+try
+{
+textArea.append(words + "\n");
+}
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+530
+
+Chapter 9
+
+Security
+
+Listing 9.5 (Continued)
+catch (SecurityException ex)
+{
+JOptionPane.showMessageDialog(this, "I am sorry, but I cannot do that.");
+ex.printStackTrace();
+}
+
+67
+68
+69
+70
+71
+
+}
+
+72
+73
+
+}
+
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+
+/**
+* A text area whose append method makes a security check to see that no bad words are added.
+*/
+class WordCheckTextArea extends JTextArea
+{
+public void append(String text)
+{
+WordCheckPermission p = new WordCheckPermission(text, "insert");
+SecurityManager manager = System.getSecurityManager();
+if (manager != null) manager.checkPermission(p);
+super.append(text);
+}
+}
+
+java.security.Permission 1.2
+
+• Permission(String name)
+constructs a permission with the given target name.
+• String getName()
+returns the target name of this permission.
+• boolean implies(Permission other)
+checks whether this permission implies the other permission. That is the case if the
+other permission describes a more specific condition that is a consequence of
+the condition described by this permission.
+

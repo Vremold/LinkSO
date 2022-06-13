@@ -1,0 +1,1009 @@
+Suppose you have an image and you would like to improve its appearance. You
+then need to access the individual pixels of the image and replace them with
+other pixels. Or perhaps you want to compute the pixels of an image from
+scratch—for example, to show the result of physical measurements or a mathematical computation. The BufferedImage class gives you control over the pixels in an
+image, and the classes that implement the BufferedImageOp interface let you transform
+images.
+
+NOTE: JDK 1.0 had a completely different, and far more complex, imaging
+framework that was optimized for incremental rendering of images downloaded
+from the Web, a scan line at a time. However, it was difficult to manipulate those
+images. We do not discuss that framework in this book.
+
+From the Library of Hristo Dimov Hristov
+
+11.11 Image Manipulation
+
+835
+
+11.11.1 Constructing Raster Images
+Most of the images that you manipulate are simply read in from an image
+file—they were either produced by a device such as a digital camera or scanner,
+or constructed by a drawing program. In this section, we’ll show you a different
+technique for constructing an image—namely, building it up a pixel at a time.
+To create an image, construct a BufferedImage object in the usual way.
+image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+
+Now, call the getRaster method to obtain an object of type WritableRaster. You will
+use this object to access and modify the pixels of the image.
+WritableRaster raster = image.getRaster();
+
+The setPixel method lets you set an individual pixel. The complexity here is that
+you can’t simply set the pixel to a Color value. You must know how the buffered
+image specifies color values. That depends on the type of the image. If your image
+has a type of TYPE_INT_ARGB, then each pixel is described by four values—red, green,
+blue, and alpha, each between 0 and 255. You have to supply them in an array of
+four integers:
+int[] black = { 0, 0, 0, 255 };
+raster.setPixel(i, j, black);
+
+In the lingo of the Java 2D API, these values are called the sample values of the
+pixel.
+CAUTION: There are also setPixel methods that take array parameters of types
+float[] and double[]. However, the values that you need to place into these arrays
+are not normalized color values between 0.0 and 1.0.
+float[] red = { 1.0F, 0.0F, 0.0F, 1.0F };
+raster.setPixel(i, j, red); // ERROR
+
+You need to supply values between 0 and 255, no matter what the type of the
+array is.
+
+You can supply batches of pixels with the setPixels method. Specify the starting
+pixel position and the width and height of the rectangle that you want to set.
+Then, supply an array that contains the sample values for all pixels. For example,
+if your buffered image has a type of TYPE_INT_ARGB, supply the red, green, blue, and
+alpha values of the first pixel, then the red, green, blue, and alpha values for the
+second pixel, and so on.
+
+From the Library of Hristo Dimov Hristov
+
+836
+
+Chapter 11
+
+Advanced AWT
+
+int[] pixels = new int[4 * width * height];
+pixels[0] = . . . // red value for first pixel
+pixels[1] = . . . // green value for first pixel
+pixels[2] = . . . // blue value for first pixel
+pixels[3] = . . . // alpha value for first pixel
+...
+raster.setPixels(x, y, width, height, pixels);
+
+Conversely, to read a pixel, use the getPixel method. Supply an array of four integers
+to hold the sample values.
+int[] sample = new int[4];
+raster.getPixel(x, y, sample);
+Color c = new Color(sample[0], sample[1], sample[2], sample[3]);
+
+You can read multiple pixels with the getPixels method.
+raster.getPixels(x, y, width, height, samples);
+
+If you use an image type other than TYPE_INT_ARGB and you know how that type
+represents pixel values, you can still use the getPixel/setPixel methods. However,
+you have to know the encoding of the sample values in the particular image type.
+If you need to manipulate an image with an arbitrary, unknown image type, then
+you have to work a bit harder. Every image type has a color model that can translate
+between sample value arrays and the standard RGB color model.
+
+NOTE: The RGB color model isn’t as standard as you might think. The exact
+look of a color value depends on the characteristics of the imaging device. Digital
+cameras, scanners, monitors, and LCD displays all have their own idiosyncrasies.
+As a result, the same RGB value can look quite different on different devices.
+The International Color Consortium (www.color.org) recommends that all color
+data be accompanied by an ICC profile that specifies how the colors map to a
+standard form such as the 1931 CIE XYZ color specification. That specification
+was designed by the Commission Internationale de l’Eclairage, or CIE
+(www.cie.co.at), the international organization in charge of providing technical
+guidance in all matters of illumination and color. The specification is a standard
+method for representing any color that the human eye can perceive as a triplet
+of coordinates called X, Y, Z. (See, for example, Computer Graphics: Principles
+and Practice, Second Edition in C, by James D. Foley, Andries van Dam, Steven
+K. Feiner, et al., Chapter 13, for more information on the 1931 CIE XYZ
+specification.)
+
+From the Library of Hristo Dimov Hristov
+
+11.11 Image Manipulation
+
+837
+
+ICC profiles are complex, however. A simpler proposed standard, called sRGB
+(www.w3.org/Graphics/Color/sRGB.html), specifies an exact mapping between RGB
+values and the 1931 CIE XYZ values that was designed to work well with typical
+color monitors. The Java 2D API uses that mapping when converting between
+RGB and other color spaces.
+
+The getColorModel method returns the color model:
+ColorModel model = image.getColorModel();
+
+To find the color value of a pixel, call the getDataElements method of the Raster class.
+That call returns an Object that contains a color-model-specific description of the
+color value.
+Object data = raster.getDataElements(x, y, null);
+
+NOTE: The object that is returned by the getDataElements method is actually an
+array of sample values. You don’t need to know this to process the object, but
+it explains why the method is called getDataElements.
+
+The color model can translate the object to standard ARGB values. The getRGB
+method returns an int value that has the alpha, red, green, and blue values packed
+in four blocks of eight bits each. You can construct a Color value out of that integer
+with the Color(int argb, boolean hasAlpha) constructor:
+int argb = model.getRGB(data);
+Color color = new Color(argb, true);
+
+To set a pixel to a particular color, reverse these steps. The getRGB method of the
+Color class yields an int value with the alpha, red, green, and blue values. Supply
+that value to the getDataElements method of the ColorModel class. The return value is an
+Object that contains the color-model-specific description of the color value. Pass
+the object to the setDataElements method of the WritableRaster class.
+int argb = color.getRGB();
+Object data = model.getDataElements(argb, null);
+raster.setDataElements(x, y, data);
+
+To illustrate how to use these methods to build an image from individual pixels,
+we bow to tradition and draw a Mandelbrot set, as shown in Figure 11.28.
+The idea of the Mandelbrot set is that each point of the plane is associated with
+a sequence of numbers. If that sequence stays bounded, you color the point. If it
+“escapes to infinity,” you leave it transparent.
+
+From the Library of Hristo Dimov Hristov
+
+838
+
+Chapter 11
+
+Advanced AWT
+
+Figure 11.28 A Mandelbrot set
+Here is how you can construct the simplest Mandelbrot set. For each point (a, b),
+look at sequences that start with (x, y) = (0, 0) and iterate:
+xnew = x2 – y2 + a
+ynew = 2 · x · y + b
+It turns out that if x or y ever gets larger than 2, then the sequence escapes to infinity. Only the pixels that correspond to points (a, b) leading to a bounded sequence are colored. (The formulas for the number sequences come ultimately
+from the mathematics of complex numbers; we’ll just take them for granted. For
+more on the mathematics of fractals, see, for example, http://classes.yale.edu/fractals.)
+Listing 11.8 shows the code. In this program, we demonstrate how to use the
+ColorModel class for translating Color values into pixel data. That process is independent of the image type. Just for fun, change the color type of the buffered image
+to TYPE_BYTE_GRAY. You don’t need to change any other code—the color model of the
+image automatically takes care of the conversion from colors to sample values.
+
+From the Library of Hristo Dimov Hristov
+
+11.11 Image Manipulation
+
+Listing 11.8
+1
+
+839
+
+rasterImage/RasterImageFrame.java
+
+package rasterImage;
+
+2
+3
+4
+5
+
+import java.awt.*;
+import java.awt.image.*;
+import javax.swing.*;
+
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+
+/**
+* This frame shows an image with a Mandelbrot set.
+*/
+public class RasterImageFrame extends JFrame
+{
+private static final double XMIN = -2;
+private static final double XMAX = 2;
+private static final double YMIN = -2;
+private static final double YMAX = 2;
+private static final int MAX_ITERATIONS = 16;
+private static final int IMAGE_WIDTH = 400;
+private static final int IMAGE_HEIGHT = 400;
+
+19
+20
+21
+22
+23
+24
+25
+
+public RasterImageFrame()
+{
+BufferedImage image = makeMandelbrot(IMAGE_WIDTH, IMAGE_HEIGHT);
+add(new JLabel(new ImageIcon(image)));
+pack();
+}
+
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+
+/**
+* Makes the Mandelbrot image.
+* @param width the width
+* @parah height the height
+* @return the image
+*/
+public BufferedImage makeMandelbrot(int width, int height)
+{
+BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+WritableRaster raster = image.getRaster();
+ColorModel model = image.getColorModel();
+
+38
+39
+40
+41
+
+Color fractalColor = Color.red;
+int argb = fractalColor.getRGB();
+Object colorData = model.getDataElements(argb, null);
+
+42
+43
+44
+45
+
+for (int i = 0; i < width; i++)
+for (int j = 0; j < height; j++)
+{
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+840
+
+Chapter 11
+
+Advanced AWT
+
+Listing 11.8 (Continued)
+double a = XMIN + i * (XMAX - XMIN) / width;
+double b = YMIN + j * (YMAX - YMIN) / height;
+if (!escapesToInfinity(a, b)) raster.setDataElements(i, j, colorData);
+
+46
+47
+48
+
+}
+return image;
+
+49
+50
+
+}
+
+51
+52
+
+private boolean escapesToInfinity(double a, double b)
+{
+double x = 0.0;
+double y = 0.0;
+int iterations = 0;
+while (x <= 2 && y <= 2 && iterations < MAX_ITERATIONS)
+{
+double xnew = x * x - y * y + a;
+double ynew = 2 * x * y + b;
+x = xnew;
+y = ynew;
+iterations++;
+}
+return x > 2 || y > 2;
+}
+
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+
+}
+
+java.awt.image.BufferedImage 1.2
+
+• BufferedImage(int width, int height, int imageType)
+constructs a buffered image object.
+Parameters:
+
+width, height
+
+The image dimensions
+
+imageType
+
+The image type. The most common types
+are TYPE_INT_RGB, TYPE_INT_ARGB, TYPE_BYTE_GRAY, and
+TYPE_BYTE_INDEXED.
+
+• ColorModel getColorModel()
+returns the color model of this buffered image.
+• WritableRaster getRaster()
+gets the raster for accessing and modifying pixels of this buffered image.
+
+From the Library of Hristo Dimov Hristov
+
+11.11 Image Manipulation
+
+841
+
+java.awt.image.Raster 1.2
+
+• Object getDataElements(int x, int y, Object data)
+returns the sample data for a raster point, in an array whose element type and
+length depend on the color model. If data is not null, it is assumed to be an array
+that is appropriate for holding sample data, and it is filled. If data is null, a new
+array is allocated. Its element type and length depend on the color model.
+•
+•
+•
+•
+•
+•
+
+int[] getPixel(int x, int y, int[] sampleValues)
+float[] getPixel(int x, int y, float[] sampleValues)
+double[] getPixel(int x, int y, double[] sampleValues)
+int[] getPixels(int x, int y, int width, int height, int[] sampleValues)
+float[] getPixels(int x, int y, int width, int height, float[] sampleValues)
+double[] getPixels(int x, int y, int width, int height, double[] sampleValues)
+
+returns the sample values for a raster point, or a rectangle of raster points, in an
+array whose length depends on the color model. If sampleValues is not null, it is assumed to be sufficiently long for holding the sample values, and it is filled. If
+sampleValues is null, a new array is allocated. These methods are only useful if you
+know the meaning of the sample values for a color model.
+
+java.awt.image.WritableRaster 1.2
+
+• void setDataElements(int x, int y, Object data)
+sets the sample data for a raster point. data is an array filled with the sample data
+for a pixel. Its element type and length depend on the color model.
+•
+•
+•
+•
+•
+•
+
+void setPixel(int x, int y, int[] sampleValues)
+void setPixel(int x, int y, float[] sampleValues)
+void setPixel(int x, int y, double[] sampleValues)
+void setPixels(int x, int y, int width, int height, int[] sampleValues)
+void setPixels(int x, int y, int width, int height, float[] sampleValues)
+void setPixels(int x, int y, int width, int height, double[] sampleValues)
+
+sets the sample values for a raster point or a rectangle of raster points.These methods
+are only useful if you know the encoding of the sample values for a color model.
+
+From the Library of Hristo Dimov Hristov
+
+842
+
+Chapter 11
+
+Advanced AWT
+
+java.awt.image.ColorModel 1.2
+
+• int getRGB(Object data)
+returns the ARGB value that corresponds to the sample data passed in the data
+array. Its element type and length depend on the color model.
+• Object getDataElements(int argb, Object data);
+returns the sample data for a color value. If data is not null, it is assumed to be an
+array that is appropriate for holding sample data, and it is filled. If data is null, a
+new array is allocated. data is an array filled with the sample data for a pixel. Its
+element type and length depend on the color model.
+
+java.awt.Color 1.0
+
+• Color(int argb, boolean hasAlpha) 1.2
+creates a color with the specified combined ARGB value if hasAlpha is true, or the
+specified RGB value if hasAlpha is false.
+• int getRGB()
+returns the ARGB color value corresponding to this color.
+
+11.11.2 Filtering Images
+In the preceding section, you saw how to build up an image from scratch. However, often you want to access image data for a different reason: You already have
+an image and you want to improve it in some way.
+Of course, you can use the getPixel/getDataElements methods that you saw in the preceding section to read the image data, manipulate them, and write them back.
+But fortunately, the Java 2D API already supplies a number of filters that carry
+out common image processing operations for you.
+The image manipulations all implement the BufferedImageOp interface. After you
+construct the operation, you simply call the filter method to transform an image
+into another.
+BufferedImageOp op = . . .;
+BufferedImage filteredImage =
+new BufferedImage(image.getWidth(), image.getHeight(), image.getType());
+op.filter(image, filteredImage);
+
+Some operations can transform an image in place (op.filter(image, image)), but
+most can’t.
+
+From the Library of Hristo Dimov Hristov
+
+11.11 Image Manipulation
+
+843
+
+Five classes implement the BufferedImageOp interface:
+AffineTransformOp
+RescaleOp
+LookupOp
+ColorConvertOp
+ConvolveOp
+
+The AffineTransformOp carries out an affine transformation on the pixels. For example,
+here is how you can rotate an image about its center:
+AffineTransform transform = AffineTransform.getRotateInstance(Math.toRadians(angle),
+image.getWidth() / 2, image.getHeight() / 2);
+AffineTransformOp op = new AffineTransformOp(transform, interpolation);
+op.filter(image, filteredImage);
+
+The AffineTransformOp constructor requires an affine transform and an interpolation
+strategy. Interpolation is necessary to determine pixels in the target image if the
+source pixels are transformed somewhere between target pixels. For example,
+if you rotate source pixels, then they will generally not fall exactly onto target
+pixels. There are two interpolation strategies: AffineTransformOp.TYPE_BILINEAR and
+AffineTransformOp.TYPE_NEAREST_NEIGHBOR. Bilinear interpolation takes a bit longer but looks
+better.
+The program in Listing 11.9 lets you rotate an image by 5 degrees (see
+Figure 11.29).
+
+Figure 11.29 A rotated image
+The RescaleOp carries out a rescaling operation
+xnew = a · x + b
+
+From the Library of Hristo Dimov Hristov
+
+844
+
+Chapter 11
+
+Advanced AWT
+
+for each of the color components in the image. (Alpha components are not
+affected.) The effect of rescaling with a > 1 is to brighten the image. Construct the
+RescaleOp by specifying the scaling parameters and optional rendering hints. In
+Listing 11.9, we use:
+float a = 1.1f;
+float b = 20.0f;
+RescaleOp op = new RescaleOp(a, b, null);
+
+You can also supply separate scaling values for each color component—see the
+API notes.
+The LookupOp operation lets you specify an arbitrary mapping of sample values.
+Supply a table that specifies how each value should be mapped. In the example
+program, we compute the negative of all colors, changing the color c to 255 – c.
+The LookupOp constructor requires an object of type LookupTable and a map of optional
+hints. The LookupTable class is abstract, with two concrete subclasses: ByteLookupTable
+and ShortLookupTable. Since RGB color values are bytes, a ByteLookupTable should
+suffice. However, because of the bug described in http://bugs.sun.com/bugdatabase/
+view_bug.do?bug_id=6183251, we will use a ShortLookupTable instead. Here is how we construct
+the LookupOp for the example program:
+short negative[] = new short[256];
+for (int i = 0; i < 256; i++) negative[i] = (short) (255 - i);
+ShortLookupTable table = new ShortLookupTable(0, negative);
+LookupOp op = new LookupOp(table, null);
+
+The lookup is applied to each color component separately, but not to the
+alpha component. You can also supply different lookup tables for each color
+component—see the API notes.
+NOTE: You cannot apply a LookupOp to an image with an indexed color model.
+(In those images, each sample value is an offset into a color palette.)
+
+The ColorConvertOp is useful for color space conversions. We do not discuss it here.
+The most powerful of the transformations is the ConvolveOp, which carries out a
+mathematical convolution. We won’t get too deeply into the mathematical details,
+but the basic idea is simple. Consider, for example, the blur filter (see Figure 11.30).
+The blurring is achieved by replacing each pixel with the average value from the
+pixel and its eight neighbors. Intuitively, it makes sense why this operation would
+blur out the picture. Mathematically, the averaging can be expressed as a
+convolution operation with the following kernel:
+
+From the Library of Hristo Dimov Hristov
+
+11.11 Image Manipulation
+
+845
+
+Figure 11.30 Blurring an image
+1/9 1/9 1/9
+1/9 1/9 1/9
+1/9 1/9 1/9
+The kernel of a convolution is a matrix that tells what weights should be applied
+to the neighboring values. The kernel above produces a blurred image. A different
+kernel carries out edge detection, locating the areas of color changes:
+0 –1 0
+–1 4 –1
+0 –1 0
+Edge detection is an important technique for analyzing photographic images (see
+Figure 11.31).
+To construct a convolution operation, first set up an array of the values for the
+kernel and construct a Kernel object. Then, construct a ConvolveOp object from the kernel
+and use it for filtering.
+float[] elements =
+{
+0.0f, -1.0f, 0.0f,
+-1.0f, 4.f, -1.0f,
+0.0f, -1.0f, 0.0f
+};
+Kernel kernel = new Kernel(3, 3, elements);
+ConvolveOp op = new ConvolveOp(kernel);
+op.filter(image, filteredImage);
+
+From the Library of Hristo Dimov Hristov
+
+846
+
+Chapter 11
+
+Advanced AWT
+
+Figure 11.31 Edge detection and inversion
+The program in Listing 11.9 allows a user to load in a GIF or JPEG image and
+carry out the image manipulations that we discussed. Thanks to the power of the
+operations provided by Java 2D API, the program is very simple.
+
+Listing 11.9
+1
+
+imageProcessing/ImageProcessingFrame.java
+
+package imageProcessing;
+
+2
+3
+4
+5
+6
+
+import java.awt.*;
+import java.awt.geom.*;
+import java.awt.image.*;
+import java.io.*;
+
+7
+8
+9
+10
+
+import javax.imageio.*;
+import javax.swing.*;
+import javax.swing.filechooser.*;
+
+11
+12
+13
+14
+15
+16
+17
+18
+19
+
+/**
+* This frame has a menu to load an image and to specify various transformations, and a component
+* to show the resulting image.
+*/
+public class ImageProcessingFrame extends JFrame
+{
+private static final int DEFAULT_WIDTH = 400;
+private static final int DEFAULT_HEIGHT = 400;
+
+20
+21
+
+private BufferedImage image;
+
+22
+23
+24
+
+public ImageProcessingFrame()
+{
+
+From the Library of Hristo Dimov Hristov
+
+11.11 Image Manipulation
+
+25
+26
+
+847
+
+setTitle("ImageProcessingTest");
+setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+
+27
+28
+29
+30
+31
+32
+33
+34
+
+add(new JComponent()
+{
+public void paintComponent(Graphics g)
+{
+if (image != null) g.drawImage(image, 0, 0, null);
+}
+});
+
+35
+36
+37
+38
+39
+
+JMenu fileMenu = new JMenu("File");
+JMenuItem openItem = new JMenuItem("Open");
+openItem.addActionListener(event -> openFile());
+fileMenu.add(openItem);
+
+40
+41
+42
+43
+
+JMenuItem exitItem = new JMenuItem("Exit");
+exitItem.addActionListener(event -> System.exit(0));
+fileMenu.add(exitItem);
+
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+
+JMenu editMenu = new JMenu("Edit");
+JMenuItem blurItem = new JMenuItem("Blur");
+blurItem.addActionListener(event ->
+{
+float weight = 1.0f / 9.0f;
+float[] elements = new float[9];
+for (int i = 0; i < 9; i++)
+elements[i] = weight;
+convolve(elements);
+});
+editMenu.add(blurItem);
+
+56
+57
+58
+59
+60
+61
+62
+63
+
+JMenuItem sharpenItem = new JMenuItem("Sharpen");
+sharpenItem.addActionListener(event ->
+{
+float[] elements = { 0.0f, -1.0f, 0.0f, -1.0f, 5.f, -1.0f, 0.0f, -1.0f, 0.0f };
+convolve(elements);
+});
+editMenu.add(sharpenItem);
+
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+
+JMenuItem brightenItem = new JMenuItem("Brighten");
+brightenItem.addActionListener(event ->
+{
+float a = 1.1f;
+float b = 20.0f;
+RescaleOp op = new RescaleOp(a, b, null);
+filter(op);
+});
+editMenu.add(brightenItem);
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+848
+
+Chapter 11
+
+Advanced AWT
+
+Listing 11.9 (Continued)
+74
+
+JMenuItem edgeDetectItem = new JMenuItem("Edge detect");
+edgeDetectItem.addActionListener(event ->
+{
+float[] elements = { 0.0f, -1.0f, 0.0f, -1.0f, 4.f, -1.0f, 0.0f, -1.0f, 0.0f };
+convolve(elements);
+});
+editMenu.add(edgeDetectItem);
+
+75
+76
+77
+78
+79
+80
+81
+82
+
+JMenuItem negativeItem = new JMenuItem("Negative");
+negativeItem.addActionListener(event ->
+{
+short[] negative = new short[256 * 1];
+for (int i = 0; i < 256; i++)
+negative[i] = (short) (255 - i);
+ShortLookupTable table = new ShortLookupTable(0, negative);
+LookupOp op = new LookupOp(table, null);
+filter(op);
+});
+editMenu.add(negativeItem);
+
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+
+JMenuItem rotateItem = new JMenuItem("Rotate");
+rotateItem.addActionListener(event ->
+{
+if (image == null) return;
+AffineTransform transform = AffineTransform.getRotateInstance(Math.toRadians(5),
+image.getWidth() / 2, image.getHeight() / 2);
+AffineTransformOp op = new AffineTransformOp(transform,
+AffineTransformOp.TYPE_BICUBIC);
+filter(op);
+});
+editMenu.add(rotateItem);
+
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+
+JMenuBar menuBar = new JMenuBar();
+menuBar.add(fileMenu);
+menuBar.add(editMenu);
+setJMenuBar(menuBar);
+
+107
+108
+109
+110
+111
+
+}
+
+112
+113
+114
+115
+
+/**
+* Open a file and load the image.
+*/
+
+From the Library of Hristo Dimov Hristov
+
+11.11 Image Manipulation
+
+849
+
+public void openFile()
+{
+JFileChooser chooser = new JFileChooser(".");
+chooser.setCurrentDirectory(new File(getClass().getPackage().getName()));
+String[] extensions = ImageIO.getReaderFileSuffixes();
+chooser.setFileFilter(new FileNameExtensionFilter("Image files", extensions));
+int r = chooser.showOpenDialog(this);
+if (r != JFileChooser.APPROVE_OPTION) return;
+
+116
+117
+118
+119
+120
+121
+122
+123
+124
+
+try
+{
+Image img = ImageIO.read(chooser.getSelectedFile());
+image = new BufferedImage(img.getWidth(null), img.getHeight(null),
+BufferedImage.TYPE_INT_RGB);
+image.getGraphics().drawImage(img, 0, 0, null);
+}
+catch (IOException e)
+{
+JOptionPane.showMessageDialog(this, e);
+}
+repaint();
+
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+
+}
+
+137
+138
+
+/**
+* Apply a filter and repaint.
+* @param op the image operation to apply
+*/
+private void filter(BufferedImageOp op)
+{
+if (image == null) return;
+image = op.filter(image, null);
+repaint();
+}
+
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+
+/**
+* Apply a convolution and repaint.
+* @param elements the convolution kernel (an array of 9 matrix elements)
+*/
+private void convolve(float[] elements)
+{
+Kernel kernel = new Kernel(3, 3, elements);
+ConvolveOp op = new ConvolveOp(kernel);
+filter(op);
+}
+
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+
+}
+
+From the Library of Hristo Dimov Hristov
+
+850
+
+Chapter 11
+
+Advanced AWT
+
+java.awt.image.BufferedImageOp 1.2
+
+• BufferedImage filter(BufferedImage source, BufferedImage dest)
+applies the image operation to the source image and stores the result in the destination image. If dest is null, a new destination image is created. The destination image
+is returned.
+
+java.awt.image.AffineTransformOp 1.2
+
+• AffineTransformOp(AffineTransform t, int interpolationType)
+constructs an affine transform operator.The interpolation type is one of TYPE_BILINEAR,
+TYPE_BICUBIC, or TYPE_NEAREST_NEIGHBOR.
+
+java.awt.image.RescaleOp 1.2
+
+• RescaleOp(float a, float b, RenderingHints hints)
+• RescaleOp(float[] as, float[] bs, RenderingHints hints)
+constructs a rescale operator that carries out the scaling operation xnew = a · x + b.
+When using the first constructor, all color components (but not the alpha component)
+are scaled with the same coefficients.When using the second constructor, you supply
+either the values for each color component, in which case the alpha component is
+unaffected, or the values for both alpha and color components.
+
+java.awt.image.LookupOp 1.2
+
+• LookupOp(LookupTable table, RenderingHints hints)
+constructs a lookup operator for the given lookup table.
+
+java.awt.image.ByteLookupTable 1.2
+
+• ByteLookupTable(int offset, byte[] data)
+• ByteLookupTable(int offset, byte[][] data)
+constructs a lookup table for converting byte values. The offset is subtracted from
+the input before the lookup. The values in the first constructor are applied to all
+color components but not the alpha component.When using the second constructor,
+you supply either the values for each color component, in which case the alpha
+component is unaffected, or the values for both alpha and color components.
+
+From the Library of Hristo Dimov Hristov
+

@@ -1,0 +1,112 @@
+  963   static {}; 
+  Signature: ()V } 
+  NOTE: There is no rationale whatsoever for forcing programmers to use this mangling scheme for signatures. The designers of the native calling mechanism could have just as easily written a function that reads signatures in the Java programming language style, such as void(int,java.lang.String), and encodes them into whatever internal representation they prefer. Then again, using the mangled signatures lets you partake in the mystique of programming close to the virtual machine. 
+  12.6 Calling Java Methods Of course, Java programming language functions can call C functions—that is what native methods are for. Can we go the other way? Why would we want to do this anyway? It often happens that a native method needs to request a service from an object that was passed to it. We’ll first show you how to do it for instance methods, then for static methods. 
+12.6.1 Instance Methods
+  As an example of calling a Java method from native code, let’s enhance the Printf class and add a method that works similarly to the C function fprintf. That is, it should be able to print a string on an arbitrary PrintWriter object. Here is the definition of the method in Java: class Printf3 { public native static void fprint(PrintWriter out, String s, double x); 
+  ... 
+  } 
+  We’ll first assemble the string to be printed into a String object str, as in the sprint method that we already implemented. Then, from the C function that implements the native method, we’ll call the print method of the PrintWriter class. 
+  You can call any Java method from C by using the function call (*env)->CallXxxMethod(env, implicit parameter, methodID, explicit parameters)   Replace Xxx with Void, Int, Object, and so on, depending on the return type of the method. Just as you need a fieldID to access a field of an object, you need a method   From the Library of Hristo Dimov Hristov   964   Chapter 12   Native Methods   ID to call a method. To obtain a method ID, call the JNI function GetMethodID and supply the class, the name of the method, and the method signature. 
+  In our example, we want to obtain the ID of the print method of the PrintWriter class. 
+  The PrintWriter class has several overloaded methods called print. For that reason, you must also supply a string describing the parameters and the return value of the specific function that you want to use. For example, we want to use void print(java.lang.String). As described in the preceding section, we must now “mangle” the signature into the string "(Ljava/lang/String;)V". 
+  Here is the complete code to make the method call, by 1. 
+  2. 
+  3. 
+  Obtaining the class of the implicit parameter Obtaining the method ID Making the call /* get the class */ class_PrintWriter = (*env)->GetObjectClass(env, out); 
+  /* get the method ID */ id_print = (*env)->GetMethodID(env, class_PrintWriter, "print", "(Ljava/lang/String;)V"); 
+  /* call the method */ (*env)->CallVoidMethod(env, out, id_print, str); 
+  Listings 12.14 and 12.15 show the Java code for a test program and the Printf3 class. Listing 12.16 contains the C code for the native fprint method. 
+  NOTE: The numerical method IDs and field IDs are conceptually similar to Method and Field objects in the reflection API. You can convert between them with the following functions: jobject ToReflectedMethod(JNIEnv* env, jclass class, jmethodID methodID); 
+  // returns Method object methodID FromReflectedMethod(JNIEnv* env, jobject method); 
+  jobject ToReflectedField(JNIEnv* env, jclass class, jfieldID fieldID); 
+  // returns Field object fieldID FromReflectedField(JNIEnv* env, jobject field); 
+12.6.2 Static Methods
+  Calling static methods from native methods is similar to calling instance methods. 
+  There are two differences: • Use the GetStaticMethodID and CallStaticXxxMethod functions   From the Library of Hristo Dimov Hristov   12.6 Calling Java Methods   965   • Supply a class object, not an implicit parameter object, when invoking the method As an example of this, let’s make the call to the static method System.getProperty("java.class.path")   from a native method. The return value of this call is a string that gives the current class path. 
+  First, we have to find the class to use. As we have no object of the class System readily available, we use FindClass rather than GetObjectClass. 
+  jclass class_System = (*env)->FindClass(env, "java/lang/System"); 
+  Next, we need the ID of the static getProperty method. The encoded signature of that method is "(Ljava/lang/String;)Ljava/lang/String;" 
+  because both the parameter and the return value are strings. Hence, we obtain the method ID as follows: jmethodID id_getProperty = (*env)->GetStaticMethodID(env, class_System, "getProperty", "(Ljava/lang/String;)Ljava/lang/String;"); 
+  Finally, we can make the call. Note that the class object is passed to the CallStaticObjectMethod function. 
+  jobject obj_ret = (*env)->CallStaticObjectMethod(env, class_System, id_getProperty, (*env)->NewStringUTF(env, "java.class.path")); 
+  The return value of this method is of type jobject. If we want to manipulate it as a string, we must cast it to jstring: jstring str_ret = (jstring) obj_ret; 
+  C++ NOTE: In C, the types jstring and jclass, as well as the array types to be introduced later, are all type-equivalent to jobject. The cast of the preceding example is therefore not strictly necessary in C. But in C++, these types are defined as pointers to “dummy classes” that have the correct inheritance hierarchy. For example, assigning a jstring to a jobject is legal without a cast in C++, but an assignment from a jobject to a jstring requires a cast. 
+12.6.3 Constructors
+  A native method can create a new Java object by invoking its constructor. Invoke the constructor by calling the NewObject function. 
+  From the Library of Hristo Dimov Hristov   966   Chapter 12   Native Methods   jobject obj_new = (*env)->NewObject(env, class, methodID, construction parameters); 
+  You can obtain the method ID needed for this call from the GetMethodID function by specifying the method name as "<init>" and the encoded signature of the constructor (with return type void). For example, here is how a native method can create a FileOutputStream object: const char[] fileName = ". . ."; 
+  jstring str_fileName = (*env)->NewStringUTF(env, fileName); 
+  jclass class_FileOutputStream = (*env)->FindClass(env, "java/io/FileOutputStream"); 
+  jmethodID id_FileOutputStream = (*env)->GetMethodID(env, class_FileOutputStream, "<init>", "(Ljava/lang/String;)V"); 
+  jobject obj_stream = (*env)->NewObject(env, class_FileOutputStream, id_FileOutputStream, str_fileName); 
+  Note that the signature of the constructor takes a parameter of type java.lang.String and has a return type of void. 
+12.6.4 Alternative Method Invocations
+  Several variants of the JNI functions can be used to call a Java method from native code. These are not as important as the functions that we already discussed, but they are occasionally useful. 
+  The CallNonvirtualXxxMethod functions receive an implicit argument, a method ID, a class object (which must correspond to a superclass of the implicit argument), and explicit arguments. The function calls the version of the method in the specified class, bypassing the normal dynamic dispatch mechanism. 
+  All call functions have versions with suffixes “A” and “V” that receive the explicit parameters in an array or a va_list (as defined in the C header stdarg.h). 
+  Listing 12.14 1   printf3/Printf3Test.java   import java.io.*; 
+  2 3 4 5 6 7 8 9 10 11 12 13   /** * @version 1.10 1997-07-01 * @author Cay Horstmann */ class Printf3Test { public static void main(String[] args) { double price = 44.95; 
+  double tax = 7.75; 
+  double amountDue = price * (1 + tax / 100); 
+  From the Library of Hristo Dimov Hristov   12.6 Calling Java Methods   PrintWriter out = new PrintWriter(System.out); 
+  Printf3.fprint(out, "Amount due = %8.2f\n", amountDue); 
+  out.flush(); 
+  14 15 16   } 
+  17 18   } 
+  Listing 12.15 1   967   printf3/Printf3.java   import java.io.*; 
+  2 3 4 5 6 7 8 9   /** * @version 1.10 1997-07-01 * @author Cay Horstmann */ class Printf3 { public static native void fprint(PrintWriter out, String format, double x); 
+  10   static { System.loadLibrary("Printf3"); 
+  } 
+  11 12 13 14 15   } 
+  Listing 12.16 1 2 3 4   printf3/Printf3.c   /** @version 1.10 1997-07-01 @author Cay Horstmann */   5 6 7 8 9   #include "Printf3.h" 
+  #include <string.h> #include <stdlib.h> #include <float.h>   10 11 12 13 14 15 16 17 18 19 20   /** @param format a string containing a printf format specifier (such as "%8.2f"). Substrings "%%" are skipped. 
+  @return a pointer to the format specifier (skipping the '%') or NULL if there wasn't a unique format specifier */ char* find_format(const char format[]) { char* p; 
+  char* q; 
+  21   (Continues)   From the Library of Hristo Dimov Hristov   968   Chapter 12   Native Methods   Listing 12.16 (Continued) p = strchr(format, '%'); 
+  while (p != NULL && *(p + 1) == '%') /* skip %% */ p = strchr(p + 2, '%'); 
+  if (p == NULL) return NULL; 
+  /* now check that % is unique */ p++; 
+  q = strchr(p, '%'); 
+  while (q != NULL && *(q + 1) == '%') /* skip %% */ q = strchr(q + 2, '%'); 
+  if (q != NULL) return NULL; /* % not unique */ q = p + strspn(p, " -0+#"); /* skip past flags */ q += strspn(q, "0123456789"); /* skip past field width */ if (*q == '.') { q++; q += strspn(q, "0123456789"); } 
+  /* skip past precision */ if (strchr("eEfFgG", *q) == NULL) return NULL; 
+  /* not a floating-point format */ return p; 
+  22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39   } 
+  40 41 42 43 44 45 46 47 48   JNIEXPORT void JNICALL Java_Printf3_fprint(JNIEnv* env, jclass cl, jobject out, jstring format, jdouble x) { const char* cformat; 
+  char* fmt; 
+  jstring str; 
+  jclass class_PrintWriter; 
+  jmethodID id_print; 
+  49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64   cformat = (*env)->GetStringUTFChars(env, format, NULL); 
+  fmt = find_format(cformat); 
+  if (fmt == NULL) str = format; 
+  else { char* cstr; 
+  int width = atoi(fmt); 
+  if (width == 0) width = DBL_DIG + 10; 
+  cstr = (char*) malloc(strlen(cformat) + width); 
+  sprintf(cstr, cformat, x); 
+  str = (*env)->NewStringUTF(env, cstr); 
+  free(cstr); 
+  } 
+  (*env)->ReleaseStringUTFChars(env, format, cformat); 
+  65 66   /* now call ps.print(str) */   67 68 69   /* get the class */ class_PrintWriter = (*env)->GetObjectClass(env, out); 
+  From the Library of Hristo Dimov Hristov   12.6 Calling Java Methods   969   70   /* get the method ID */ id_print = (*env)->GetMethodID(env, class_PrintWriter, "print", "(Ljava/lang/String;)V"); 
+  71 72 73   /* call the method */ (*env)->CallVoidMethod(env, out, id_print, str); 
+  74 75 76   } 
+  Executing Java Methods   • jmethodID GetMethodID(JNIEnv *env, jclass cl, const char name[], const char methodSignature[]) returns the identifier of a method in a class. 
+  • Xxx CallXxxMethod(JNIEnv *env, jobject obj, jmethodID id, args) • Xxx CallXxxMethodA(JNIEnv *env, jobject obj, jmethodID id, jvalue args[]) • Xxx CallXxxMethodV(JNIEnv *env, jobject obj, jmethodID id, va_list args) calls a method.The return type Xxx is one of Object, Boolean, Byte, Char, Short, Int, Long, Float, or Double. The first function has a variable number of arguments—simply append the method parameters after the method ID. The second function receives the method arguments in an array of jvalue, where jvalue is a union defined as typedef union jvalue { jboolean z; 
+  jbyte b; 
+  jchar c; 
+  jshort s; 
+  jint i; 
+  jlong j; 
+  jfloat f; 
+  jdouble d; 
+  jobject l; 
+  } jvalue; 
+  The third function receives the method parameters in a va_list, as defined in the C header stdarg.h. 
+  • Xxx CallNonvirtualXxxMethod(JNIEnv *env, jobject obj, jclass cl, jmethodID id, args) • Xxx CallNonvirtualXxxMethodA(JNIEnv *env, jobject obj, jclass cl, jmethodID id, jvalue args[]) • Xxx CallNonvirtualXxxMethodV(JNIEnv *env, jobject obj, jclass cl, jmethodID id, va_list args) calls a method, bypassing dynamic dispatch. The return type Xxx is one of Object, Boolean, Byte, Char, Short, Int, Long, Float, or Double. The first function has a variable number of arguments—simply append the method parameters after the method ID. The second function receives the method arguments in an array of jvalue. The third function receives the method parameters in a va_list, as defined in the C header stdarg.h. 
+  (Continues)   From the Library of Hristo Dimov Hristov   970   Chapter 12   Native Methods   Executing Java Methods (Continued)   • jmethodID GetStaticMethodID(JNIEnv *env, jclass cl, const char name[], const char methodSignature[])   returns the identifier of a static method in a class. 
+  • Xxx CallStaticXxxMethod(JNIEnv *env, jclass cl, jmethodID id, args) • Xxx CallStaticXxxMethodA(JNIEnv *env, jclass cl, jmethodID id, jvalue args[]) • Xxx CallStaticXxxMethodV(JNIEnv *env, jclass cl, jmethodID id, va_list args) calls a static method. The return type Xxx is one of Object, Boolean, Byte, Char, Short, Int, Long, Float, or Double.The first function has a variable number of arguments—simply append the method parameters after the method ID.The second function receives the method arguments in an array of jvalue. The third function receives the method parameters in a va_list, as defined in the C header stdarg.h. 
+  • jobject NewObject(JNIEnv *env, jclass cl, jmethodID id, args) • jobject NewObjectA(JNIEnv *env, jclass cl, jmethodID id, jvalue args[]) • jobject NewObjectV(JNIEnv *env, jclass cl, jmethodID id, va_list args) calls a constructor. The method ID is obtained from GetMethodID with a method name of "<init>" and a return type of void. The first function has a variable number of arguments—simply append the method parameters after the method ID.The second function receives the method arguments in an array of jvalue. The third function receives the method parameters in a va_list, as defined in the C header stdarg.h. 

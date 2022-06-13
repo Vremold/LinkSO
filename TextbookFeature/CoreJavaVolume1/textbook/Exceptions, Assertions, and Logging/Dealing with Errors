@@ -1,0 +1,91 @@
+  Suppose an error occurs while a Java program is running. The error might be caused by a file containing wrong information, a flaky network connection, or (we hate to mention it) use of an invalid array index or an object reference that hasn’t yet been assigned to an object. Users expect that programs will act sensibly when errors happen. If an operation cannot be completed because of an error, the program ought to either Return to a safe state and enable the user to execute other commands; or Allow the user to save all work and terminate the program gracefully. 
+  This may not be easy to do, because the code that detects (or even causes) the error condition is usually far removed from the code that can roll back the data to a safe state or save the user’s work and exit cheerfully. The mission of exception handling is to transfer control from where the error occurred to an error handler that can deal with the situation. To handle exceptional situations in your program, you must take into account the errors and problems that may occur. What sorts of problems do you need to consider? 
+  User input errors. In addition to the inevitable typos, some users like to blaze their own trail instead of following directions. Suppose, for example, that a user asks to connect to a URL that is syntactically wrong. Your code should check the syntax, but suppose it does not. 
+  Then the network layer will complain. 
+  Device errors. Hardware does not always do what you want it to. The printer may be turned off. A web page may be temporarily unavailable. 
+  Devices will often fail in the middle of a task. For example, a printer may run out of paper during printing. 
+  Physical limitations. Disks can fill up; you can run out of available memory. 
+  Code errors. A method may not perform correctly. For example, it could deliver wrong answers or use other methods incorrectly. Computing an   invalid array index, trying to find a nonexistent entry in a hash table, or trying to pop an empty stack are all examples of a code error. 
+  The traditional reaction to an error in a method is to return a special error code that the calling method analyzes. For example, methods that read information back from files often return a -1 end-of-file value marker rather than a standard character. This can be an efficient method for dealing with many exceptional conditions. Another common return value to denote an error condition is the null reference. 
+  Unfortunately, it is not always possible to return an error code. There may be no obvious way of distinguishing valid and invalid data. A method returning an integer cannot simply return -1 to denote the error; the value -1 might be a perfectly valid result. 
+  Instead, as we mentioned back in Chapter 5, Java allows every method an alternative exit path if it is unable to complete its task in the normal way. In this situation, the method does not return a value. Instead, it throws an object that encapsulates the error information. Note that the method exits immediately; it does not return its normal (or any) value. Moreover, execution does not resume at the code that called the method; instead, the exception-handling mechanism begins its search for an exception handler that can deal with this particular error condition. 
+  Exceptions have their own syntax and are part of a special inheritance hierarchy. We’ll take up the syntax first and then give a few hints on how to use this language feature effectively. 
+7.1.1 The Classification of Exceptions
+  In the Java programming language, an exception object is always an instance of a class derived from Throwable. As you will soon see, you can create your own exception classes if those built into Java do not suit your needs. 
+  Figure 7.1 is a simplified diagram of the exception hierarchy in Java. 
+  Figure 7.1 Exception hierarchy in Java Notice that all exceptions descend from Throwable, but the hierarchy immediately splits into two branches: Error and Exception. 
+  The Error hierarchy describes internal errors and resource exhaustion situations inside the Java runtime system. You should not throw an object of this type. There is little you can do if such an internal error occurs, beyond notifying the user and trying to terminate the program gracefully. These situations are quite rare. 
+  When doing Java programming, focus on the Exception hierarchy. The Exception hierarchy also splits into two branches: exceptions that derive from RuntimeException and those that do not. The general rule is this: A RuntimeException happens because you made a programming error. 
+  Any other exception occurs because a bad thing, such as an I/O error, happened to your otherwise good program. 
+  Exceptions that inherit from RuntimeException include such problems as   A bad cast An out-of-bounds array access A null pointer access Exceptions that do not inherit from RuntimeException include Trying to read past the end of a file Trying to open a file that doesn’t exist Trying to find a Class object for a string that does not denote an existing class The rule "If it is a RuntimeException, it was your fault" works pretty well. You could have avoided that ArrayIndexOutOfBoundsException by testing the array index against the array bounds. The NullPointerException would not have happened had you checked whether the variable was null before using it. 
+  How about a file that doesn’t exist? Can’t you first check whether the file exists, and then open it? Well, the file might be deleted right after you checked for its existence. Thus, the notion of "existence" depends on the environment, not just on your code. 
+  The Java Language Specification calls any exception that derives from the class Error or the class RuntimeException an unchecked exception. 
+  All other exceptions are called checked exceptions. This is useful terminology that we also adopt. The compiler checks that you provide exception handlers for all checked exceptions. 
+  Note The name RuntimeException is somewhat confusing. Of course, all of the errors we are discussing occur at runtime. 
+  If you are familiar with the (much more limited) exception hierarchy of the standard C++ library, you may be really confused at this point. 
+  C++ has two fundamental exception classes, runtime_error and logic_error. The logic_error class is the equivalent of Java’s RuntimeException and also denotes logical errors in the program. The runtime_error class is the base class for exceptions caused by unpredictable problems. It is equivalent to those exceptions in Java that are not of type RuntimeException. 
+7.1.2 Declaring Checked Exceptions
+  A Java method can throw an exception if it encounters a situation it cannot handle. The idea is simple: A method will not only tell the Java compiler what values it can return, it is also going to tell the compiler what can go wrong. For example, code that attempts to read from a file knows that the file might not exist or that it might be empty. The code that tries to process the information in a file therefore will need to notify the compiler that it can throw some sort of IOException. 
+  The place in which you advertise that your method can throw an exception is the header of the method; the header changes to reflect the checked exceptions the method can throw. For example, here is the declaration of one of the constructors of the FileInputStream class from the standard library. (See Chapter 1 of Volume II for more on input and output.) public FileInputStream(String name) throws FileNotFoundException   The declaration says that this constructor produces a FileInputStream object from a String parameter but that it also can go wrong in a special way—by throwing a FileNotFoundException. If this sad state should come to pass, the constructor call will not initialize a new FileInputStream object but instead will throw an object of the FileNotFoundException class. If it does, the runtime system will begin to search for an exception handler that knows how to deal with FileNotFoundException objects. 
+  When you write your own methods, you don’t have to advertise every   possible throwable object that your method might actually throw. To understand when (and what) you have to advertise in the throws clause of the methods you write, keep in mind that an exception is thrown in any of the following four situations: You call a method that throws a checked exception—for example, the FileInputStream constructor. 
+  You detect an error and throw a checked exception with the throw statement (we cover the throw statement in the next section). 
+  You make a programming error, such as a[-1] = 0 that gives rise to an unchecked exception (in this case, an ArrayIndexOutOfBoundsException). 
+  An internal error occurs in the virtual machine or runtime library. 
+  If either of the first two scenarios occurs, you must tell the programmers who will use your method about the possibility of an exception. Why? Any method that throws an exception is a potential death trap. If no handler catches the exception, the current thread of execution terminates. 
+  As with Java methods that are part of the supplied classes, you declare that your method may throw an exception with an exception specification in the method header. 
+  class MyAnimation { . . . 
+  public Image loadImage(String s) throws IOException { . . . 
+  } 
+  } 
+  If a method might throw more than one checked exception type, you must list all exception classes in the header. Separate them by commas, as in the following example: class MyAnimation { . . . 
+  public Image loadImage(String s) throws FileNotFoundException, EOFException { . . . 
+  } 
+  } 
+  However, you do not need to advertise internal Java errors—that is, exceptions inheriting from Error. Any code could potentially throw those exceptions, and they are entirely beyond your control. 
+  Similarly, you should not advertise unchecked exceptions inheriting from RuntimeException. 
+  class MyAnimation { . . . 
+  void drawImage(int i) throws ArrayIndexOutOfBoundsException // bad style { . . . 
+  } 
+  } 
+  These runtime errors are completely under your control. If you are so concerned about array index errors, you should spend your time fixing them instead of advertising the possibility that they can happen. 
+  In summary, a method must declare all the checked exceptions that it might throw. Unchecked exceptions are either beyond your control (Error) or result from conditions that you should not have allowed in the first place (RuntimeException). If your method fails to faithfully declare all checked exceptions, the compiler will issue an error message. 
+  Of course, as you have already seen in quite a few examples, instead of declaring the exception, you can also catch it. Then the exception won’t be thrown out of the method, and no throws specification is necessary. You will see later in this chapter how to decide whether to catch an exception or to enable someone else to catch it. 
+  Caution If you override a method from a superclass, the checked exceptions   that the subclass method declares cannot be more general than those of the superclass method. (It is OK to throw more specific exceptions, or not to throw any exceptions in the subclass method.) In particular, if the superclass method throws no checked exception at all, neither can the subclass. For example, if you override JComponent.paintComponent, your paintComponent method must not throw any checked exceptions, because the superclass method doesn’t throw any. 
+  When a method in a class declares that it throws an exception that is an instance of a particular class, it may throw an exception of that class or of any of its subclasses. For example, the FileInputStream constructor could have declared that it throws an IOException. In that case, you would not have known what kind of IOException it is; it could be a plain IOException or an object of one of the various subclasses, such as FileNotFoundException. 
+  Also, in C++, a function may throw any exception if no throw specification is given. In Java, a method without a throws specifier may not throw any checked exceptions at all. 
+7.1.3 How to Throw an Exception
+  Now, suppose something terrible has happened in your code. You have a method, readData, that is reading in a file whose header promised   Content-length: 1024   but you got an end of file after 733 characters. You may decide this situation is so abnormal that you want to throw an exception. 
+  You need to decide what exception type to throw. Some kind of IOException would be a good choice. Perusing the Java API documentation, you find an EOFException with the description "Signals that an EOF has been reached unexpectedly during input." Perfect. Here is how you throw it: throw new EOFException(); 
+  or, if you prefer, var e = new EOFException(); 
+  throw e; 
+  Here is how it all fits together: String readData(Scanner in) throws EOFException { . . . 
+  while (. . .) { if (!in.hasNext()) // EOF encountered { if (n < len) throw new EOFException(); 
+  } 
+  . . . 
+  } 
+  return s; 
+  } 
+  The EOFException has a second constructor that takes a string argument. 
+  You can put this to good use by describing the exceptional condition more carefully. 
+  String gripe = "Content-length: " + len + ", Received: " + n; 
+  throw new EOFException(gripe); 
+  As you can see, throwing an exception is easy if one of the existing exception classes works for you. In this case:   1. Find an appropriate exception class. 
+  2. Make an object of that class. 
+  3. Throw it. 
+  Once a method throws an exception, it does not return to its caller. This means you do not have to worry about cooking up a default return value or an error code. 
+7.1.4 Creating Exception Classes
+  Your code may run into a problem which is not adequately described by any of the standard exception classes. In this case, it is easy enough to create your own exception class. Just derive it from Exception, or from a child class of Exception such as IOException. It is customary to give both a default constructor and a constructor that contains a detailed message. (The toString method of the Throwable superclass returns a string containing that detailed message, which is handy for debugging.) class FileFormatException extends IOException { public FileFormatException() {} 
+  public FileFormatException(String gripe) { super(gripe); 
+  } 
+  } 
+  Now you are ready to throw your very own exception type. 
+  String readData(BufferedReader in) throws FileFormatException   { . . . 
+  while (. . .) { if (ch == -1) // EOF encountered { if (n < len) throw new FileFormatException(); 
+  } 
+  . . . 
+  } 
+  return s; 
+  } 
+  java.lang.Throwable 1.0 Throwable() constructs a new Throwable object with no detailed message. 
+  Throwable(String message) constructs a new Throwable object with the specified detailed message. By convention, all derived exception classes support both a default constructor and a constructor with a detailed message. 
+  String getMessage() gets the detailed message of the Throwable object. 

@@ -1,0 +1,136 @@
+  Regular expressions are used to specify string patterns. You can use regular expressions whenever you need to locate strings that match a particular pattern. 
+  For example, one of our sample programs locates all hyperlinks in an HTML file by looking for strings of the pattern <a href=". . .">. 
+  From the Library of Hristo Dimov Hristov   2.7 Regular Expressions   129   Of course, when specifying a pattern, the . . . notation is not precise enough. 
+  You need to specify exactly what sequence of characters is a legal match, using a special syntax to describe a pattern. 
+  Here is a simple example. The regular expression [Jj]ava.+   matches any string of the following form: • The first letter is a J or j. 
+  • The next three letters are ava. 
+  • The remainder of the string consists of one or more arbitrary characters. 
+  For example, the string "javanese" matches this particular regular expression, but the string "Core Java" does not. 
+  As you can see, you need to know a bit of syntax to understand the meaning of a regular expression. Fortunately, for most purposes, a few straightforward constructs are sufficient. 
+  • A character class is a set of character alternatives, enclosed in brackets, such as [Jj], [0-9], [A-Za-z], or [^0-9]. Here the - denotes a range (all characters whose Unicode values fall between the two bounds), and ^ denotes the complement (all characters except those specified). 
+  • To include a - inside a character class, make it the first or last item. To include a ], make it the first item. To include a ^, put it anywhere but the beginning. 
+  You only need to escape [ and \. 
+  • There are many predefined character classes such as \d (digits) or \p{Sc} 
+  (Unicode currency symbol). See Tables 2.6 and 2.7. 
+  • Most characters match themselves, such as the ava characters in the preceding example. 
+  • The . symbol matches any character (except possibly line terminators, depending on flag settings). 
+  • Use \ as an escape character. For example, \. matches a period and \\ matches a backslash. 
+  • ^ and $ match the beginning and end of a line, respectively. 
+  • If X and Y are regular expressions, then XY means “any match for X followed by a match for Y ”. X | Y means “any match for X or Y ”. 
+  • You can apply quantifiers X+ (1 or more), X* (0 or more), and X? (0 or 1) to an expression X . 
+  From the Library of Hristo Dimov Hristov   130   Chapter 2   Input and Output   Table 2.6 Regular Expression Syntax Expression   Description   Example   The character c   J   Characters c, not one of . * + ? { | ()[\^$ . 
+  Any character except line terminators, or any character if the DOTALL flag is set   \x{p} 
+  The Unicode code point with hex code p   \x{1D546} 
+  \uhhhh, \xhh, \0o, \0oo, \0ooo   The UTF-16 code unit with the given hex or octal value   \uFEFF   \a, \e, \f, \n, \r, \t   Alert (\x{7}), escape (\x{1B}), form feed (\x{B}), newline (\x{A}), carriage return (\x{D}), tab (\x{9})   \n   \cc, where c is in [A-Z] or one of @ [ \ ] ^ _ ? 
+  The control character corresponding to the character c   \cH is a backspace (\x{8})   \c, where c is not in [A-Za-z0-9]   The character c   \\   \Q . . . \E   Everything between the start and the end of the quotation   \Q(...)\E matches the string (...)   Any of the characters represented by C1, C2, . . . 
+  [0-9+-]   [^ . . . ]   Complement of a character class   [^\d\s]   [ . . . && . . . ]   Intersection of character classes   [\p{L}&&[^A-Za-z]]   \p{ . . . }, \P{ . . . } 
+  A predefined character class (see Table 2.7); its complement   \p{L} matches a Unicode   Character Classes [C1C2 . . . ], where Ci   are characters, ranges c-d, or character classes   letter, and so does \pL—you can omit braces around a single letter (Continues)   From the Library of Hristo Dimov Hristov   2.7 Regular Expressions   131   Table 2.6 (Continued) Expression   Description   Example   \d, \D   Digits ([0-9], or \p{Digit} when the UNICODE_CHARACTER_CLASS flag is set); the complement   \d+ is a sequence of digits   \w, \W   Word characters ([a-zA-Z0-9_], or Unicode word characters when the UNICODE_CHARACTER_CLASS flag is set); the complement   \s, \S   Spaces ([ \n\r\t\f\x{B}], or \p{IsWhite_Space} when the UNICODE_CHARACTER_CLASS flag is   \s*,\s* is a comma   surrounded by optional white space   set); the complement \h, \v, \H, \V   Horizontal whitespace, vertical whitespace, their complements   Sequences and Alternatives XY   X|Y   Any string from X, followed by any string from Y   [1-9][0-9]* is a positive   Any string from X or Y   http|ftp   Captures the match of X   '([^']*)' captures the   number without leading zero   Grouping (X)   quoted text \n   The nth group   (['"]).*\1 matches 'Fred' or "Fred" but not "Fred'   (?<name>X)   Captures the match of X with the given name   '(?<id>[A-Za-z0-9]+)'   \k<name>   The group with the given name   \k<id> matches the group with name id   (?:X)   Use parentheses without capturing X   In (?:http|ftp)://(.*), the match after :// is \1   captures the match with name id   (Continues)   From the Library of Hristo Dimov Hristov   132   Chapter 2   Input and Output   Table 2.6 (Continued) Expression   Description   Example   (?f1f2 . . . :X), (?f1 . . . -fk . . . :X), with fi in [dimsuUx]   Matches, but does not capture, X with the given flags on or off (after -)   (?i:jpe?g) is a   Other (? . . . )   See the Pattern API documentation   case-insensitive match   Quantifiers X? 
+  Optional X   \+? is an optional + sign   X*, X+   0 or more X, 1 or more X   [1-9][0-9]+ is an integer ≥   10 X{n}, X{n,}, X{m,n} 
+  n times X, at least n times X, between m and n times X   [0-7]{1,3} are one to three   Q?, where Q is a quantified expression   Reluctant quantifier, attempting the shortest match before trying longer matches   .*(<.+?>).* captures the   Q+, where Q is a quantified expression   Possessive quantifier, taking the longest match without backtracking   '[^']*+' matches strings   ^, $   Beginning, end of input (or beginning, end of line in multiline mode)   ^Java$ matches the input or line Java   \A, \Z, \z   Beginning of input, end of input, absolute end of input (unchanged in multiline mode)   \b, \B   Word boundary, nonword boundary   \R   A Unicode line break   \G   The end of the previous match   octal digits   shortest sequence enclosed in angle brackets   enclosed in single quotes and fails quickly on strings without a closing quote   Boundary Matches   \bJava\b matches the word Java   From the Library of Hristo Dimov Hristov   2.7 Regular Expressions   133   Table 2.7 Predefined Character Class Names Used with \p Character Class Name posixClass   Explanation posixClass is one of Lower, Upper, Alpha, Digit, Alnum, Punct, Graph, Print, Cntrl, XDigit, Space, Blank, ASCII, interpreted as POSIX or Unicode class, depending on the UNICODE_CHARACTER_CLASS flag   IsScript , sc=Script , script=Script   A script accepted by Character.UnicodeScript.forName   InBlock , blk=Block , block=Block   A block accepted by Character.UnicodeBlock.forName   Category , InCategory , gc=Category , general_category=Category   A one- or two-letter name for a Unicode general category   IsProperty   Property is one of Alphabetic, Ideographic, Letter, Lowercase, Uppercase, Titlecase, Punctuation, Control, White_Space, Digit, Hex_Digit, Join_Control, Noncharacter_Code_Point, Assigned   javaMethod   Invokes the method Character.isMethod (must not be deprecated)   • By default, a quantifier matches the largest possible repetition that makes the overall match succeed. You can modify that behavior with suffixes ? (reluctant, or stingy, match: match the smallest repetition count) and + (possessive, or greedy, match: match the largest count even if that makes the overall match fail). 
+  For example, the string cab matches [a-z]*ab but not [a-z]*+ab. In the first case, the expression [a-z]* only matches the character c, so that the characters ab match the remainder of the pattern. But the greedy version [a-z]*+ matches the characters cab, leaving the remainder of the pattern unmatched. 
+  • You can use groups to define subexpressions. Enclose the groups in ( ), for example, ([+-]?)([0-9]+). You can then ask the pattern matcher to return the match of each group or to refer back to a group with \n where n is the group number, starting with \1. 
+  For example, here is a somewhat complex but potentially useful regular expression that describes decimal or hexadecimal integers: [+-]?[0-9]+|0[Xx][0-9A-Fa-f]+   Unfortunately, the regular expression syntax is not completely standardized between various programs and libraries; there is a consensus on the basic constructs but many maddening differences in the details. The Java regular expression   From the Library of Hristo Dimov Hristov   134   Chapter 2   Input and Output   classes use a syntax that is similar to, but not quite the same as, the one used in the Perl language. Table 2.6 shows all constructs of the Java syntax. For more information on the regular expression syntax, consult the API documentation for the Pattern class or the book Mastering Regular Expressions by Jeffrey E. F. Friedl (O’Reilly and Associates, 2006). 
+  The simplest use for a regular expression is to test whether a particular string matches it. Here is how you program that test in Java. First, construct a Pattern object from a string containing the regular expression. Then, get a Matcher object from the pattern and call its matches method: Pattern pattern = Pattern.compile(patternString); 
+  Matcher matcher = pattern.matcher(input); 
+  if (matcher.matches()) . . . 
+  The input of the matcher is an object of any class that implements the CharSequence interface, such as a String, StringBuilder, or CharBuffer. 
+  When compiling the pattern, you can set one or more flags, for example: Pattern pattern = Pattern.compile(expression, Pattern.CASE_INSENSITIVE + Pattern.UNICODE_CASE); 
+  Or you can specify them inside the pattern: String regex = "(?iU:expression)"; 
+  Here are the flags: • Pattern.CASE_INSENSITIVE or i: Match characters independently of the letter case. By default, this flag takes only US ASCII characters into account. 
+  • Pattern.UNICODE_CASE or u: When used in combination with CASE_INSENSITIVE, use Unicode letter case for matching. 
+  • Pattern.UNICODE_CHARACTER_CLASS or U: Select Unicode character classes instead of POSIX. Implies UNICODE_CASE. 
+  • Pattern.MULTILINE or m: Make ^ and $ match the beginning and end of a line, not the entire input. 
+  • Pattern.UNIX_LINES or d: Only '\n' is a line terminator when matching ^ and $ in multiline mode. 
+  • Pattern.DOTALL or s: Make the . symbol match all characters, including line terminators. 
+  • Pattern.COMMENTS or x: Whitespace and comments (from # to the end of a line) are ignored. 
+  • Pattern.LITERAL: The pattern is taken literally and must be matched exactly, except possibly for letter case. 
+  From the Library of Hristo Dimov Hristov   2.7 Regular Expressions   135   • Pattern.CANON_EQ: Take canonical equivalence of Unicode characters into account. 
+  For example, u followed by ¨ (diaeresis) matches ü. 
+  The last two flags cannot be specified inside a regular expression. 
+  If you want to match elements in a collection or stream, turn the pattern into a predicate: Stream<String> strings = . . .; 
+  Stream<String> result = strings.filter(pattern.asPredicate()); 
+  The result contains all strings that match the regular expression. 
+  If the regular expression contains groups, the Matcher object can reveal the group boundaries. The methods int start(int groupIndex) int end(int groupIndex)   yield the starting index and the past-the-end index of a particular group. 
+  You can simply extract the matched string by calling String group(int groupIndex)   Group 0 is the entire input; the group index for the first actual group is 1. Call the groupCount method to get the total group count. For named groups, use the methods int start(String groupName) int end(String groupName) String group(String groupName)   Nested groups are ordered by the opening parentheses. For example, given the pattern (([1-9]|1[0-2]):([0-5][0-9]))[ap]m   and the input 11:59am   the matcher reports the following groups Group Index   Start   End   String   0   0   7   11:59am   1   0   5   11:59   2   0   2   11   3   3   5   59   From the Library of Hristo Dimov Hristov   136   Chapter 2   Input and Output   Listing 2.6 prompts for a pattern, then for strings to match. It prints out whether or not the input matches the pattern. If the input matches and the pattern contains groups, the program prints the group boundaries as parentheses, for example: ((11):(59))am   Listing 2.6 1   regex/RegexTest.java   package regex; 
+  2 3 4   import java.util.*; 
+  import java.util.regex.*; 
+  5 6 7 8 9 10 11 12 13 14 15 16 17 18 19   /** * This program tests regular expression matching. Enter a pattern and strings to match, * or hit Cancel to exit. If the pattern contains groups, the group boundaries are displayed * in the match. 
+  * @version 1.02 2012-06-02 * @author Cay Horstmann */ public class RegexTest { public static void main(String[] args) throws PatternSyntaxException { Scanner in = new Scanner(System.in); 
+  System.out.println("Enter pattern: "); 
+  String patternString = in.nextLine(); 
+  20 21   Pattern pattern = Pattern.compile(patternString); 
+  22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40   while (true) { System.out.println("Enter string to match: "); 
+  String input = in.nextLine(); 
+  if (input == null || input.equals("")) return; 
+  Matcher matcher = pattern.matcher(input); 
+  if (matcher.matches()) { System.out.println("Match"); 
+  int g = matcher.groupCount(); 
+  if (g > 0) { for (int i = 0; i < input.length(); i++) { // Print any empty groups for (int j = 1; j <= g; j++) if (i == matcher.start(j) && i == matcher.end(j)) System.out.print("()"); 
+  From the Library of Hristo Dimov Hristov   2.7 Regular Expressions   // Print ( for non-empty groups starting here for (int j = 1; j <= g; j++) if (i == matcher.start(j) && i != matcher.end(j)) System.out.print('('); 
+  System.out.print(input.charAt(i)); 
+  // Print ) for non-empty groups ending here for (int j = 1; j <= g; j++) if (i + 1 != matcher.start(j) && i + 1 == matcher.end(j)) System.out.print(')'); 
+  41 42 43 44 45 46 47 48 49   } 
+  System.out.println(); 
+  50 51   } 
+  } 
+  else System.out.println("No match"); 
+  52 53 54 55   } 
+  56   } 
+  57 58   137   } 
+  Usually, you don’t want to match the entire input against a regular expression, but to find one or more matching substrings in the input. Use the find method of the Matcher class to find the next match. If it returns true, use the start and end methods to find the extent of the match or the group method without an argument to get the matched string. 
+  while (matcher.find()) { int start = matcher.start(); 
+  int end = matcher.end(); 
+  String match = input.group(); 
+  ... 
+  } 
+  Listing 2.7 puts this mechanism to work. It locates all hypertext references in a web page and prints them. To run the program, supply a URL on the command line, such as java match.HrefMatch http://horstmann.com   Listing 2.7 1   match/HrefMatch.java   package match; 
+  2 3 4 5 6   import java.io.*; 
+  import java.net.*; 
+  import java.nio.charset.*; 
+  import java.util.regex.*; 
+  7   (Continues)   From the Library of Hristo Dimov Hristov   138   Chapter 2   Input and Output   Listing 2.7 (Continued) 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24   /** * This program displays all URLs in a web page by matching a regular expression that describes * the <a href=...> HTML tag. Start the program as <br> * java match.HrefMatch URL * @version 1.02 2016-07-14 * @author Cay Horstmann */ public class HrefMatch { public static void main(String[] args) { try { // get URL string from command line or use default String urlString; 
+  if (args.length > 0) urlString = args[0]; 
+  else urlString = "http://java.sun.com"; 
+  25   // open reader for URL InputStreamReader in = new InputStreamReader(new URL(urlString).openStream(), StandardCharsets.UTF_8); 
+  26 27 28 29   // read contents into string builder StringBuilder input = new StringBuilder(); 
+  int ch; 
+  while ((ch = in.read()) != -1) input.append((char) ch); 
+  30 31 32 33 34 35   // search for all occurrences of pattern String patternString = "<a\\s+href\\s*=\\s*(\"[^\"]*\"|[^\\s>]*)\\s*>"; 
+  Pattern pattern = Pattern.compile(patternString, Pattern.CASE_INSENSITIVE); 
+  Matcher matcher = pattern.matcher(input); 
+  36 37 38 39 40   while (matcher.find()) { String match = matcher.group(); 
+  System.out.println(match); 
+  } 
+  41 42 43 44 45   } 
+  catch (IOException | PatternSyntaxException e) { e.printStackTrace(); 
+  } 
+  46 47 48 49 50   } 
+  51 52   } 
+  From the Library of Hristo Dimov Hristov   2.7 Regular Expressions   139   The replaceAll method of the Matcher class replaces all occurrences of a regular expression with a replacement string. For example, the following instructions replace all sequences of digits with a # character: Pattern pattern = Pattern.compile("[0-9]+"); 
+  Matcher matcher = pattern.matcher(input); 
+  String output = matcher.replaceAll("#"); 
+  The replacement string can contain references to the groups in the pattern: $n is replaced with the nth group, and ${name} is replaced with the group that has the given name. Use \$ to include a $ character in the replacement text. 
+  If you have a string that may contain $ and \, and you don’t want them to be interpreted as group replacements, call matcher.replaceAll(Matcher.quoteReplacement(str)). 
+  The replaceFirst method replaces only the first occurrence of the pattern. 
+  Finally, the Pattern class has a split method that splits an input into an array of strings, using the regular expression matches as boundaries. For example, the following instructions split the input into tokens, where the delimiters are punctuation marks surrounded by optional whitespace. 
+  Pattern pattern = Pattern.compile("\\s*\\p{Punct}\\s*"); 
+  String[] tokens = pattern.split(input); 
+  If there are many tokens, you can fetch them lazily: Stream<String> tokens = commas.splitAsStream(input); 
+  If you don’t care about precompiling the pattern or lazy fetching, you can just use the String.split method: String[] tokens = input.split("\\s*,\\s*"); 
+  java.util.regex.Pattern 1.4   • static Pattern compile(String expression) • static Pattern compile(String expression, int flags) compiles the regular expression string into a pattern object for fast processing of matches. 
+  Parameters:   expression The regular expression flags   One or more of the flags CASE_INSENSITIVE, UNICODE_CASE, MULTILINE, UNIX_LINES, DOTALL, and CANON_EQ (Continues)   From the Library of Hristo Dimov Hristov   140   Chapter 2   Input and Output   java.util.regex.Pattern 1.4 (Continued)   • Matcher matcher(CharSequence input) returns a matcher object that you can use to locate the matches of the pattern in the input. 
+  • String[] split(CharSequence input) • String[] split(CharSequence input, int limit) • Stream<String> splitAsStream(CharSequence input) 8 splits the input string into tokens, where the pattern specifies the form of the delimiters. Returns an array or stream of tokens. The delimiters are not part of the tokens. 
+  Parameters:   input   The string to be split into tokens   limit   The maximum number of strings to produce. If limit - 1 matching delimiters have been found, then the last entry of the returned array contains the remaining unsplit input. If limit is ≤ 0, then the entire input is split. If limit is 0, then trailing empty strings are not placed in the returned array. 
+  java.util.regex.Matcher 1.4   • boolean matches() returns true if the input matches the pattern. 
+  • boolean lookingAt() returns true if the beginning of the input matches the pattern. 
+  • boolean find() • boolean find(int start) attempts to find the next match and returns true if another match is found. 
+  Parameters:   start   The index at which to start searching   • int start() • int end() returns the start or past-the-end position of the current match. 
+  • String group() returns the current match. 
+  (Continues)   From the Library of Hristo Dimov Hristov   2.7 Regular Expressions   141   java.util.regex.Matcher 1.4 (Continued)   • int groupCount() returns the number of groups in the input pattern. 
+  • int start(int groupIndex) • int end(int groupIndex) returns the start or past-the-end position of a given group in the current match. 
+  Parameters:   groupIndex   The group index (starting with 1), or 0 to indicate the entire match   • String group(int groupIndex) returns the string matching a given group. 
+  Parameters:   groupIndex   The group index (starting with 1), or 0 to indicate the entire match   • String replaceAll(String replacement) • String replaceFirst(String replacement) returns a string obtained from the matcher input by replacing all matches, or the first match, with the replacement string. 
+  Parameters:   replacement   The replacement string. It can contain references to pattern groups as $n . Use \$ to include a $ symbol. 
+  • static String quoteReplacement(String str) 5.0 quotes all \ and $ in str. 
+  • Matcher reset() • Matcher reset(CharSequence input) resets the matcher state.The second method makes the matcher work on a different input. Both methods return this. 
+  You have now seen how to carry out input and output operations in Java, and had an overview of the regular expression package that was a part of the “new I/O” specification. In the next chapter, we turn to the processing of XML data. 

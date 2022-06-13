@@ -1,0 +1,62 @@
+  It was known for some time among researchers of type systems that a rigid system of generic types is quite unpleasant to use. The Java designers invented an ingenious (but nevertheless safe) "escape hatch": the wildcard type. The following sections show you how to work with wildcards. 
+8.8.1 The Wildcard Concept
+  In a wildcard type, a type parameter is allowed to vary. For example, the wildcard type Pair<? extends Employee>   denotes any generic Pair type whose type parameter is a subclass of Employee, such as Pair<Manager>, but not Pair<String>. 
+  Let’s say you want to write a method that prints out pairs of employees, like this:   public static void printBuddies(Pair<Employee> p) { Employee first = p.getFirst(); 
+  Employee second = p.getSecond(); 
+  System.out.println(first.getName() + " and " + second.getName() + " are bud } 
+  As you saw in the preceding section, you cannot pass a Pair<Manager> to that method, which is rather limiting. But the solution is simple—use a wildcard type: public static void printBuddies(Pair<? extends Employee> p)   The type Pair<Manager> is a subtype of Pair<? extends Employee> (see Figure 8.3). 
+  Figure 8.3 Subtype relationships with wildcards Can we use wildcards to corrupt a Pair<Manager> through a Pair<? 
+  extends Employee> reference? 
+  var managerBuddies = new Pair<Manager>(ceo, cfo); 
+  Pair<? extends Employee> wildcardBuddies = managerBuddies; // OK wildcardBuddies.setFirst(lowlyEmployee); // compile-time error   No corruption is possible. The call to setFirst is a type error. To see why, let us have a closer look at the type Pair<? extends Employee>. Its methods look like this: ? extends Employee getFirst() void setFirst(? extends Employee)   This makes it impossible to call the setFirst method. The compiler only knows that it needs some subtype of Employee, but it doesn’t know which   type. It refuses to pass any specific type—after all, ? might not match it. 
+  We don’t have this problem with getFirst: It is perfectly legal to assign the return value of getFirst to an Employee reference. 
+  This is the key idea behind bounded wildcards. We now have a way of distinguishing between the safe accessor methods and the unsafe mutator methods. 
+8.8.2 Supertype Bounds for Wildcards
+  Wildcard bounds are similar to type variable bounds, but they have an added capability—you can specify a supertype bound, like this: ? super Manager   This wildcard is restricted to all supertypes of Manager. (It was a stroke of good luck that the existing super keyword describes the relationship so accurately.) Why would you want to do this? A wildcard with a supertype bound gives you a behavior that is opposite to that of the wildcards described in Section 8.8, "Wildcard Types," on p. 459. You can supply parameters to methods, but you can’t use the return values. For example, Pair<? super Manager> has methods that can be described as follows: void setFirst(? super Manager) ? super Manager getFirst()   This is not actual Java syntax, but it shows what the compiler knows. The compiler cannot know the exact type of the setFirst method and therefore cannot accept a call with an argument of type Employee or Object. It is only possible to pass an object of type Manager or a subtype such as Executive. Moreover, if you call getFirst, there is no guarantee about the type of the returned object. You can only assign it to an Object. 
+  Here is a typical example. We have an array of managers and want to put the manager with the lowest and highest bonus into a Pair object. What kind of Pair? A Pair<Employee> should be fair game or, for that matter, a   Pair<Object> (see Figure 8.4). The following method will accept any appropriate Pair:   Figure 8.4 A wildcard with a supertype bound public static void minmaxBonus(Manager[] a, Pair<? super Manager> result) { if (a.length == 0) return; 
+  Manager min = a[0]; 
+  Manager max = a[0]; 
+  for (int i = 1; i < a.length; i++) { if (min.getBonus() > a[i].getBonus()) min = a[i]; 
+  if (max.getBonus() < a[i].getBonus()) max = a[i]; 
+  } 
+  result.setFirst(min); 
+  result.setSecond(max); 
+  } 
+  Intuitively speaking, wildcards with supertype bounds let you write to a generic object, while wildcards with subtype bounds let you read from a generic object. 
+  Here is another use for supertype bounds. The Comparable interface is itself a generic type. It is declared as follows: public interface Comparable<T> { public int compareTo(T other); 
+  } 
+  Here, the type variable indicates the type of the other parameter. For example, the String class implements Comparable<String>, and its compareTo method is declared as public int compareTo(String other)   This is nice—the explicit parameter has the correct type. Before the interface was generic, other was an Object, and a cast was necessary in the implementation of the method. 
+  Now that Comparable is a generic type, perhaps we should have done a better job with the min method of the ArrayAlg class? We could have declared it as public static <T extends Comparable<T>> T min(T[] a)   This looks more thorough than just using T extends Comparable, and it would work fine for many classes. For example, if you compute the minimum of a String array, then T is the type String, and String is a subtype of Comparable<String>. But we run into a problem when processing an array of LocalDate objects. As it happens, LocalDate implements ChronoLocalDate, and ChronoLocalDate extends Comparable<ChronoLocalDate>. Thus, LocalDate implements   Comparable<ChronoLocalDate> but not Comparable<LocalDate>. 
+  In a situation such as this one, supertypes come to the rescue: public static <T extends Comparable<? super T>> T min(T[] a) . . . 
+  Now the compareTo method has the form int compareTo(? super T)   Maybe it is declared to take an object of type T, or—for example, when T is LocalDate—a supertype of T. At any rate, it is safe to pass an object of type T to the compareTo method. 
+  To the uninitiated, a declaration such as <T extends Comparable<? 
+  super T>> is bound to look intimidating. This is unfortunate, because the intent of this declaration is to help application programmers by removing unnecessary restrictions on the call parameters. Application programmers with no interest in generics will probably learn quickly to gloss over these declarations and just take for granted that library programmers will do the right thing. If you are a library programmer, you’ll need to get used to wildcards, or your users will curse you and throw random casts at their code until it compiles. 
+  Note Another common use for supertype bounds is an argument type of a functional interface. For example, the Collection interface has a method default boolean removeIf(Predicate<? super E> filter)   The method removes all elements that fulfill the given predicate. For example, if you hate employees with odd hash codes, you can remove them like this:   ArrayList<Employee> staff = . . .; 
+  Predicate<Object> oddHashCode = obj -> obj.hashCode() %2 != 0; 
+  staff.removeIf(oddHashCode); 
+  You want to be able to pass a Predicate<Object>, not just a Predicate<Employee>. The super wildcard makes that possible. 
+8.8.3 Unbounded Wildcards
+  You can even use wildcards with no bounds at all—for example, Pair<?>. 
+  At first glance, this looks identical to the raw Pair type. Actually, the types are very different. The type Pair<?> has methods such as ? getFirst() void setFirst(?)   The return value of getFirst can only be assigned to an Object. The setFirst method can never be called, not even with an Object. That’s the essential difference between Pair<?> and Pair: you can call the setFirst method of the raw Pair class with any Object. 
+  Note You can call setFirst(null). 
+  Why would you ever want such a wimpy type? It is useful for very simple operations. For example, the following method tests whether a pair contains a null reference. It never needs the actual type. 
+  public static boolean hasNulls(Pair<?> p) { return p.getFirst() == null || p.getSecond() == null; 
+  } 
+  You could have avoided the wildcard type by turning hasNulls into a generic method: public static <T> boolean hasNulls(Pair<T> p)   However, the version with the wildcard type seems easier to read. 
+8.8.4 Wildcard Capture
+  Let us write a method that swaps the elements of a pair: public static void swap(Pair<?> p)   A wildcard is not a type variable, so we can’t write code that uses ? as a type. 
+  In other words, the following would be illegal: ? t = p.getFirst(); // ERROR p.setFirst(p.getSecond()); 
+  p.setSecond(t); 
+  That’s a problem because we need to temporarily hold the first element when we do the swapping. Fortunately, there is an interesting solution to this problem. We can write a helper method, swapHelper, like this: public static <T> void swapHelper(Pair<T> p) { T t = p.getFirst(); 
+  p.setFirst(p.getSecond()); 
+  p.setSecond(t); 
+  } 
+  Note that swapHelper is a generic method, whereas swap is not—it has a fixed parameter of type Pair<?>. 
+  Now we can call swapHelper from swap: public static void swap(Pair<?> p) { swapHelper(p); } 
+  In this case, the parameter T of the swapHelper method captures the   wildcard. It isn’t known what type the wildcard denotes, but it is a definite type, and the definition of <T>swapHelper makes perfect sense when T denotes that type. 
+  Of course, in this case, we were not compelled to use a wildcard. We could have directly implemented <T> void swap(Pair<T> p) as a generic method without wildcards. However, consider this example in which a wildcard type occurs naturally in the middle of a computation: public static void maxminBonus(Manager[] a, Pair<? super Manager> result) { minmaxBonus(a, result); 
+  PairAlg.swapHelper(result); // OK-swapHelper captures wildcard type } 
+  Here, the wildcard capture mechanism cannot be avoided. 
+  Wildcard capture is only legal in very limited circumstances. The compiler must be able to guarantee that the wildcard represents a single, definite type. 
+  For example, the T in ArrayList<Pair<T>> can never capture the wildcard in ArrayList<Pair<?>>. The array list might hold two Pair<?>, each of which has a different type for ?. 
+  The test program in Listing 8.3 gathers up the various methods that we discussed in the preceding sections so you can see them in context. 

@@ -1,0 +1,1015 @@
+You now know how to write Java programs that read XML. Let us now turn to
+the opposite process: producing XML output. Of course, you could write an XML
+file simply by making a sequence of print calls, printing the elements, attributes,
+and text content, but that would not be a good idea. The code is rather tedious, and
+you can easily make mistakes if you don’t pay attention to special symbols (such
+as " or <) in the attribute values and text content.
+
+From the Library of Hristo Dimov Hristov
+
+3.7 Generating XML Documents
+
+209
+
+A better approach is to build up a DOM tree with the contents of the document
+and then write out the tree contents. The following sections discuss the details.
+
+3.7.1 Documents without Namespaces
+To build a DOM tree, you start out with an empty document. You can get an
+empty document by calling the newDocument method of the DocumentBuilder class:
+Document doc = builder.newDocument();
+
+Use the createElement method of the Document class to construct the elements of your
+document:
+Element rootElement = doc.createElement(rootName);
+Element childElement = doc.createElement(childName);
+
+Use the createTextNode method to construct text nodes:
+Text textNode = doc.createTextNode(textContents);
+
+Add the root element to the document, and add the child nodes to their parents:
+doc.appendChild(rootElement);
+rootElement.appendChild(childElement);
+childElement.appendChild(textNode);
+
+As you build up the DOM tree, you may also need to set element attributes.
+Simply call the setAttribute method of the Element class:
+rootElement.setAttribute(name, value);
+
+3.7.2 Documents with Namespaces
+If you use namespaces, the procedure for creating a document is slightly different.
+First, set the builder factory to be namespace-aware, then create the builder:
+DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+factory.setNamespaceAware(true);
+builder = factory.newDocumentBuilder();
+
+Then use createElementNS instead of createElement to create any nodes:
+String namespace = "http://www.w3.org/2000/svg";
+Element rootElement = doc.createElementNS(namespace, "svg");
+
+If your node has a qualified name with a namespace prefix, then any necessary
+xmlns-prefixed attributes are created automatically. For example, if you need SVG
+inside XHTML, you can construct an element like this:
+Element svgElement = doc.createElement(namespace, "svg:svg")
+
+From the Library of Hristo Dimov Hristov
+
+210
+
+Chapter 3
+
+XML
+
+When the element is written, it turns into
+<svg:svg xmlns:svg="http://www.w3.org/2000/svg">
+
+If you need to set element attributes whose names are in a namespace, use the
+setAttributeNS method of the Element class:
+rootElement.setAttributeNS(namespace, qualifiedName, value);
+
+3.7.3 Writing Documents
+Somewhat curiously, it is not so easy to write a DOM tree to an output stream.
+The easiest approach is to use the Extensible Stylesheet Language Transformations
+(XSLT) API. For more information about XSLT, turn to Section 3.8, “XSL Transformations,” on p. 222. Right now, consider the code that follows a magic
+incantation to produce XML output.
+We apply the do-nothing transformation to the document and capture its output.
+To include a DOCTYPE node in the output, we also need to set the SYSTEM and PUBLIC
+identifiers as output properties.
+// construct the do-nothing transformation
+Transformer t = TransformerFactory.newInstance().newTransformer();
+// set output properties to get a DOCTYPE node
+t.setOutputProperty(OutputKeys.DOCTYPE_SYSTEM, systemIdentifier);
+t.setOutputProperty(OutputKeys.DOCTYPE_PUBLIC, publicIdentifier);
+// set indentation
+t.setOutputProperty(OutputKeys.INDENT, "yes");
+t.setOutputProperty(OutputKeys.METHOD, "xml");
+t.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+// apply the do-nothing transformation and send the output to a file
+t.transform(new DOMSource(doc), new StreamResult(new FileOutputStream(file)));
+
+Another approach is to use the LSSerializer interface. To get an instance, you have
+to use the following magic incantation:
+DOMImplementation impl = doc.getImplementation();
+DOMImplementationLS implLS = (DOMImplementationLS) impl.getFeature("LS", "3.0");
+LSSerializer ser = implLS.createLSSerializer();
+
+If you want spaces and line breaks, set this flag:
+ser.getDomConfig().setParameter("format-pretty-print", true);
+
+Then it’s simple enough to convert a document to a string:
+String str = ser.writeToString(doc);
+
+From the Library of Hristo Dimov Hristov
+
+3.7 Generating XML Documents
+
+211
+
+If you want to write the output directly to a file, you need an LSOutput:
+LSOutput out = implLS.createLSOutput();
+out.setEncoding("UTF-8");
+out.setByteStream(Files.newOutputStream(path));
+ser.write(doc, out);
+
+3.7.4 An Example: Generating an SVG File
+Listing 3.10 on p. 215 is a typical program that produces XML output. The program
+draws a modernist painting—a random set of colored rectangles (see Figure 3.6).
+To save a masterpiece, we use the Scalable Vector Graphics (SVG) format. SVG
+is an XML format to describe complex graphics in a device-independent fashion.
+You can find more information about SVG at www.w3c.org/Graphics/SVG. To view SVG
+files, simply use any modern browser.
+
+Figure 3.6 Generating modern art
+We don’t need to go into details about SVG; for our purposes, we just need to
+know how to express a set of colored rectangles. Here is a sample:
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20000802//EN"
+"http://www.w3.org/TR/2000/CR-SVG-20000802/DTD/svg-20000802.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="150">
+<rect x="231" y="61" width="9" height="12" fill="#6e4a13"/>
+<rect x="107" y="106" width="56" height="5" fill="#c406be"/>
+...
+</svg>
+
+As you can see, each rectangle is described as a rect node. The position, width,
+height, and fill color are attributes. The fill color is an RGB value in hexadecimal.
+
+From the Library of Hristo Dimov Hristov
+
+212
+
+Chapter 3
+
+XML
+
+NOTE: SVG uses attributes heavily. In fact, some attributes are quite complex.
+For example, here is a path element:
+<path d="M 100 100 L 300 100 L 200 300 z">
+
+The M denotes a “moveto” command, L is “lineto,” and z is “closepath” (!). Apparently, the designers of this data format didn’t have much confidence in using
+XML for structured data. In your own XML formats, you might want to use
+elements instead of complex attributes.
+
+javax.xml.parsers.DocumentBuilder 1.4
+
+• Document newDocument()
+returns an empty document.
+
+org.w3c.dom.Document 1.4
+
+• Element createElement(String name)
+• Element createElementNS(String uri, String qname)
+creates an element with the given name.
+• Text createTextNode(String data)
+creates a text node with the given data.
+
+org.w3c.dom.Node 1.4
+
+• Node appendChild(Node child)
+appends a node to the list of children of this node. Returns the appended node.
+
+org.w3c.dom.Element 1.4
+
+• void setAttribute(String name, String value)
+• void setAttributeNS(String uri, String qname, String value)
+sets the attribute with the given name to the given value.
+Parameters:
+
+uri
+
+The URI of the namespace, or null
+
+qname
+
+The qualified name. If it has an alias prefix, then uri must
+not be null.
+
+value
+
+The attribute value
+
+From the Library of Hristo Dimov Hristov
+
+3.7 Generating XML Documents
+
+213
+
+javax.xml.transform.TransformerFactory 1.4
+
+• static TransformerFactory newInstance()
+returns an instance of the TransformerFactory class.
+• Transformer newTransformer()
+returns an instance of the Transformer class that carries out an identity (do-nothing)
+transformation.
+
+javax.xml.transform.Transformer 1.4
+
+• void setOutputProperty(String name, String value)
+sets an output property. See www.w3.org/TR/xslt#output for a listing of the standard
+output properties. The most useful ones are shown here:
+doctype-public
+
+The public ID to be used in the DOCTYPE declaration
+
+doctype-system
+
+The system ID to be used in the DOCTYPE declaration
+
+indent
+
+"yes" or "no"
+
+method
+
+"xml", "html", "text", or a custom string
+
+• void transform(Source from, Result to)
+transforms an XML document.
+
+javax.xml.transform.dom.DOMSource 1.4
+
+• DOMSource(Node n)
+constructs a source from the given node. Usually, n is a document node.
+
+javax.xml.transform.stream.StreamResult 1.4
+
+•
+•
+•
+•
+
+StreamResult(File f)
+StreamResult(OutputStream out)
+StreamResult(Writer out)
+StreamResult(String systemID)
+
+constructs a stream result from a file, stream, writer, or system ID (usually a relative
+or absolute URL).
+
+From the Library of Hristo Dimov Hristov
+
+214
+
+Chapter 3
+
+XML
+
+3.7.5 Writing an XML Document with StAX
+In the preceding section, you saw how to produce an XML document by writing
+a DOM tree. If you have no other use for the DOM tree, that approach is not very
+efficient.
+The StAX API lets you write an XML tree directly. Construct an XMLStreamWriter from
+an OutputStream:
+XMLOutputFactory factory = XMLOutputFactory.newInstance();
+XMLStreamWriter writer = factory.createXMLStreamWriter(out);
+
+To produce the XML header, call
+writer.writeStartDocument()
+
+Then call
+writer.writeStartElement(name);
+
+Add attributes by calling
+writer.writeAttribute(name, value);
+
+Now you can add child elements by calling writeStartElement again, or write
+characters with
+writer.writeCharacters(text);
+
+When you have written all child nodes, call
+writer.writeEndElement();
+
+This causes the current element to be closed.
+To write an element without children (such as <img . . ./>), use the call
+writer.writeEmptyElement(name);
+
+Finally, at the end of the document, call
+writer.writeEndDocument();
+
+This call closes any open elements.
+You still need to close the XMLStreamWriter, and you need to do it manually since the
+XMLStreamWriter interface does not extend the AutoCloseable interface.
+As with the DOM/XSLT approach, you don’t have to worry about escaping
+characters in attribute values and character data. However, it is possible to produce
+malformed XML, such as a document with multiple root nodes. Also, the current
+version of StAX has no support for producing indented output.
+
+From the Library of Hristo Dimov Hristov
+
+3.7 Generating XML Documents
+
+215
+
+The program in Listing 3.10 shows you both approaches for writing XML.
+Listings 3.11 and 3.12 show the frame and component classes for the rectangle
+painting.
+
+Listing 3.10
+1
+
+write/XMLWriteTest.java
+
+package write;
+
+2
+3
+4
+
+import java.awt.*;
+import javax.swing.*;
+
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+
+/**
+* This program shows how to write an XML file. It saves a file describing a modern drawing in SVG
+* format.
+* @version 1.12 2016-04-27
+* @author Cay Horstmann
+*/
+public class XMLWriteTest
+{
+public static void main(String[] args)
+{
+EventQueue.invokeLater(() ->
+{
+JFrame frame = new XMLWriteFrame();
+frame.setTitle("XMLWriteTest");
+frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+frame.setVisible(true);
+});
+}
+}
+
+Listing 3.11
+1
+
+write/XMLWriteFrame.java
+
+package write;
+
+2
+3
+4
+
+import java.io.*;
+import java.nio.file.*;
+
+5
+6
+7
+8
+9
+10
+
+import javax.swing.*;
+import javax.xml.stream.*;
+import javax.xml.transform.*;
+import javax.xml.transform.dom.*;
+import javax.xml.transform.stream.*;
+
+11
+12
+
+import org.w3c.dom.*;
+
+13
+
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+216
+
+Chapter 3
+
+XML
+
+Listing 3.11 (Continued)
+14
+15
+16
+17
+18
+19
+20
+
+/**
+* A frame with a component for showing a modern drawing.
+*/
+public class XMLWriteFrame extends JFrame
+{
+private RectangleComponent comp;
+private JFileChooser chooser;
+
+21
+22
+23
+24
+
+public XMLWriteFrame()
+{
+chooser = new JFileChooser();
+
+25
+
+// add component to frame
+
+26
+27
+
+comp = new RectangleComponent();
+add(comp);
+
+28
+29
+30
+
+// set up menu bar
+
+31
+32
+
+JMenuBar menuBar = new JMenuBar();
+setJMenuBar(menuBar);
+
+33
+34
+35
+
+JMenu menu = new JMenu("File");
+menuBar.add(menu);
+
+36
+37
+38
+
+JMenuItem newItem = new JMenuItem("New");
+menu.add(newItem);
+newItem.addActionListener(event -> comp.newDrawing());
+
+39
+40
+41
+42
+
+JMenuItem saveItem = new JMenuItem("Save with DOM/XSLT");
+menu.add(saveItem);
+saveItem.addActionListener(event -> saveDocument());
+
+43
+44
+45
+46
+
+JMenuItem saveStAXItem = new JMenuItem("Save with StAX");
+menu.add(saveStAXItem);
+saveStAXItem.addActionListener(event -> saveStAX());
+
+47
+48
+49
+50
+
+JMenuItem exitItem = new JMenuItem("Exit");
+menu.add(exitItem);
+exitItem.addActionListener(event -> System.exit(0));
+pack();
+
+51
+52
+53
+54
+55
+
+}
+
+56
+57
+58
+59
+
+/**
+* Saves the drawing in SVG format, using DOM/XSLT.
+*/
+
+From the Library of Hristo Dimov Hristov
+
+3.7 Generating XML Documents
+
+217
+
+public void saveDocument()
+{
+try
+{
+if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return;
+File file = chooser.getSelectedFile();
+Document doc = comp.buildDocument();
+Transformer t = TransformerFactory.newInstance().newTransformer();
+t.setOutputProperty(OutputKeys.DOCTYPE_SYSTEM,
+"http://www.w3.org/TR/2000/CR-SVG-20000802/DTD/svg-20000802.dtd");
+t.setOutputProperty(OutputKeys.DOCTYPE_PUBLIC, "-//W3C//DTD SVG 20000802//EN");
+t.setOutputProperty(OutputKeys.INDENT, "yes");
+t.setOutputProperty(OutputKeys.METHOD, "xml");
+t.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+t.transform(new DOMSource(doc), new StreamResult(Files.newOutputStream(file.toPath())));
+}
+catch (TransformerException | IOException ex)
+{
+ex.printStackTrace();
+}
+}
+
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+
+/**
+* Saves the drawing in SVG format, using StAX.
+*/
+public void saveStAX()
+{
+if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return;
+File file = chooser.getSelectedFile();
+XMLOutputFactory factory = XMLOutputFactory.newInstance();
+try
+{
+XMLStreamWriter writer = factory.createXMLStreamWriter(
+Files.newOutputStream(file.toPath()));
+try
+{
+comp.writeDocument(writer);
+}
+finally
+{
+writer.close(); // Not autocloseable
+}
+}
+catch (XMLStreamException | IOException ex)
+{
+ex.printStackTrace();
+}
+}
+
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+
+}
+
+From the Library of Hristo Dimov Hristov
+
+218
+
+Chapter 3
+
+XML
+
+Listing 3.12
+1
+
+write/RectangleComponent.java
+
+package write;
+
+2
+3
+4
+5
+6
+7
+8
+9
+
+import java.awt.*;
+import java.awt.geom.*;
+import java.util.*;
+import javax.swing.*;
+import javax.xml.parsers.*;
+import javax.xml.stream.*;
+import org.w3c.dom.*;
+
+10
+11
+12
+13
+14
+15
+16
+
+/**
+* A component that shows a set of colored rectangles.
+*/
+public class RectangleComponent extends JComponent
+{
+private static final Dimension PREFERRED_SIZE = new Dimension(300, 200);
+
+17
+18
+19
+20
+21
+
+private java.util.List<Rectangle2D> rects;
+private java.util.List<Color> colors;
+private Random generator;
+private DocumentBuilder builder;
+
+22
+23
+24
+25
+26
+27
+
+public RectangleComponent()
+{
+rects = new ArrayList<>();
+colors = new ArrayList<>();
+generator = new Random();
+
+28
+
+DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+factory.setNamespaceAware(true);
+try
+{
+builder = factory.newDocumentBuilder();
+}
+catch (ParserConfigurationException e)
+{
+e.printStackTrace();
+}
+
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+
+}
+
+40
+41
+42
+43
+44
+45
+
+/**
+* Create a new random drawing.
+*/
+public void newDrawing()
+{
+
+From the Library of Hristo Dimov Hristov
+
+3.7 Generating XML Documents
+
+int n = 10 + generator.nextInt(20);
+rects.clear();
+colors.clear();
+for (int i = 1; i <= n; i++)
+{
+int x = generator.nextInt(getWidth());
+int y = generator.nextInt(getHeight());
+int width = generator.nextInt(getWidth() - x);
+int height = generator.nextInt(getHeight() - y);
+rects.add(new Rectangle(x, y, width, height));
+int r = generator.nextInt(256);
+int g = generator.nextInt(256);
+int b = generator.nextInt(256);
+colors.add(new Color(r, g, b));
+}
+repaint();
+
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+
+219
+
+}
+
+63
+64
+65
+66
+67
+
+public void paintComponent(Graphics g)
+{
+if (rects.size() == 0) newDrawing();
+Graphics2D g2 = (Graphics2D) g;
+
+68
+
+// draw all rectangles
+for (int i = 0; i < rects.size(); i++)
+{
+g2.setPaint(colors.get(i));
+g2.fill(rects.get(i));
+}
+
+69
+70
+71
+72
+73
+74
+75
+
+}
+
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+
+/**
+* Creates an SVG document of the current drawing.
+* @return the DOM tree of the SVG document
+*/
+public Document buildDocument()
+{
+String namespace = "http://www.w3.org/2000/svg";
+Document doc = builder.newDocument();
+Element svgElement = doc.createElementNS(namespace, "svg");
+doc.appendChild(svgElement);
+svgElement.setAttribute("width", "" + getWidth());
+svgElement.setAttribute("height", "" + getHeight());
+for (int i = 0; i < rects.size(); i++)
+{
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+220
+
+Chapter 3
+
+XML
+
+Listing 3.12 (Continued)
+Color c = colors.get(i);
+Rectangle2D r = rects.get(i);
+Element rectElement = doc.createElementNS(namespace, "rect");
+rectElement.setAttribute("x", "" + r.getX());
+rectElement.setAttribute("y", "" + r.getY());
+rectElement.setAttribute("width", "" + r.getWidth());
+rectElement.setAttribute("height", "" + r.getHeight());
+rectElement.setAttribute("fill", String.format("#%06x",
+c.getRGB() & 0xFFFFFF));
+svgElement.appendChild(rectElement);
+
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+
+}
+return doc;
+
+101
+102
+
+}
+
+103
+104
+
+/**
+* Writes an SVG document of the current drawing.
+* @param writer the document destination
+*/
+public void writeDocument(XMLStreamWriter writer) throws XMLStreamException
+{
+writer.writeStartDocument();
+writer.writeDTD("<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 20000802//EN\" "
++ "\"http://www.w3.org/TR/2000/CR-SVG-20000802/DTD/svg-20000802.dtd\">");
+writer.writeStartElement("svg");
+writer.writeDefaultNamespace("http://www.w3.org/2000/svg");
+writer.writeAttribute("width", "" + getWidth());
+writer.writeAttribute("height", "" + getHeight());
+for (int i = 0; i < rects.size(); i++)
+{
+Color c = colors.get(i);
+Rectangle2D r = rects.get(i);
+writer.writeEmptyElement("rect");
+writer.writeAttribute("x", "" + r.getX());
+writer.writeAttribute("y", "" + r.getY());
+writer.writeAttribute("width", "" + r.getWidth());
+writer.writeAttribute("height", "" + r.getHeight());
+writer.writeAttribute("fill", String.format("#%06x",
+c.getRGB() & 0xFFFFFF));
+}
+writer.writeEndDocument(); // closes svg element
+}
+
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+
+public Dimension getPreferredSize() { return PREFERRED_SIZE; }
+
+133
+134
+
+}
+
+From the Library of Hristo Dimov Hristov
+
+3.7 Generating XML Documents
+
+221
+
+javax.xml.stream.XMLOutputFactory 6
+
+• static XMLOutputFactory newInstance()
+returns an instance of the XMLOutputFactory class.
+•
+•
+•
+•
+
+XMLStreamWriter createXMLStreamWriter(OutputStream in)
+XMLStreamWriter createXMLStreamWriter(OutputStream in, String characterEncoding)
+XMLStreamWriter createXMLStreamWriter(Writer in)
+XMLStreamWriter createXMLStreamWriter(Result in)
+
+creates a writer that writes to the given stream, writer, or JAXP result.
+
+javax.xml.stream.XMLStreamWriter 6
+
+• void writeStartDocument()
+• void writeStartDocument(String xmlVersion)
+• void writeStartDocument(String encoding, String xmlVersion)
+writes the XML processing instruction at the top of the document. Note that the
+encoding parameter is only used to write the attribute. It does not set the character
+encoding of the output.
+• void setDefaultNamespace(String namespaceURI)
+• void setPrefix(String prefix, String namespaceURI)
+sets the default namespace or the namespace associated with a prefix.The declaration
+is scoped to the current element or, if no element has been written, to the document
+root.
+• void writeStartElement(String localName)
+• void writeStartElement(String namespaceURI, String localName)
+writes a start tag, replacing the namespaceURI with the associated prefix.
+• void writeEndElement()
+closes the current element.
+• void writeEndDocument()
+closes all open elements.
+• void writeEmptyElement(String localName)
+• void writeEmptyElement(String namespaceURI, String localName)
+writes a self-closing tag, replacing the namespaceURI with the associated prefix.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+222
+
+Chapter 3
+
+XML
+
+javax.xml.stream.XMLStreamWriter 6 (Continued)
+
+• void writeAttribute(String localName, String value)
+• void writeAttribute(String namespaceURI, String localName, String value)
+writes an attribute for the current element, replacing the namespaceURI with the
+associated prefix.
+• void writeCharacters(String text)
+writes character data.
+• void writeCData(String text)
+writes a CDATA block.
+• void writeDTD(String dtd)
+writes the dtd string, which is assumed to contain a DOCTYPE declaration.
+• void writeComment(String comment)
+writes a comment.
+• void close()
+closes this writer.
+

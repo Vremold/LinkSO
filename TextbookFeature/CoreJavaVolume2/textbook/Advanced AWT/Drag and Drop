@@ -1,0 +1,240 @@
+  903   java.awt.datatransfer.Clipboard 1.1   • Clipboard(String name) constructs a local clipboard with the given name. 
+  11.14 Drag and Drop When you use cut and paste to transmit information between two programs, the clipboard acts as an intermediary. The drag and drop metaphor cuts out the middleman and lets two programs communicate directly. The Java platform offers basic support for drag and drop. You can carry out drag and drop operations between Java applications and native applications. This section shows you how to write a Java application that is a drop target, and an application that is a drag source. 
+  Before going deeper into the Java platform support for drag and drop, let us quickly look at the drag-and-drop user interface. We use the Windows Explorer and WordPad programs as examples—on another platform, you can experiment with locally available programs with drag-and-drop capabilities. 
+  You initiate a drag operation with a gesture inside a drag source—by first selecting one or more elements and then dragging the selection away from its initial location. 
+  When you release the mouse button over a drop target that accepts the drop operation, the drop target queries the drag source for information about the dropped elements and carries out an appropriate operation. For example, if you drop a file icon from a file manager on top of a directory icon, the file is moved into that directory. However, if you drag it to a text editor, the text editor opens the file. 
+  (This requires, of course, that you use a file manager and text editor that are capable of drag and drop, such as Explorer/WordPad in Windows or Nautilus/gedit in Gnome.) If you hold down the Ctrl key while dragging, the type of the drop action changes from a move action to a copy action, and a copy of the file is placed into the directory. 
+  If you hold down both Shift and Ctrl keys, then a link to the file is placed into the directory. (Other platforms might use other keyboard combinations for these operations.) Thus, there are three types of drop actions with different gestures: • Move • Copy • Link   From the Library of Hristo Dimov Hristov   904   Chapter 11   Advanced AWT   The intention of the link action is to establish a reference to the dropped element. 
+  Such links typically require support from the host operating system (such as symbolic links for files, or object links for document components) and don’t usually make a lot of sense in cross-platform programs. In this section, we focus on using drag and drop for copying and moving. 
+  There is usually some visual feedback for the drag operation. Minimally, the cursor shape changes. As the cursor moves over possible drop targets, the cursor shape indicates whether the drop is possible or not. If a drop is possible, the cursor shape also indicates the type of the drop action. Table 11.6 shows several drop cursor shapes. 
+  Table 11.6 Drop Cursor Shapes Action   Windows Icon   Gnome Icon   Move   Copy   Link   Drop not allowed   You can also drag other elements besides file icons. For example, you can select text in WordPad or gedit and drag it. Try dropping text fragments into willing drop targets and see how they react. 
+  NOTE: This experiment shows a disadvantage of drag and drop as a user interface mechanism. It can be difficult for users to anticipate what they can drag, where they can drop it, and what happens when they do. Because the default “move” action can remove the original, many users are understandably cautious about experimenting with drag and drop. 
+11.14.1 Data Transfer Support in Swing
+  Starting with Java SE 1.4, several Swing components have built-in support for drag and drop (see Table 11.7). You can drag selected text from a number of components, and you can drop text into text components. For backward   From the Library of Hristo Dimov Hristov   11.14 Drag and Drop   905   compatibility, you must call the setDragEnabled method to activate dragging. Dropping is always enabled. 
+  Table 11.7 Data Transfer Support in Swing Components Component   Drag Source   Drop Target   JFileChooser   Exports file list   N/A   JColorChooser   Exports color object   Accepts color objects   JTextField JFormattedTextField   Exports selected text   Accepts text   JPasswordField   N/A (for security)   Accepts text   JTextArea JTextPane JEditorPane   Exports selected text   Accepts text and file lists   JList JTable JTree   Exports text description of selection (copy only)   N/A   NOTE: The java.awt.dnd package provides a lower-level drag-and-drop API that forms the basis for the Swing drag and drop. We do not discuss that API in this book. 
+  The program in Listing 11.20 demonstrates the behavior. As you run the program, note these points: • You can select multiple items in the list, table, or tree (see Listing 11.21) and drag them. 
+  • Dragging items from the table is a bit awkward. You first select with the mouse, then let go of the mouse button, then click it again, and then you drag. 
+  • When you drop the items in the text area, you can see how the dragged information is formatted. Table cells are separated by tabs, and each selected row is on a separate line (see Figure 11.44). 
+  • You can only copy, not move, items from the list, table, tree, file chooser, or color chooser. Removing items from a list, table, or tree is not possible with all data models. You will see in the next section how to implement this capability when the data model is editable. 
+  • You cannot drag into the list, table, tree, or file chooser. 
+  From the Library of Hristo Dimov Hristov   906   Chapter 11   Advanced AWT   Figure 11.44 The Swing drag-and-drop test program • If you run two copies of the program, you can drag a color from one color chooser to the other. 
+  • You cannot drag text out of the text area because we didn’t call setDragEnabled on it. 
+  The Swing package provides a potentially useful mechanism to quickly turn a component into a drag source and drop target. You can install a transfer handler for a given property. For example, in our sample program, we call textField.setTransferHandler(new TransferHandler("background")); 
+  You can now drag a color into the text field, and its background color changes. 
+  When a drop occurs, the transfer handler checks whether one of the data flavors has representation class Color. If so, it invokes the setBackground method. 
+  From the Library of Hristo Dimov Hristov   11.14 Drag and Drop   907   By installing this transfer handler into the text field, you disable the standard transfer handler. You can no longer cut, copy, paste, drag, or drop text in the text field. However, you can now drag color out of this text field. You still need to select some text to initiate the drag gesture. When you drag the text, you’ll find that you can drop it into the color chooser and change its color value to the text field’s background color. However, you cannot drop the text into the text area. 
+  Listing 11.20 1   dnd/SwingDnDTest.java   package dnd; 
+  2 3 4   import java.awt.*; 
+  import javax.swing.*; 
+  5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23   /** * This program demonstrates the basic Swing support for drag and drop. 
+  * @version 1.11 2016-05-10 * @author Cay Horstmann */ public class SwingDnDTest { public static void main(String[] args) { EventQueue.invokeLater(() -> { JFrame frame = new SwingDnDFrame(); 
+  frame.setTitle("SwingDnDTest"); 
+  frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
+  frame.setVisible(true); 
+  }); 
+  } 
+  } 
+  Listing 11.21 1   dnd/SampleComponents.java   package dnd; 
+  2 3   import java.awt.*; 
+  4 5 6   import javax.swing.*; 
+  import javax.swing.tree.*; 
+  7 8 9 10 11   public class SampleComponents { public static JTree tree() { (Continues)   From the Library of Hristo Dimov Hristov   908   Chapter 11   Advanced AWT   Listing 11.21 (Continued) DefaultMutableTreeNode root = new DefaultMutableTreeNode("World"); 
+  DefaultMutableTreeNode country = new DefaultMutableTreeNode("USA"); 
+  root.add(country); 
+  DefaultMutableTreeNode state = new DefaultMutableTreeNode("California"); 
+  country.add(state); 
+  DefaultMutableTreeNode city = new DefaultMutableTreeNode("San Jose"); 
+  state.add(city); 
+  city = new DefaultMutableTreeNode("Cupertino"); 
+  state.add(city); 
+  state = new DefaultMutableTreeNode("Michigan"); 
+  country.add(state); 
+  city = new DefaultMutableTreeNode("Ann Arbor"); 
+  state.add(city); 
+  country = new DefaultMutableTreeNode("Germany"); 
+  root.add(country); 
+  state = new DefaultMutableTreeNode("Schleswig-Holstein"); 
+  country.add(state); 
+  city = new DefaultMutableTreeNode("Kiel"); 
+  state.add(city); 
+  return new JTree(root); 
+  12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31   } 
+  32 33   public static JList<String> list() { String[] words = { "quick", "brown", "hungry", "wild", "silent", "huge", "private", "abstract", "static", "final" }; 
+  34 35 36 37 38   DefaultListModel<String> model = new DefaultListModel<>(); 
+  for (String word : words) model.addElement(word); 
+  return new JList<>(model); 
+  39 40 41 42   } 
+  43 44   public static JTable table() { Object[][] cells = { { "Mercury", 2440.0, 0, false, Color.YELLOW }, { "Venus", 6052.0, 0, false, Color.YELLOW }, { "Earth", 6378.0, 1, false, Color.BLUE }, { "Mars", 3397.0, 2, false, Color.RED }, { "Jupiter", 71492.0, 16, true, Color.ORANGE }, { "Saturn", 60268.0, 18, true, Color.ORANGE }, { "Uranus", 25559.0, 17, true, Color.BLUE }, { "Neptune", 24766.0, 8, true, Color.BLUE }, { "Pluto", 1137.0, 1, false, Color.BLACK } }; 
+  45 46 47 48 49 50 51 52 53 54 55   String[] columnNames = { "Planet", "Radius", "Moons", "Gaseous", "Color" }; 
+  return new JTable(cells, columnNames); 
+  56 57   } 
+  58 59   } 
+  From the Library of Hristo Dimov Hristov   11.14 Drag and Drop   909   javax.swing.JComponent 1.2   • void setTransferHandler(TransferHandler handler) 1.4 sets a transfer handler to handle data transfer operations (cut, copy, paste, drag, drop). 
+  javax.swing.TransferHandler 1.4   • TransferHandler(String propertyName) constructs a transfer handler that reads or writes the JavaBeans component property with the given name when a data transfer operation is executed. 
+  javax.swing.JFileChooser 1.2 javax.swing.JColorChooser 1.2 javax.swing.text.JTextComponent 1.2 javax.swing.JList 1.2 javax.swing.JTable 1.2 javax.swing.JTree 1.2   • void setDragEnabled(boolean b) 1.4 enables or disables dragging of data out of this component. 
+11.14.2 Drag Sources
+  In the previous section, you saw how to take advantage of the basic drag-anddrop support in Swing. In this section, we’ll show you how to configure any component as a drag source. In the next section, we’ll discuss drop targets and present a sample component that is both a source and a target for images. 
+  To customize the drag-and-drop behavior of a Swing component, subclass the TransferHandler class. First, override the getSourceActions method to indicate which actions (copy, move, link) your component supports. Next, override the createTransferable method that produces a Transferable object, following the same process that you use for copying to the clipboard. 
+  In our sample program, we drag images out of a JList that is filled with image icons (see Figure 11.45). Here is the implementation of the createTransferable method. 
+  The selected image is simply placed into an ImageTransferable wrapper. 
+  From the Library of Hristo Dimov Hristov   910   Chapter 11   Advanced AWT   protected Transferable createTransferable(JComponent source) { JList list = (JList) source; 
+  int index = list.getSelectedIndex(); 
+  if (index < 0) return null; 
+  ImageIcon icon = (ImageIcon) list.getModel().getElementAt(index); 
+  return new ImageTransferable(icon.getImage()); 
+  } 
+  Figure 11.45 The ImageList drag-and-drop application In our example, we are fortunate that a JList is already wired for initiating a drag gesture. You simply activate that mechanism by calling the setDragEnabled method. 
+  If you add drag support to a component that does not recognize a drag gesture, you need to initiate the transfer yourself. For example, here is how you can initiate dragging on a JLabel:   From the Library of Hristo Dimov Hristov   11.14 Drag and Drop   911   label.addMouseListener(new MouseAdapter() { public void mousePressed(MouseEvent evt) { int mode; 
+  if ((evt.getModifiers() & (InputEvent.CTRL_MASK | InputEvent.SHIFT_MASK)) != 0) mode = TransferHandler.COPY; 
+  else mode = TransferHandler.MOVE; 
+  JComponent comp = (JComponent) evt.getSource(); 
+  TransferHandler th = comp.getTransferHandler(); 
+  th.exportAsDrag(comp, evt, mode); 
+  } 
+  }); 
+  Here, we simply start the transfer when the user clicks on the label. A more sophisticated implementation would watch for a mouse motion that drags the mouse by a small amount. 
+  When the user completes the drop action, the exportDone method of the source transfer handler is invoked. In that method, you need to remove the transferred object if the user carried out a move action. Here is the implementation for the image list: protected void exportDone(JComponent source, Transferable data, int action) { if (action == MOVE) { JList list = (JList) source; 
+  int index = list.getSelectedIndex(); 
+  if (index < 0) return; 
+  DefaultListModel model = (DefaultListModel) list.getModel(); 
+  model.remove(index); 
+  } 
+  } 
+  To summarize, to turn a component into a drag source, you have to add a transfer handler that specifies the following: • Which actions are supported • Which data are transferred • How the original data are removed after a move action In addition, if your drag source is a component other than those listed in Table 11.7 on p. 905, you need to watch for a mouse gesture and initiate the transfer. 
+  From the Library of Hristo Dimov Hristov   912   Chapter 11   Advanced AWT   javax.swing.TransferHandler 1.4   • int getSourceActions(JComponent c) override to return the allowable source actions (bitwise or combination of COPY, MOVE, and LINK) when dragging from the given component. 
+  • protected Transferable createTransferable(JComponent source) override to create the Transferable for the data that is to be dragged. 
+  • void exportAsDrag(JComponent comp, InputEvent e, int action) starts a drag gesture from the given component. The action is COPY, MOVE, or LINK. 
+  • protected void exportDone(JComponent source, Transferable data, int action) override to adjust the drag source after a successful transfer. 
+11.14.3 Drop Targets
+  In this section, we’ll show you how to implement a drop target. Our example is again a JList with image icons. We’ll add drop support so that users can drop images into the list. 
+  To make a component into a drop target, set a TransferHandler and implement the canImport and importData methods. 
+  NOTE: You can add a transfer handler to a JFrame. This is most commonly used for dropping files into an application. Valid drop locations include the frame decorations and the menu bar, but not components contained in the frame (which have their own transfer handlers). 
+  The canImport method is called continuously as the user moves the mouse over the drop target component. Return true if a drop is allowed. This information affects the cursor icon that gives visual feedback whether the drop is allowed. 
+  The canImport method has a parameter of type TransferHandler.TransferSupport. Through this parameter, you can obtain the drop action chosen by the user, the drop location, and the data to be transferred. (Before Java SE 6, a different canImport method was called that only supplies a list of data flavors.) In the canImport method, you can also override the user drop action. For example, if a user chose the move action but it would be inappropriate to remove the original, you can force the transfer handler to use a copy action instead. 
+  Here is a typical example. The image list component is willing to accept drops of file lists and images. However, if a file list is dragged into the component, a   From the Library of Hristo Dimov Hristov   11.14 Drag and Drop   913   user-selected MOVE action is changed into a COPY action, so that the image files do not get deleted. 
+  public boolean canImport(TransferSupport support) { if (support.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) { if (support.getUserDropAction() == MOVE) support.setDropAction(COPY); 
+  return true; 
+  } 
+  else return support.isDataFlavorSupported(DataFlavor.imageFlavor); 
+  } 
+  A more sophisticated implementation could check that the files actually contain images. 
+  The Swing components JList, JTable, JTree, and JTextComponent give visual feedback about insertion positions as the mouse is moved over the drop target. By default, the selection (for JList, JTable, and JTree) or the caret (for JTextComponent) is used to indicate the drop location. That approach is neither user-friendly nor flexible, and it is the default solely for backward compatibility. You should call the setDropMode method to choose a more appropriate visual feedback. 
+  You can control whether the dropped data should overwrite existing items or be inserted between them. For example, in our sample program, we call setDropMode(DropMode.ON_OR_INSERT); 
+  to allow the user to drop onto an item (thereby replacing it), or to insert between two items (see Figure 11.46). Table 11.8 shows the drop modes supported by the Swing components. 
+  Figure 11.46 Visual indicators for dropping onto an item and between two items Once the user completes the drop gesture, the importData method is invoked. You need to obtain the data from the drag source. Invoke the getTransferable method on the TransferSupport parameter to obtain a reference to a Transferable object. This is the same interface that is used for copy and paste. 
+  From the Library of Hristo Dimov Hristov   914   Chapter 11   Advanced AWT   Table 11.8 Drop Modes Component   Supported Drop Modes   JList, JTree   ON, INSERT, ON_OR_INSERT, USE_SELECTION   JTable   ON, INSERT, ON_OR_INSERT, INSERT_ROWS, INSERT_COLS, ON_OR_INSERT_ROWS, ON_OR_INSERT_COLS, USE_SELECTION   JTextComponent   INSERT, USE_SELECTION (actually moves the caret, not the selection)   One data type that is commonly used for drag and drop is the DataFlavor. 
+  javaFileListFlavor. A file list describes a set of files that are dropped onto the target. 
+  The transfer data is an object of type List<File>. Here is the code for retrieving the files: DataFlavor[] flavors = transferable.getTransferDataFlavors(); 
+  if (Arrays.asList(flavors).contains(DataFlavor.javaFileListFlavor)) { List<File> fileList = (List<File>) transferable.getTransferData(DataFlavor.javaFileListFlavor); 
+  for (File f : fileList) { do something with f; 
+  } 
+  } 
+  When dropping into one of the components listed in Table 11.8, you need to know precisely where to drop the data. Invoke the getDropLocation method on the TransferSupport parameter to find where the drop occurred. This method returns an object of a subclass of TransferHandler.DropLocation. The JList, JTable, JTree, and JTextComponent classes define subclasses that specify location in the particular data model. For example, a location in a list is simply an integer index, but a location in a tree is a tree path. Here is how we obtain the drop location in our image list: int index; 
+  if (support.isDrop()) { JList.DropLocation location = (JList.DropLocation) support.getDropLocation(); 
+  index = location.getIndex(); 
+  } 
+  else index = model.size(); 
+  The JList.DropLocation subclass has a method getIndex that returns the index of the drop. (The JTree.DropLocation subclass has a method getPath instead.) The importData method is also called when data are pasted into the component with the Ctrl+V keystroke. In that case, the getDropLocation method would throw an IllegalStateException. Therefore, if the isDrop method returns false, we simply append the pasted data to the end of the list. 
+  From the Library of Hristo Dimov Hristov   11.14 Drag and Drop   915   When inserting into a list, table, or tree, you also need to check whether the data should be inserted between items or replace the item at the drop location. For a list, invoke the isInsert method of the JList.DropLocation. For the other components, see the API notes for their drop location classes at the end of this section. 
+  To summarize, to turn a component into a drop target, add a transfer handler that specifies the following: • When a dragged item can be accepted • How the dropped data are imported In addition, if you add drop support to a JList, JTable, JTree, or JTextComponent, you should set the drop mode. 
+  Listing 11.22 shows the frame class of the program. Note that the ImageList class is both a drag source and a drop target. Try dragging images between the two lists. You can also drag image files from a file chooser of another program into the lists. 
+  Listing 11.22 1   dndImage/imageListDnDFrame.java   package dndImage; 
+  2 3 4 5 6 7 8 9 10   import java.awt.*; 
+  import java.awt.datatransfer.*; 
+  import java.io.*; 
+  import java.nio.file.*; 
+  import java.util.*; 
+  import java.util.List; 
+  import javax.imageio.*; 
+  import javax.swing.*; 
+  11 12 13 14 15   public class ImageListDnDFrame extends JFrame { private static final int DEFAULT_WIDTH = 600; 
+  private static final int DEFAULT_HEIGHT = 500; 
+  16 17 18   private ImageList list1; 
+  private ImageList list2; 
+  19 20 21 22   public ImageListDnDFrame() { setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT); 
+  23 24 25   list1 = new ImageList(Paths.get(getClass().getPackage().getName(), "images1")); 
+  list2 = new ImageList(Paths.get(getClass().getPackage().getName(), "images2")); 
+  26   (Continues)   From the Library of Hristo Dimov Hristov   916   Chapter 11   Advanced AWT   Listing 11.22 (Continued) setLayout(new GridLayout(2, 1)); 
+  add(new JScrollPane(list1)); 
+  add(new JScrollPane(list2)); 
+  27 28 29   } 
+  30 31   } 
+  32 33 34 35 36 37 38 39 40 41 42 43 44 45 46   class ImageList extends JList<ImageIcon> { public ImageList(Path dir) { DefaultListModel<ImageIcon> model = new DefaultListModel<>(); 
+  try (DirectoryStream<Path> entries = Files.newDirectoryStream(dir)) { for (Path entry : entries) model.addElement(new ImageIcon(entry.toString())); 
+  } 
+  catch (IOException ex) { ex.printStackTrace(); 
+  } 
+  47   setModel(model); 
+  setVisibleRowCount(0); 
+  setLayoutOrientation(JList.HORIZONTAL_WRAP); 
+  setDragEnabled(true); 
+  setDropMode(DropMode.ON_OR_INSERT); 
+  setTransferHandler(new ImageListTransferHandler()); 
+  48 49 50 51 52 53   } 
+  54 55   } 
+  56 57 58 59   class ImageListTransferHandler extends TransferHandler { // support for drag   60 61 62 63 64   public int getSourceActions(JComponent source) { return COPY_OR_MOVE; 
+  } 
+  65 66 67 68 69 70 71 72 73   protected Transferable createTransferable(JComponent source) { ImageList list = (ImageList) source; 
+  int index = list.getSelectedIndex(); 
+  if (index < 0) return null; 
+  ImageIcon icon = list.getModel().getElementAt(index); 
+  return new ImageTransferable(icon.getImage()); 
+  } 
+  74   From the Library of Hristo Dimov Hristov   11.14 Drag and Drop   75 76 77 78 79 80 81 82 83 84 85   917   protected void exportDone(JComponent source, Transferable data, int action) { if (action == MOVE) { ImageList list = (ImageList) source; 
+  int index = list.getSelectedIndex(); 
+  if (index < 0) return; 
+  DefaultListModel<?> model = (DefaultListModel<?>) list.getModel(); 
+  model.remove(index); 
+  } 
+  } 
+  86 87   // support for drop   88 89 90 91 92 93 94 95 96 97   public boolean canImport(TransferSupport support) { if (support.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) { if (support.getUserDropAction() == MOVE) support.setDropAction(COPY); 
+  return true; 
+  } 
+  else return support.isDataFlavorSupported(DataFlavor.imageFlavor); 
+  } 
+  98 99 100 101 102   public boolean importData(TransferSupport support) { ImageList list = (ImageList) support.getComponent(); 
+  DefaultListModel<ImageIcon> model = (DefaultListModel<ImageIcon>) list.getModel(); 
+  103 104 105   Transferable transferable = support.getTransferable(); 
+  List<DataFlavor> flavors = Arrays.asList(transferable.getTransferDataFlavors()); 
+  106 107   List<Image> images = new ArrayList<>(); 
+  108 109 110 111 112 113 114 115 116 117 118 119 120 121 122   try { if (flavors.contains(DataFlavor.javaFileListFlavor)) { @SuppressWarnings("unchecked") List<File> fileList = (List<File>) transferable.getTransferData(DataFlavor.javaFileListFlavor); 
+  for (File f : fileList) { try { images.add(ImageIO.read(f)); 
+  } 
+  catch (IOException ex) { (Continues)   From the Library of Hristo Dimov Hristov   918   Chapter 11   Advanced AWT   Listing 11.22 (Continued) // couldn't read image--skip   123   } 
+  124   } 
+  } 
+  else if (flavors.contains(DataFlavor.imageFlavor)) { images.add((Image) transferable.getTransferData(DataFlavor.imageFlavor)); 
+  } 
+  125 126 127 128 129 130 131   int index; 
+  if (support.isDrop()) { JList.DropLocation location = (JList.DropLocation) support.getDropLocation(); 
+  index = location.getIndex(); 
+  if (!location.isInsert()) model.remove(index); // replace location } 
+  else index = model.size(); 
+  for (Image image : images) { model.add(index, new ImageIcon(image)); 
+  index++; 
+  } 
+  return true; 
+  132 133 134 135 136 137 138 139 140 141 142 143 144 145   } 
+  catch (IOException | UnsupportedFlavorException ex) { return false; 
+  } 
+  146 147 148 149 150   } 
+  151 152   } 
+  javax.swing.TransferHandler 1.4   • boolean canImport(TransferSupport support) 6 Override to indicate whether the target component can accept the drag described by the TransferSupport parameter. 
+  • boolean importData(TransferSupport support) 6 Override to carry out the drop or paste gesture described by the TransferSupport parameter, and return true if the import was successful. 
+  From the Library of Hristo Dimov Hristov   11.14 Drag and Drop   919   javax.swing.JFrame 1.2   • void setTransferHandler(TransferHandler handler) 6 sets a transfer handler to handle drop and paste operations only   javax.swing.JList 1.2 javax.swing.JTable 1.2 javax.swing.JTree 1.2 javax.swing.text.JTextComponent 1.2   • void setDropMode(DropMode mode) 6 set the drop mode of this component to one of the values specified in Table 11.8 on p. 914. 
+  javax.swing.TransferHandler.TransferSupport 6   • Component getComponent() gets the target component of this transfer. 
+  • DataFlavor[] getDataFlavors() gets the data flavors of the data to be transferred. 
+  • boolean isDrop() true if this transfer is a drop, false if it is a paste. 
+  • int getUserDropAction() gets the drop action chosen by the user (MOVE, COPY, or LINK). 
+  • getSourceDropActions() gets the drop actions that are allowed by the drag source. 
+  • getDropAction() • setDropAction() gets or sets the drop action of this transfer. Initially, this is the user drop action, but it can be overridden by the transfer handler. 
+  • DropLocation getDropLocation() gets the location of the drop, or throws an IllegalStateException if this transfer is not a drop. 
+  From the Library of Hristo Dimov Hristov   920   Chapter 11   Advanced AWT   javax.swing.TransferHandler.DropLocation 6   • Point getDropPoint() gets the mouse location of the drop in the target component. 
+  javax.swing.JList.DropLocation 6   • boolean isInsert() returns true if the data are to be inserted before a given location, false if they are to replace existing data. 
+  • int getIndex() gets the model index for the insertion or replacement. 
+  javax.swing.JTable.DropLocation 6   • boolean isInsertRow() • boolean isInsertColumn() returns true if data are to be inserted before a row or column. 
+  • int getRow() • int getColumn() gets the model row or column index for the insertion or replacement, or -1 if the drop occurred in an empty area. 
+  javax.swing.JTree.DropLocation 6   • TreePath getPath() • int getChildIndex() returns the tree path and child that, together with the drop mode of the target component, define the drop location, as described below. 
+  Drop Mode INSERT   Tree Edit Action Insert as child of the path, before the child index. 
+  ON or USE_SELECTION   Replace the data of the path (child index not used). 
+  INSERT_OR_ON   If the child index is -1, do as in ON, otherwise as in INSERT. 

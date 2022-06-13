@@ -1,0 +1,203 @@
+  719   javax.swing.event.HyperlinkEvent 1.2   • URL getURL() returns the URL of the selected hyperlink. 
+  10.5 Progress Indicators In the following sections, we discuss three classes for indicating the progress of a slow activity. A JProgressBar is a Swing component that indicates progress. A ProgressMonitor is a dialog box that contains a progress bar. A ProgressMonitorInputStream displays a progress monitor dialog box while the stream is read. 
+10.5.1 Progress Bars
+  A progress bar is a simple component—just a rectangle that is partially filled with color to indicate the progress of an operation. By default, progress is indicated by a string “n%”. You can see a progress bar in the bottom right of Figure 10.41. 
+  Figure 10.41 A progress bar You can construct a progress bar much as you construct a slider—by supplying the minimum and maximum value and an optional orientation: progressBar = new JProgressBar(0, 1000); 
+  progressBar = new JProgressBar(SwingConstants.VERTICAL, 0, 1000); 
+  You can also set the minimum and maximum with the setMinimum and setMaximum methods. 
+  Unlike a slider, the progress bar cannot be adjusted by the user. Your program needs to call setValue to update it. 
+  From the Library of Hristo Dimov Hristov   720   Chapter 10   Advanced Swing   If you call progressBar.setStringPainted(true); 
+  the progress bar computes the completion percentage and displays a string “n%”. 
+  If you want to show a different string, you can supply it with the setString method: if (progressBar.getValue() > 900) progressBar.setString("Almost Done"); 
+  The program in Listing 10.26 shows a progress bar that monitors a simulated time-consuming activity. 
+  The SimulatedActivity class increments a value current ten times per second. When it reaches a target value, the activity finishes. We use the SwingWorker class to implement the activity and update the progress bar in the process method. The SwingWorker invokes the method from the event dispatch thread, so it is safe to update the progress bar. (See Volume I, Chapter 14 for more information about thread safety in Swing.) Java SE 1.4 added support for an indeterminate progress bar that shows an animation indicating some kind of progress, without specifying the percentage of completion. That is the kind of progress bar that you see in your browser—it indicates that the browser is waiting for the server and has no idea how long the wait might be. To display the “indeterminate wait” animation, call the setIndeterminate method. 
+  Listing 10.26 shows the full program code. 
+  Listing 10.26 1   progressBar/ProgressBarFrame.java   package progressBar; 
+  2 3 4   import java.awt.*; 
+  import java.util.List; 
+  5 6   import javax.swing.*; 
+  7 8 9 10 11 12 13 14 15   /** * A frame that contains a button to launch a simulated activity, a progress bar, and a text area * for the activity output. 
+  */ public class ProgressBarFrame extends JFrame { public static final int TEXT_ROWS = 10; 
+  public static final int TEXT_COLUMNS = 40; 
+  16 17 18 19   private JButton startButton; 
+  private JProgressBar progressBar; 
+  private JCheckBox checkBox; 
+  From the Library of Hristo Dimov Hristov   10.5 Progress Indicators   20 21   721   private JTextArea textArea; 
+  private SimulatedActivity activity; 
+  22 23 24 25 26   public ProgressBarFrame() { // this text area holds the activity output textArea = new JTextArea(TEXT_ROWS, TEXT_COLUMNS); 
+  27   // set up panel with button and progress bar   28 29   final int MAX = 1000; 
+  JPanel panel = new JPanel(); 
+  startButton = new JButton("Start"); 
+  progressBar = new JProgressBar(0, MAX); 
+  progressBar.setStringPainted(true); 
+  panel.add(startButton); 
+  panel.add(progressBar); 
+  30 31 32 33 34 35 36 37   checkBox = new JCheckBox("indeterminate"); 
+  checkBox.addActionListener(event -> { progressBar.setIndeterminate(checkBox.isSelected()); 
+  progressBar.setStringPainted(!progressBar.isIndeterminate()); 
+  }); 
+  panel.add(checkBox); 
+  add(new JScrollPane(textArea), BorderLayout.CENTER); 
+  add(panel, BorderLayout.SOUTH); 
+  38 39 40 41 42 43 44 45 46 47   // set up the button action   48 49   startButton.addActionListener(event -> { startButton.setEnabled(false); 
+  activity = new SimulatedActivity(MAX); 
+  activity.execute(); 
+  }); 
+  pack(); 
+  50 51 52 53 54 55 56 57   } 
+  58 59 60 61 62   class SimulatedActivity extends SwingWorker<Void, Integer> { private int current; 
+  private int target; 
+  63 64 65 66 67 68   /** * Constructs the simulated activity that increments a counter from 0 to a * given target. 
+  * @param t the target value of the counter */ (Continues)   From the Library of Hristo Dimov Hristov   722   Chapter 10   Advanced Swing   Listing 10.26 (Continued) public SimulatedActivity(int t) { current = 0; 
+  target = t; 
+  } 
+  69 70 71 72 73 74   protected Void doInBackground() throws Exception { try { while (current < target) { Thread.sleep(100); 
+  current++; 
+  publish(current); 
+  } 
+  } 
+  catch (InterruptedException e) { } 
+  return null; 
+  } 
+  75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91   protected void process(List<Integer> chunks) { for (Integer chunk : chunks) { textArea.append(chunk + "\n"); 
+  progressBar.setValue(chunk); 
+  } 
+  } 
+  92 93 94 95 96 97 98 99 100   protected void done() { startButton.setEnabled(true); 
+  } 
+  101 102 103 104   } 
+  105 106   } 
+10.5.2 Progress Monitors
+  A progress bar is a simple component that can be placed inside a window. In contrast, a ProgressMonitor is a complete dialog box that contains a progress bar (see Figure 10.42). The dialog box contains a Cancel button. If you click it, the monitor dialog box is closed. In addition, your program can query whether the user has   From the Library of Hristo Dimov Hristov   10.5 Progress Indicators   723   canceled the dialog box and terminate the monitored action. (Note that the class name does not start with a “J”.)   Figure 10.42 A progress monitor dialog box Construct a progress monitor by supplying the following: • The parent component over which the dialog box should pop up • An object (which should be a string, icon, or component) that is displayed in the dialog box • An optional note to display below the object • The minimum and maximum values However, the progress monitor cannot measure progress or cancel an activity by itself. You still need to periodically set the progress value by calling the setProgress method. (This is the equivalent of the setValue method of the JProgressBar class.) When the monitored activity has concluded, call the close method to dismiss the dialog box. You can reuse the same dialog box by calling start again. 
+  The biggest problem with using a progress monitor dialog box is handling the cancellation requests. You cannot attach an event handler to the Cancel button. 
+  Instead, you need to periodically call the isCanceled method to see if the user has clicked the Cancel button. 
+  If your worker thread can block indefinitely (for example, when reading input from a network connection), it cannot monitor the Cancel button. In our sample program, we will show you how to use a timer for that purpose. We will also make the timer responsible for updating the progress measurement. 
+  If you run the program in Listing 10.27, you can observe an interesting feature of the progress monitor dialog box. The dialog box doesn’t come up immediately. 
+  From the Library of Hristo Dimov Hristov   724   Chapter 10   Advanced Swing   Instead, it waits for a short interval to see if the activity has already been completed or is likely to complete in less time than it would take for the dialog box to appear. 
+  Use the setMillisToDecideToPopup method to set the number of milliseconds to wait between the construction of the dialog object and the decision whether to show the pop-up at all. The default value is 500 milliseconds. The setMillisToPopup is your estimation of the time the dialog box needs to pop up. The Swing designers set this value to a default of 2 seconds. Clearly they were mindful of the fact that Swing dialogs don’t always come up as snappily as we all would like. You should probably not touch this value. 
+  Listing 10.27 1   progressMonitor/ProgressMonitorFrame.java   package progressMonitor; 
+  2 3   import java.awt.*; 
+  4 5   import javax.swing.*; 
+  6 7 8 9 10 11 12 13 14   /** * A frame that contains a button to launch a simulated activity and a text area for the activity * output. 
+  */ class ProgressMonitorFrame extends JFrame { public static final int TEXT_ROWS = 10; 
+  public static final int TEXT_COLUMNS = 40; 
+  15 16 17 18 19 20   private Timer cancelMonitor; 
+  private JButton startButton; 
+  private ProgressMonitor progressDialog; 
+  private JTextArea textArea; 
+  private SimulatedActivity activity; 
+  21 22 23 24 25   public ProgressMonitorFrame() { // this text area holds the activity output textArea = new JTextArea(TEXT_ROWS, TEXT_COLUMNS); 
+  26 27 28 29 30   // set up a button panel JPanel panel = new JPanel(); 
+  startButton = new JButton("Start"); 
+  panel.add(startButton); 
+  31 32 33   add(new JScrollPane(textArea), BorderLayout.CENTER); 
+  add(panel, BorderLayout.SOUTH); 
+  34 35   // set up the button action   From the Library of Hristo Dimov Hristov   10.5 Progress Indicators   725   36   startButton.addActionListener(event -> { startButton.setEnabled(false); 
+  final int MAX = 1000; 
+  37 38 39 40 41   // start activity activity = new SimulatedActivity(MAX); 
+  activity.execute(); 
+  42 43 44 45   // launch progress dialog progressDialog = new ProgressMonitor(ProgressMonitorFrame.this, "Waiting for Simulated Activity", null, 0, MAX); 
+  cancelMonitor.start(); 
+  }); 
+  46 47 48 49 50 51   // set up the timer action   52 53   cancelMonitor = new Timer(500, event -> { if (progressDialog.isCanceled()) { activity.cancel(true); 
+  startButton.setEnabled(true); 
+  } 
+  else if (activity.isDone()) { progressDialog.close(); 
+  startButton.setEnabled(true); 
+  } 
+  else { progressDialog.setProgress(activity.getProgress()); 
+  } 
+  }); 
+  pack(); 
+  54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72   } 
+  73 74 75 76 77   class SimulatedActivity extends SwingWorker<Void, Integer> { private int current; 
+  private int target; 
+  78 79 80 81 82 83   /** * Constructs the simulated activity that increments a counter from 0 to a * given target. 
+  * @param t the target value of the counter */ (Continues)   From the Library of Hristo Dimov Hristov   726   Chapter 10   Advanced Swing   Listing 10.27 (Continued) public SimulatedActivity(int t) { current = 0; 
+  target = t; 
+  } 
+  84 85 86 87 88 89   protected Void doInBackground() throws Exception { try { while (current < target) { Thread.sleep(100); 
+  current++; 
+  textArea.append(current + "\n"); 
+  setProgress(current); 
+  } 
+  } 
+  catch (InterruptedException e) { } 
+  return null; 
+  } 
+  90 91 92 93 94 95 96 97 98 99 100 101 102 103 104 105 106   } 
+  107 108   } 
+10.5.3 Monitoring the Progress of Input Streams
+  The Swing package contains a useful stream filter, ProgressMonitorInputStream, that automatically pops up a dialog box that monitors how much of the stream has been read. 
+  This filter is extremely easy to use. Insert a ProgressMonitorInputStream into your usual sequence of filtered streams. (See Chapter 2 for more information on streams.) For example, suppose you read text from a file. You start out with a FileInputStream: FileInputStream in = new FileInputStream(f); 
+  Normally, you would convert in to an InputStreamReader: InputStreamReader reader = new InputStreamReader(in); 
+  However, to monitor the stream, first turn the file input stream into a stream with a progress monitor: ProgressMonitorInputStream progressIn = new ProgressMonitorInputStream(parent, caption, in); 
+  From the Library of Hristo Dimov Hristov   10.5 Progress Indicators   727   Supply the parent component, a caption, and, of course, the stream to monitor. 
+  The read method of the progress monitor stream simply passes along the bytes and updates the progress dialog box. 
+  You can now go on building your filter sequence: InputStreamReader reader = new InputStreamReader(progressIn); 
+  That’s all there is to it. When the file is being read, the progress monitor automatically pops up (see Figure 10.43). This is a very nice application of stream filtering. 
+  Figure 10.43 A progress monitor for an input stream CAUTION: The progress monitor stream uses the available method of the InputStream class to determine the total number of bytes in the stream. However, the available method only reports the number of bytes in the stream that are available without blocking. Progress monitors work well for files and HTTP URLs because their length is known in advance, but they don’t work with all streams. 
+  The program in Listing 10.28 counts the lines in a file. If you read in a large file (such as "The Count of Monte Cristo" in the gutenberg directory of the companion code), the progress dialog box pops up. 
+  If the user clicks the Cancel button, the input stream closes. The code that processes the input already knows how to deal with the end of input, so no change to the programming logic is required to handle cancellation. 
+  Note that the program doesn’t use a very efficient way of filling up the text area. 
+  It would be faster to first read the file into a StringBuilder and then set the text of the text area to the string builder contents. However, in this example program,   From the Library of Hristo Dimov Hristov   728   Chapter 10   Advanced Swing   we actually like this slow approach—it gives you more time to admire the progress dialog box. 
+  To avoid flicker, we do not display the text area while it is filling up. 
+  Listing 10.28 1   progressMonitorInputStream/TextFrame.java   package progressMonitorInputStream; 
+  2 3 4 5   import java.io.*; 
+  import java.nio.file.*; 
+  import java.util.*; 
+  6 7   import javax.swing.*; 
+  8 9 10 11 12 13 14 15 16 17   /** * A frame with a menu to load a text file and a text area to display its contents. The text * area is constructed when the file is loaded and set as the content pane of the frame when * the loading is complete. That avoids flicker during loading. 
+  */ public class TextFrame extends JFrame { public static final int TEXT_ROWS = 10; 
+  public static final int TEXT_COLUMNS = 40; 
+  18 19 20 21 22   private JMenuItem openItem; 
+  private JMenuItem exitItem; 
+  private JTextArea textArea; 
+  private JFileChooser chooser; 
+  23 24 25 26 27   public TextFrame() { textArea = new JTextArea(TEXT_ROWS, TEXT_COLUMNS); 
+  add(new JScrollPane(textArea)); 
+  28 29 30   chooser = new JFileChooser(); 
+  chooser.setCurrentDirectory(new File(".")); 
+  31 32 33 34 35 36 37 38 39 40 41 42   JMenuBar menuBar = new JMenuBar(); 
+  setJMenuBar(menuBar); 
+  JMenu fileMenu = new JMenu("File"); 
+  menuBar.add(fileMenu); 
+  openItem = new JMenuItem("Open"); 
+  openItem.addActionListener(event -> { try { openFile(); 
+  } 
+  From the Library of Hristo Dimov Hristov   10.5 Progress Indicators   729   catch (IOException exception) { exception.printStackTrace(); 
+  } 
+  }); 
+  43 44 45 46 47 48   fileMenu.add(openItem); 
+  exitItem = new JMenuItem("Exit"); 
+  exitItem.addActionListener(event -> System.exit(0)); 
+  fileMenu.add(exitItem); 
+  pack(); 
+  49 50 51 52 53   } 
+  54 55   /** * Prompts the user to select a file, loads the file into a text area, and sets it as the * content pane of the frame. 
+  */ public void openFile() throws IOException { int r = chooser.showOpenDialog(this); 
+  if (r != JFileChooser.APPROVE_OPTION) return; 
+  final File f = chooser.getSelectedFile(); 
+  56 57 58 59 60 61 62 63 64 65   // set up stream and reader filter sequence   66 67   InputStream fileIn = Files.newInputStream(f.toPath()); 
+  final ProgressMonitorInputStream progressIn = new ProgressMonitorInputStream( this, "Reading " + f.getName(), fileIn); 
+  68 69 70 71   textArea.setText(""); 
+  72 73   SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() { protected Void doInBackground() throws Exception { try (Scanner in = new Scanner(progressIn, "UTF-8")) { while (in.hasNextLine()) { String line = in.nextLine(); 
+  textArea.append(line); 
+  textArea.append("\n"); 
+  } 
+  } 
+  return null; 
+  } 
+  }; 
+  worker.execute(); 
+  74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90   } 
+  91 92   } 
+  From the Library of Hristo Dimov Hristov   730   Chapter 10   Advanced Swing   javax.swing.JProgressBar 1.2   • • • •   JProgressBar() JProgressBar(int direction) JProgressBar(int min, int max) JProgressBar(int direction, int min, int max)   constructs a slider with the given direction, minimum, and maximum. 
+  Parameters:   • • • •   direction   One of SwingConstants.HORIZONTAL or SwingConstants.VERTICAL. 
+  The default is horizontal. 
+  min, max   The minimum and maximum for the progress bar values. Defaults are 0 and 100. 
+  int getMinimum() int getMaximum() void setMinimum(int value) void setMaximum(int value)   gets or sets the minimum and maximum values. 
+  • int getValue() • void setValue(int value) gets or sets the current value. 
+  • String getString() • void setString(String s) gets or sets the string to be displayed in the progress bar. If the string is null, a default string “n%” is displayed. 
+  • boolean isStringPainted() • void setStringPainted(boolean b) gets or sets the “string painted” property. If this property is true, a string is painted on top of the progress bar. The default is false. 
+  • boolean isIndeterminate() 1.4 • void setIndeterminate(boolean b) 1.4 gets or sets the “indeterminate” property. If this property is true, the progress bar becomes a block that moves backward and forward, indicating a wait of unknown duration. The default is false. 

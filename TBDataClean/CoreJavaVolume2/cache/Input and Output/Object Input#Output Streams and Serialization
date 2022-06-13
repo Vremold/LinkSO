@@ -1,0 +1,1250 @@
+Using a fixed-length record format is a good choice if you need to store data of
+the same type. However, objects that you create in an object-oriented program
+are rarely all of the same type. For example, you might have an array called staff
+that is nominally an array of Employee records but contains objects that are actually
+instances of a subclass such as Manager.
+It is certainly possible to come up with a data format that allows you to store such
+polymorphic collections—but, fortunately, we don’t have to. The Java language
+supports a very general mechanism, called object serialization, that makes it possible
+to write any object to an output stream and read it again later. (You will see in
+this chapter where the term “serialization” comes from.)
+
+2.4.1 Saving and Loading Serializable Objects
+To save object data, you first need to open an ObjectOutputStream object:
+ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream("employee.dat"));
+
+Now, to save an object, simply use the writeObject method of the ObjectOutputStream
+class as in the following fragment:
+
+From the Library of Hristo Dimov Hristov
+
+2.4 Object Input/Output Streams and Serialization
+
+81
+
+Employee harry = new Employee("Harry Hacker", 50000, 1989, 10, 1);
+Manager boss = new Manager("Carl Cracker", 80000, 1987, 12, 15);
+out.writeObject(harry);
+out.writeObject(boss);
+
+To read the objects back in, first get an ObjectInputStream object:
+ObjectInputStream in = new ObjectInputStream(new FileInputStream("employee.dat"));
+
+Then, retrieve the objects in the same order in which they were written, using the
+readObject method:
+Employee e1 = (Employee) in.readObject();
+Employee e2 = (Employee) in.readObject();
+
+There is, however, one change you need to make to any class that you want to
+save to an output stream and restore from an object input stream. The class must
+implement the Serializable interface:
+class Employee implements Serializable { . . . }
+
+The Serializable interface has no methods, so you don’t need to change your classes
+in any way. In this regard, it is similar to the Cloneable interface that we discussed
+in Volume I, Chapter 6. However, to make a class cloneable, you still had to
+override the clone method of the Object class. To make a class serializable, you
+do not need to do anything else.
+NOTE: You can write and read only objects with the writeObject/readObject
+methods. For primitive type values, use methods such as writeInt/readInt or
+writeDouble/readDouble. (The object input/output stream classes implement the
+DataInput/DataOutput interfaces.)
+
+Behind the scenes, an ObjectOutputStream looks at all the fields of the objects and saves
+their contents. For example, when writing an Employee object, the name, date, and
+salary fields are written to the output stream.
+However, there is one important situation that we need to consider: What happens
+when one object is shared by several objects as part of its state?
+To illustrate the problem, let us make a slight modification to the Manager class.
+Let’s assume that each manager has a secretary:
+class Manager extends Employee
+{
+private Employee secretary;
+...
+}
+
+From the Library of Hristo Dimov Hristov
+
+82
+
+Chapter 2
+
+Input and Output
+
+Each Manager object now contains a reference to the Employee object that describes the
+secretary. Of course, two managers can share the same secretary, as is the case in
+Figure 2.5 and the following code:
+harry = new Employee("Harry Hacker", . . .);
+Manager carl = new Manager("Carl Cracker", . . .);
+carl.setSecretary(harry);
+Manager tony = new Manager("Tony Tester", . . .);
+tony.setSecretary(harry);
+
+Figure 2.5 Two managers can share a mutual employee.
+Saving such a network of objects is a challenge. Of course, we cannot save and
+restore the memory addresses for the secretary objects. When an object is
+reloaded, it will likely occupy a completely different memory address than it
+originally did.
+Instead, each object is saved with the serial number, hence the name object
+serialization for this mechanism. Here is the algorithm:
+1.
+
+Associate a serial number with each object reference that you encounter (as
+shown in Figure 2.6).
+
+From the Library of Hristo Dimov Hristov
+
+2.4 Object Input/Output Streams and Serialization
+
+83
+
+Figure 2.6 An example of object serialization
+2.
+3.
+
+When encountering an object reference for the first time, save the object data
+to the output stream.
+If it has been saved previously, just write “same as the previously saved object
+with serial number x.”
+
+When reading back the objects, the procedure is reversed.
+1.
+
+2.
+
+When an object is specified in an object input stream for the first time, construct it, initialize it with the stream data, and remember the association
+between the serial number and the object reference.
+When the tag “same as the previously saved object with serial number x” is
+encountered, retrieve the object reference for the sequence number.
+
+From the Library of Hristo Dimov Hristov
+
+84
+
+Chapter 2
+
+Input and Output
+
+NOTE: In this chapter, we will use serialization to save a collection of objects to
+a disk file and retrieve it exactly as we stored it. Another very important application
+is the transmittal of a collection of objects across a network connection to another
+computer. Just as raw memory addresses are meaningless in a file, they are
+also meaningless when communicating with a different processor. By replacing
+memory addresses with serial numbers, serialization permits the transport of
+object collections from one machine to another.
+
+Listing 2.3 is a program that saves and reloads a network of Employee and Manager
+objects (some of which share the same employee as a secretary). Note that the
+secretary object is unique after reloading—when newStaff[1] gets a raise, that is
+reflected in the secretary fields of the managers.
+
+Listing 2.3
+1
+
+objectStream/ObjectStreamTest.java
+
+package objectStream;
+
+2
+3
+
+import java.io.*;
+
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+
+/**
+* @version 1.10 17 Aug 1998
+* @author Cay Horstmann
+*/
+class ObjectStreamTest
+{
+public static void main(String[] args) throws IOException, ClassNotFoundException
+{
+Employee harry = new Employee("Harry Hacker", 50000, 1989, 10, 1);
+Manager carl = new Manager("Carl Cracker", 80000, 1987, 12, 15);
+carl.setSecretary(harry);
+Manager tony = new Manager("Tony Tester", 40000, 1990, 3, 15);
+tony.setSecretary(harry);
+
+18
+19
+
+Employee[] staff = new Employee[3];
+
+20
+21
+22
+23
+
+staff[0] = carl;
+staff[1] = harry;
+staff[2] = tony;
+
+24
+25
+26
+27
+28
+29
+
+// save all employee records to the file employee.dat
+try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream("employee.dat")))
+{
+out.writeObject(staff);
+}
+
+30
+
+From the Library of Hristo Dimov Hristov
+
+2.4 Object Input/Output Streams and Serialization
+
+85
+
+try (ObjectInputStream in = new ObjectInputStream(new FileInputStream("employee.dat")))
+{
+// retrieve all records into a new array
+
+31
+32
+33
+34
+
+Employee[] newStaff = (Employee[]) in.readObject();
+
+35
+36
+
+// raise secretary's salary
+newStaff[1].raiseSalary(10);
+
+37
+38
+39
+
+// print the newly read employee records
+for (Employee e : newStaff)
+System.out.println(e);
+
+40
+41
+42
+
+}
+
+43
+
+}
+
+44
+45
+
+}
+
+java.io.ObjectOutputStream 1.1
+
+• ObjectOutputStream(OutputStream out)
+creates an ObjectOutputStream so that you can write objects to the specified OutputStream.
+• void writeObject(Object obj)
+writes the specified object to the ObjectOutputStream. This method saves the class of
+the object, the signature of the class, and the values of any nonstatic, nontransient
+fields of the class and its superclasses.
+
+java.io.ObjectInputStream 1.1
+
+• ObjectInputStream(InputStream in)
+creates an ObjectInputStream to read back object information from the specified
+InputStream.
+• Object readObject()
+reads an object from the ObjectInputStream. In particular, this method reads back the
+class of the object, the signature of the class, and the values of the nontransient and
+nonstatic fields of the class and all its superclasses. It does deserializing to allow
+multiple object references to be recovered.
+
+2.4.2 Understanding the Object Serialization File Format
+Object serialization saves object data in a particular file format. Of course, you
+can use the writeObject/readObject methods without having to know the exact sequence
+of bytes that represents objects in a file. Nonetheless, we found studying the data
+
+From the Library of Hristo Dimov Hristov
+
+86
+
+Chapter 2
+
+Input and Output
+
+format extremely helpful for gaining insight into the object serialization process.
+As the details are somewhat technical, feel free to skip this section if you are not
+interested in the implementation.
+Every file begins with the two-byte “magic number”
+AC ED
+
+followed by the version number of the object serialization format, which is
+currently
+00 05
+
+(We use hexadecimal numbers throughout this section to denote bytes.) Then, it
+contains a sequence of objects, in the order in which they were saved.
+String objects are saved as
+74
+
+two-byte
+length
+
+characters
+
+For example, the string “Harry” is saved as
+74 00 05 Harry
+
+The Unicode characters of the string are saved in the “modified UTF-8” format.
+When an object is saved, the class of that object must be saved as well. The class
+description contains
+• The name of the class
+• The serial version unique ID, which is a fingerprint of the data field types and
+method signatures
+• A set of flags describing the serialization method
+• A description of the data fields
+The fingerprint is obtained by ordering the descriptions of the class, superclass,
+interfaces, field types, and method signatures in a canonical way, and then
+applying the so-called Secure Hash Algorithm (SHA) to that data.
+SHA is a fast algorithm that gives a “fingerprint” to a larger block of information.
+This fingerprint is always a 20-byte data packet, regardless of the size of the
+original data. It is created by a clever sequence of bit operations on the data that
+makes it essentially 100 percent certain that the fingerprint will change if the information is altered in any way. (For more details on SHA, see, for example,
+Cryptography and Network Security, Seventh Edition by William Stallings, Prentice
+Hall, 2016.) However, the serialization mechanism uses only the first eight bytes
+of the SHA code as a class fingerprint. It is still very likely that the class fingerprint
+will change if the data fields or methods change.
+
+From the Library of Hristo Dimov Hristov
+
+2.4 Object Input/Output Streams and Serialization
+
+87
+
+When reading an object, its fingerprint is compared against the current fingerprint
+of the class. If they don’t match, it means the class definition has changed after
+the object was written, and an exception is generated. Of course, in practice,
+classes do evolve, and it might be necessary for a program to read in older versions
+of objects. We will discuss this in Section 2.4.5, “Versioning,” on p. 95.
+Here is how a class identifier is stored:
+•
+•
+•
+•
+•
+•
+•
+•
+•
+
+72
+
+2-byte length of class name
+Class name
+8-byte fingerprint
+1-byte flag
+2-byte count of data field descriptors
+Data field descriptors
+78 (end marker)
+Superclass type (70 if none)
+
+The flag byte is composed of three bit masks, defined in java.io.ObjectStreamConstants:
+static final byte SC_WRITE_METHOD = 1;
+// class has a writeObject method that writes additional data
+static final byte SC_SERIALIZABLE = 2;
+// class implements the Serializable interface
+static final byte SC_EXTERNALIZABLE = 4;
+// class implements the Externalizable interface
+
+We discuss the Externalizable interface later in this chapter. Externalizable classes
+supply custom read and write methods that take over the output of their
+instance fields. The classes that we write implement the Serializable interface and
+will have a flag value of 02. The serializable java.util.Date class defines its own
+readObject/writeObject methods and has a flag of 03.
+Each data field descriptor has the format:
+•
+•
+•
+•
+
+1-byte type code
+2-byte length of field name
+Field name
+Class name (if the field is an object)
+
+The type code is one of the following:
+B
+
+byte
+
+C
+
+char
+
+From the Library of Hristo Dimov Hristov
+
+88
+
+Chapter 2
+
+Input and Output
+
+D
+
+double
+
+F
+
+float
+
+I
+
+int
+
+J
+
+long
+
+L
+
+object
+
+S
+
+short
+
+Z
+
+boolean
+
+[
+
+array
+
+When the type code is L, the field name is followed by the field type. Class and
+field name strings do not start with the string code 74, but field types do. Field
+types use a slightly different encoding of their names—namely, the format used
+by native methods.
+For example, the salary field of the Employee class is encoded as:
+D 00 06 salary
+
+Here is the complete class descriptor of the Employee class:
+72 00 08 Employee
+E6 D2 86 7D AE AC 18 1B 02
+00 03
+D 00 06 salary
+L 00 07 hireDay
+74 00 10 Ljava/util/Date;
+L 00 04 name
+74 00 12 Ljava/lang/String;
+78
+70
+
+Fingerprint and flags
+Number of instance fields
+Instance field type and name
+Instance field type and name
+Instance field class name: Date
+Instance field type and name
+Instance field class name: String
+End marker
+No superclass
+
+These descriptors are fairly long. If the same class descriptor is needed again in
+the file, an abbreviated form is used:
+71
+
+4-byte serial number
+
+The serial number refers to the previous explicit class descriptor. We discuss the
+numbering scheme later.
+An object is stored as
+73
+
+class descriptor
+
+object data
+
+For example, here is how an Employee object is stored:
+
+From the Library of Hristo Dimov Hristov
+
+2.4 Object Input/Output Streams and Serialization
+
+40 E8 6A 00 00 00 00 00
+73
+71 00 7E 00 08
+77 08 00 00 00 91 1B 4E B1 80 78
+74 00 0C Harry Hacker
+
+89
+
+salary field
+
+value: double
+hireDay field value: new object
+Existing class java.util.Date
+External storage (details later)
+name field value: String
+
+As you can see, the data file contains enough information to restore the Employee
+object.
+Arrays are saved in the following format:
+75
+
+class descriptor
+
+4-byte number of
+entries
+
+entries
+
+The array class name in the class descriptor is in the same format as that used by
+native methods (which is slightly different from the format used by class names
+in other class descriptors). In this format, class names start with an L and end
+with a semicolon.
+For example, an array of three Employee objects starts out like this:
+75
+72 00 0B [LEmployee;
+FC BF 36 11 C5 91 11 C7 02
+00 00
+78
+70
+00 00 00 03
+
+Array
+New class, string length, class name Employee[]
+Fingerprint and flags
+Number of instance fields
+End marker
+No superclass
+Number of array entries
+
+Note that the fingerprint for an array of Employee objects is different from a
+fingerprint of the Employee class itself.
+All objects (including arrays and strings) and all class descriptors are given serial
+numbers as they are saved in the output file. The numbers start at 00 7E 00 00.
+We already saw that a full class descriptor for any given class occurs only once.
+Subsequent descriptors refer to it. For example, in our previous example, a
+repeated reference to the Date class was coded as
+71 00 7E 00 08
+
+The same mechanism is used for objects. If a reference to a previously saved object
+is written, it is saved in exactly the same way—that is, 71 followed by the serial
+number. It is always clear from the context whether a particular serial reference
+denotes a class descriptor or an object.
+Finally, a null reference is stored as
+
+From the Library of Hristo Dimov Hristov
+
+90
+
+Chapter 2
+
+Input and Output
+
+70
+
+Here is the commented output of the ObjectRefTest program of the preceding section.
+Run the program, look at a hex dump of its data file employee.dat, and compare it
+with the commented listing. The important lines toward the end of the output
+show a reference to a previously saved object.
+AC ED 00 05
+75
+72 00 0B [LEmployee;
+FC BF 36 11 C5 91 11 C7 02
+00 00
+78
+70
+00 00 00 03
+73
+72 00 07 Manager
+36 06 AE 13 63 8F 59 B7 02
+00 01
+L 00 09 secretary
+74 00 0A LEmployee;
+78
+72 00 08 Employee
+E6 D2 86 7D AE AC 18 1B 02
+00 03
+D 00 06 salary
+L 00 07 hireDay
+74 00 10 Ljava/util/Date;
+L 00 04 name
+74 00 12 Ljava/lang/String;
+78
+70
+40 F3 88 00 00 00 00 00
+73
+72 00 0E java.util.Date
+
+File header
+Array staff (serial #1)
+New class, string length, class name
+Employee[] (serial #0)
+Fingerprint and flags
+Number of instance fields
+End marker
+No superclass
+Number of array entries
+staff[0]— new object (serial #7)
+New class, string length, class name
+(serial #2)
+Fingerprint and flags
+Number of data fields
+Instance field type and name
+Instance field class name: String (serial #3)
+End marker
+Superclass: new class, string length, class
+name (serial #4)
+Fingerprint and flags
+Number of instance fields
+Instance field type and name
+Instance field type and name
+Instance field class name: String (serial #5)
+Instance field type and name
+Instance field class name: String (serial #6)
+End marker
+No superclass
+salary field value: double
+hireDay field value: new object (serial #9)
+New class, string length, class name
+(serial #8)
+
+From the Library of Hristo Dimov Hristov
+
+2.4 Object Input/Output Streams and Serialization
+
+68 6A 81 01 4B 59 74 19 03
+00 00
+78
+70
+77 08
+00 00 00 83 E9 39 E0 00
+78
+74 00 0C Carl Cracker
+73
+71 00 7E 00 04
+40 E8 6A 00 00 00 00 00
+73
+71 00 7E 00 08
+77 08
+00 00 00 91 1B 4E B1 80
+78
+74 00 0C Harry Hacker
+71 00 7E 00 0B
+73
+71 00 7E 00 02
+40 E3 88 00 00 00 00 00
+73
+71 00 7E 00 08
+77 08
+00 00 00 94 6D 3E EC 00 00
+78
+74 00 0B Tony Tester
+71 00 7E 00 0B
+
+91
+
+Fingerprint and flags
+No instance variables
+End marker
+No superclass
+External storage, number of bytes
+Date
+End marker
+name field value: String (serial #10)
+secretary field value: new object (serial #11)
+existing class (use serial #4)
+salary field value: double
+hireDay field value: new object (serial #12)
+Existing class (use serial #8)
+External storage, number of bytes
+Date
+End marker
+name field value: String (serial #13)
+staff[1]: existing object (use serial #11)
+staff[2]: new object (serial #14)
+Existing class (use serial #2)
+salary field value: double
+hireDay field value: new object (serial #15)
+Existing class (use serial #8)
+External storage, number of bytes
+Date
+End marker
+name field value: String (serial #16)
+secretary field value: existing object (use
+serial #11)
+
+Of course, studying these codes can be about as exciting as reading a phone book.
+It is not important to know the exact file format (unless you are trying to create
+an evil effect by modifying the data), but it is still instructive to know that the
+serialized format has a detailed description of all the objects that it contains, with
+sufficient detail to allow reconstruction of both objects and arrays of objects.
+What you should remember is this:
+• The serialized format contains the types and data fields of all objects.
+
+From the Library of Hristo Dimov Hristov
+
+92
+
+Chapter 2
+
+Input and Output
+
+• Each object is assigned a serial number.
+• Repeated occurrences of the same object are stored as references to that serial
+number.
+
+2.4.3 Modifying the Default Serialization Mechanism
+Certain data fields should never be serialized—for example, integer values that
+store file handles or handles of windows that are only meaningful to native
+methods. Such information is guaranteed to be useless when you reload an object
+at a later time or transport it to a different machine. In fact, improper values for
+such fields can actually cause native methods to crash. Java has an easy mechanism
+to prevent such fields from ever being serialized: Mark them with the keyword
+transient. You also need to tag fields as transient if they belong to nonserializable
+classes. Transient fields are always skipped when objects are serialized.
+The serialization mechanism provides a way for individual classes to add validation or any other desired action to the default read and write behavior. A
+serializable class can define methods with the signature
+private void readObject(ObjectInputStream in)
+throws IOException, ClassNotFoundException;
+private void writeObject(ObjectOutputStream out)
+throws IOException;
+
+Then, the data fields are no longer automatically serialized, and these methods
+are called instead.
+Here is a typical example. A number of classes in the java.awt.geom package, such
+as Point2D.Double, are not serializable. Now, suppose you want to serialize a class
+LabeledPoint that stores a String and a Point2D.Double. First, you need to mark the
+Point2D.Double field as transient to avoid a NotSerializableException.
+public class LabeledPoint implements Serializable
+{
+private String label;
+private transient Point2D.Double point;
+...
+}
+
+In the writeObject method, we first write the object descriptor and the String field,
+label, by calling the defaultWriteObject method. This is a special method of the
+ObjectOutputStream class that can only be called from within a writeObject method of a
+serializable class. Then we write the point coordinates, using the standard DataOutput
+calls.
+
+From the Library of Hristo Dimov Hristov
+
+2.4 Object Input/Output Streams and Serialization
+
+93
+
+private void writeObject(ObjectOutputStream out)
+throws IOException
+{
+out.defaultWriteObject();
+out.writeDouble(point.getX());
+out.writeDouble(point.getY());
+}
+
+In the readObject method, we reverse the process:
+private void readObject(ObjectInputStream in)
+throws IOException
+{
+in.defaultReadObject();
+double x = in.readDouble();
+double y = in.readDouble();
+point = new Point2D.Double(x, y);
+}
+
+Another example is the java.util.Date class that supplies its own readObject and
+writeObject methods. These methods write the date as a number of milliseconds
+from the epoch (January 1, 1970, midnight UTC). The Date class has a complex
+internal representation that stores both a Calendar object and a millisecond count
+to optimize lookups. The state of the Calendar is redundant and does not have to
+be saved.
+The readObject and writeObject methods only need to save and load their data fields.
+They should not concern themselves with superclass data or any other class
+information.
+Instead of letting the serialization mechanism save and restore object data, a class
+can define its own mechanism. To do this, a class must implement the Externalizable
+interface. This, in turn, requires it to define two methods:
+public void readExternal(ObjectInputStream in)
+throws IOException, ClassNotFoundException;
+public void writeExternal(ObjectOutputStream out)
+throws IOException;
+
+Unlike the readObject and writeObject methods that were described in the previous
+section, these methods are fully responsible for saving and restoring the entire
+object, including the superclass data. When writing an object, the serialization
+mechanism merely records the class of the object in the output stream. When
+reading an externalizable object, the object input stream creates an object with
+the no-argument constructor and then calls the readExternal method. Here is how
+you can implement these methods for the Employee class:
+
+From the Library of Hristo Dimov Hristov
+
+94
+
+Chapter 2
+
+Input and Output
+
+public void readExternal(ObjectInput s)
+throws IOException
+{
+name = s.readUTF();
+salary = s.readDouble();
+hireDay = LocalDate.ofEpochDay(s.readLong());
+}
+public void writeExternal(ObjectOutput s)
+throws IOException
+{
+s.writeUTF(name);
+s.writeDouble(salary);
+s.writeLong(hireDay.toEpochDay());
+}
+
+CAUTION: Unlike the readObject and writeObject methods, which are private and
+can only be called by the serialization mechanism, the readExternal and writeExternal
+methods are public. In particular, readExternal potentially permits modification of
+the state of an existing object.
+
+2.4.4 Serializing Singletons and Typesafe Enumerations
+You have to pay particular attention to serializing and deserializing objects that
+are assumed to be unique. This commonly happens when you are implementing
+singletons and typesafe enumerations.
+If you use the enum construct of the Java language, you need not worry about
+serialization—it just works. However, suppose you maintain legacy code that
+contains an enumerated type such as
+public class Orientation
+{
+public static final Orientation HORIZONTAL = new Orientation(1);
+public static final Orientation VERTICAL = new Orientation(2);
+private int value;
+private Orientation(int v) { value = v; }
+}
+
+This idiom was common before enumerations were added to the Java language.
+Note that the constructor is private. Thus, no objects can be created beyond
+Orientation.HORIZONTAL and Orientation.VERTICAL. In particular, you can use the == operator
+to test for object equality:
+if (orientation == Orientation.HORIZONTAL) . . .
+
+From the Library of Hristo Dimov Hristov
+
+2.4 Object Input/Output Streams and Serialization
+
+95
+
+There is an important twist that you need to remember when a typesafe enumeration implements the Serializable interface. The default serialization mechanism is
+not appropriate. Suppose we write a value of type Orientation and read it in again:
+Orientation original = Orientation.HORIZONTAL;
+ObjectOutputStream out = . . .;
+out.write(original);
+out.close();
+ObjectInputStream in = . . .;
+Orientation saved = (Orientation) in.read();
+
+Now the test
+if (saved == Orientation.HORIZONTAL) . . .
+
+will fail. In fact, the saved value is a completely new object of the Orientation type
+that is not equal to any of the predefined constants. Even though the constructor
+is private, the serialization mechanism can create new objects!
+To solve this problem, you need to define another special serialization method,
+called readResolve. If the readResolve method is defined, it is called after the object is
+deserialized. It must return an object which then becomes the return value of the
+readObject method. In our case, the readResolve method will inspect the value field and
+return the appropriate enumerated constant:
+protected Object readResolve() throws ObjectStreamException
+{
+if (value == 1) return Orientation.HORIZONTAL;
+if (value == 2) return Orientation.VERTICAL;
+throw new ObjectStreamException(); // this shouldn't happen
+}
+
+Remember to add a readResolve method to all typesafe enumerations in your legacy
+code and to all classes that follow the singleton design pattern.
+
+2.4.5 Versioning
+If you use serialization to save objects, you need to consider what happens when
+your program evolves. Can version 1.1 read the old files? Can the users who still
+use 1.0 read the files that the new version is producing? Clearly, it would be
+desirable if object files could cope with the evolution of classes.
+At first glance, it seems that this would not be possible. When a class definition
+changes in any way, its SHA fingerprint also changes, and you know that object
+input streams will refuse to read in objects with different fingerprints. However,
+a class can indicate that it is compatible with an earlier version of itself. To do this,
+you must first obtain the fingerprint of the earlier version of the class. Use the
+
+From the Library of Hristo Dimov Hristov
+
+96
+
+Chapter 2
+
+Input and Output
+
+standalone serialver program that is part of the JDK to obtain this number. For
+example, running
+serialver Employee
+
+prints
+Employee: static final long serialVersionUID = -1814239825517340645L;
+
+If you start the serialver program with the -show option, the program brings up a
+graphical dialog box (see Figure 2.7).
+
+Figure 2.7 The graphical version of the serialver program
+All later versions of the class must define the serialVersionUID constant to the same
+fingerprint as the original.
+class Employee implements Serializable // version 1.1
+{
+...
+public static final long serialVersionUID = -1814239825517340645L;
+}
+
+When a class has a static data member named serialVersionUID, it will not compute
+the fingerprint manually but will use that value instead.
+Once that static data member has been placed inside a class, the serialization
+system is now willing to read in different versions of objects of that class.
+If only the methods of the class change, there is no problem with reading the new
+object data. However, if the data fields change, you may have problems. For example, the old file object may have more or fewer data fields than the one in the
+program, or the types of the data fields may be different. In that case, the object
+input stream makes an effort to convert the serialized object to the current version
+of the class.
+The object input stream compares the data fields of the current version of the
+class with those of the version in the serialized object. Of course, the object input
+stream considers only the nontransient and nonstatic data fields. If two fields
+have matching names but different types, the object input stream makes no effort
+to convert one type to the other—the objects are incompatible. If the serialized
+
+From the Library of Hristo Dimov Hristov
+
+2.4 Object Input/Output Streams and Serialization
+
+97
+
+object has data fields that are not present in the current version, the object input
+stream ignores the additional data. If the current version has data fields that are
+not present in the serialized object, the added fields are set to their default (null
+for objects, zero for numbers, and false for boolean values).
+Here is an example. Suppose we have saved a number of employee records on
+disk, using the original version (1.0) of the class. Now we change the Employee class
+to version 2.0 by adding a data field called department. Figure 2.8 shows what happens when a 1.0 object is read into a program that uses 2.0 objects. The department
+field is set to null. Figure 2.9 shows the opposite scenario: A program using 1.0
+objects reads a 2.0 object. The additional department field is ignored.
+
+Figure 2.8 Reading an object with fewer data fields
+
+Figure 2.9 Reading an object with more data fields
+
+From the Library of Hristo Dimov Hristov
+
+98
+
+Chapter 2
+
+Input and Output
+
+Is this process safe? It depends. Dropping a data field seems harmless—the recipient still has all the data that it knew how to manipulate. Setting a data field to
+null might not be so safe. Many classes work hard to initialize all data fields in all
+constructors to non-null values, so that the methods don’t have to be prepared to
+handle null data. It is up to the class designer to implement additional code in the
+readObject method to fix version incompatibilities or to make sure the methods are
+robust enough to handle null data.
+
+2.4.6 Using Serialization for Cloning
+There is an amusing use for the serialization mechanism: It gives you an easy
+way to clone an object, provided the class is serializable. Simply serialize it to an
+output stream and then read it back in. The result is a new object that is a deep
+copy of the existing object. You don’t have to write the object to a file—you can
+use a ByteArrayOutputStream to save the data into a byte array.
+As Listing 2.4 shows, to get clone for free, simply extend the SerialCloneable class,
+and you are done.
+You should be aware that this method, although clever, will usually be much
+slower than a clone method that explicitly constructs a new object and copies or
+clones the data fields.
+
+Listing 2.4
+1
+
+serialClone/SerialCloneTest.java
+
+package serialClone;
+
+2
+3
+4
+5
+6
+
+/**
+* @version 1.21 13 Jul 2016
+* @author Cay Horstmann
+*/
+
+7
+8
+9
+10
+
+import java.io.*;
+import java.util.*;
+import java.time.*;
+
+11
+12
+13
+14
+15
+16
+17
+18
+
+public class SerialCloneTest
+{
+public static void main(String[] args) throws CloneNotSupportedException
+{
+Employee harry = new Employee("Harry Hacker", 35000, 1989, 10, 1);
+// clone harry
+Employee harry2 = (Employee) harry.clone();
+
+19
+20
+21
+
+// mutate harry
+harry.raiseSalary(10);
+
+From the Library of Hristo Dimov Hristov
+
+2.4 Object Input/Output Streams and Serialization
+
+99
+
+22
+
+// now harry and the clone are different
+System.out.println(harry);
+System.out.println(harry2);
+
+23
+24
+25
+
+}
+
+26
+27
+
+}
+
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+
+/**
+* A class whose clone method uses serialization.
+*/
+class SerialCloneable implements Cloneable, Serializable
+{
+public Object clone() throws CloneNotSupportedException
+{
+try {
+// save the object to a byte array
+ByteArrayOutputStream bout = new ByteArrayOutputStream();
+try (ObjectOutputStream out = new ObjectOutputStream(bout))
+{
+out.writeObject(this);
+}
+
+43
+
+// read a clone of the object from the byte array
+try (InputStream bin = new ByteArrayInputStream(bout.toByteArray()))
+{
+ObjectInputStream in = new ObjectInputStream(bin);
+return in.readObject();
+}
+
+44
+45
+46
+47
+48
+49
+
+}
+catch (IOException | ClassNotFoundException e)
+{
+CloneNotSupportedException e2 = new CloneNotSupportedException();
+e2.initCause(e);
+throw e2;
+}
+
+50
+51
+52
+53
+54
+55
+56
+
+}
+
+57
+58
+
+}
+
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+
+/**
+* The familiar Employee class, redefined to extend the
+* SerialCloneable class.
+*/
+class Employee extends SerialCloneable
+{
+private String name;
+private double salary;
+private LocalDate hireDay;
+
+69
+
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+100
+
+Chapter 2
+
+Input and Output
+
+Listing 2.4 (Continued)
+public Employee(String n, double s, int year, int month, int day)
+{
+name = n;
+salary = s;
+hireDay = LocalDate.of(year, month, day);
+}
+
+70
+71
+72
+73
+74
+75
+76
+
+public String getName()
+{
+return name;
+}
+
+77
+78
+79
+80
+81
+
+public double getSalary()
+{
+return salary;
+}
+
+82
+83
+84
+85
+86
+
+public LocalDate getHireDay()
+{
+return hireDay;
+}
+
+87
+88
+89
+90
+91
+
+/**
+* Raises the salary of this employee.
+* @byPercent the percentage of the raise
+*/
+public void raiseSalary(double byPercent)
+{
+double raise = salary * byPercent / 100;
+salary += raise;
+}
+
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+
+public String toString()
+{
+return getClass().getName()
++ "[name=" + name
++ ",salary=" + salary
++ ",hireDay=" + hireDay
++ "]";
+}
+
+102
+103
+104
+105
+106
+107
+108
+109
+110
+
+}
+

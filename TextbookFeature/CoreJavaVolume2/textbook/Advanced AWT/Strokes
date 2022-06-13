@@ -1,0 +1,140 @@
+  The draw operation of the Graphics2D class draws the boundary of a shape by using the currently selected stroke. By default, the stroke is a solid line that is 1 pixel wide. You can select a different stroke by calling the setStroke method and supplying an object of a class that implements the Stroke interface. The Java 2D API defines only one such class, called BasicStroke. In this section, we’ll look at the capabilities of the BasicStroke class. 
+  You can construct strokes of arbitrary thickness. For example, here is how to draw lines that are 10 pixels wide: g2.setStroke(new BasicStroke(10.0F)); 
+  g2.draw(new Line2D.Double(. . .)); 
+  When a stroke is more than a pixel thick, the end of the stroke can have different styles. Figure 11.11 shows these so-called end cap styles. You have three choices: • A butt cap simply ends the stroke at its end point. 
+  • A round cap adds a half-circle to the end of the stroke. 
+  • A square cap adds a half-square to the end of the stroke. 
+  When two thick strokes meet, there are three choices for the join style (see Figure 11.12). 
+  • A bevel join joins the strokes with a straight line that is perpendicular to the bisector of the angle between the two strokes. 
+  • A round join extends each stroke to have a round cap. 
+  • A miter join extends both strokes by adding a “spike.”   From the Library of Hristo Dimov Hristov   11.4 Strokes   789   Figure 11.11 End cap styles   Figure 11.12 Join styles   From the Library of Hristo Dimov Hristov   790   Chapter 11   Advanced AWT   The miter join is not suitable for lines that meet at small angles. If two lines join with an angle that is less than the miter limit, a bevel join is used instead, which prevents extremely long spikes. By default, the miter limit is 10 degrees. 
+  You can specify these choices in the BasicStroke constructor, for example: g2.setStroke(new BasicStroke(10.0F, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)); 
+  g2.setStroke(new BasicStroke(10.0F, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 15.0F /* miter limit */)); 
+  Finally, you can create dashed lines by setting a dash pattern. In the program in Listing 11.2, you can select a dash pattern that spells out SOS in Morse code. The dash pattern is a float[] array that contains the lengths of the “on” and “off” intervals (see Figure 11.13). 
+  Figure 11.13 A dash pattern You can specify the dash pattern and a dash phase when constructing the BasicStroke. 
+  The dash phase indicates where in the dash pattern each line should start. 
+  Normally, you set this value to 0. 
+  float[] dashPattern = { 10, 10, 10, 10, 10, 10, 30, 10, 30, . . . }; 
+  g2.setStroke(new BasicStroke(10.0F, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0F /* miter limit */, dashPattern, 0 /* dash phase */)); 
+  NOTE: End cap styles are applied to the ends of each dash in a dash pattern. 
+  The program in Listing 11.2 lets you specify end cap styles, join styles, and dashed lines (see Figure 11.14). You can move the ends of the line segments to test the miter limit: Select the miter join, then move the line segment to form a very acute angle. You will see the miter join turn into a bevel join. 
+  The program is similar to the program in Listing 11.1. The mouse listener remembers your click on the end point of a line segment, and the mouse motion listener monitors the dragging of the end point. A set of radio buttons signal the user   From the Library of Hristo Dimov Hristov   11.4 Strokes   791   Figure 11.14 The StrokeTest program choices for the end cap style, join style, and solid or dashed line. The paintComponent method of the StrokePanel class constructs a GeneralPath consisting of the two line segments that join the three points which the user can move with the mouse. It then constructs a BasicStroke, according to the selections the user made, and finally draws the path. 
+  Listing 11.2 1   stroke/StrokeTest.java   package stroke; 
+  2 3 4 5 6   import java.awt.*; 
+  import java.awt.event.*; 
+  import java.awt.geom.*; 
+  import javax.swing.*; 
+  7 8 9 10 11 12   /** * This program demonstrates different stroke types. 
+  * @version 1.04 2016-05-10 * @author Cay Horstmann */ (Continues)   From the Library of Hristo Dimov Hristov   792   Chapter 11   Advanced AWT   Listing 11.2 (Continued) 13 14 15 16 17 18 19 20 21 22 23 24 25   public class StrokeTest { public static void main(String[] args) { EventQueue.invokeLater(() -> { JFrame frame = new StrokeTestFrame(); 
+  frame.setTitle("StrokeTest"); 
+  frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
+  frame.setVisible(true); 
+  }); 
+  } 
+  } 
+  26 27 28 29 30 31 32 33   /** * This frame lets the user choose the cap, join, and line style, and shows the resulting stroke. 
+  */ class StrokeTestFrame extends JFrame { private StrokeComponent canvas; 
+  private JPanel buttonPanel; 
+  34 35 36 37 38   public StrokeTestFrame() { canvas = new StrokeComponent(); 
+  add(canvas, BorderLayout.CENTER); 
+  39   buttonPanel = new JPanel(); 
+  buttonPanel.setLayout(new GridLayout(3, 3)); 
+  add(buttonPanel, BorderLayout.NORTH); 
+  40 41 42 43   ButtonGroup group1 = new ButtonGroup(); 
+  makeCapButton("Butt Cap", BasicStroke.CAP_BUTT, group1); 
+  makeCapButton("Round Cap", BasicStroke.CAP_ROUND, group1); 
+  makeCapButton("Square Cap", BasicStroke.CAP_SQUARE, group1); 
+  44 45 46 47 48   ButtonGroup group2 = new ButtonGroup(); 
+  makeJoinButton("Miter Join", BasicStroke.JOIN_MITER, group2); 
+  makeJoinButton("Bevel Join", BasicStroke.JOIN_BEVEL, group2); 
+  makeJoinButton("Round Join", BasicStroke.JOIN_ROUND, group2); 
+  49 50 51 52 53   ButtonGroup group3 = new ButtonGroup(); 
+  makeDashButton("Solid Line", false, group3); 
+  makeDashButton("Dashed Line", true, group3); 
+  54 55 56 57   } 
+  58 59 60   /** * Makes a radio button to change the cap style. 
+  From the Library of Hristo Dimov Hristov   11.4 Strokes   793   * @param label the button label * @param style the cap style * @param group the radio button group */ private void makeCapButton(String label, final int style, ButtonGroup group) { // select first button in group boolean selected = group.getButtonCount() == 0; 
+  JRadioButton button = new JRadioButton(label, selected); 
+  buttonPanel.add(button); 
+  group.add(button); 
+  button.addActionListener(event -> canvas.setCap(style)); 
+  pack(); 
+  } 
+  61 62 63 64 65 66 67 68 69 70 71 72 73 74 75   /** * Makes a radio button to change the join style. 
+  * @param label the button label * @param style the join style * @param group the radio button group */ private void makeJoinButton(String label, final int style, ButtonGroup group) { // select first button in group boolean selected = group.getButtonCount() == 0; 
+  JRadioButton button = new JRadioButton(label, selected); 
+  buttonPanel.add(button); 
+  group.add(button); 
+  button.addActionListener(event -> canvas.setJoin(style)); 
+  } 
+  76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91   /** * Makes a radio button to set solid or dashed lines * @param label the button label * @param style false for solid, true for dashed lines * @param group the radio button group */ private void makeDashButton(String label, final boolean style, ButtonGroup group) { // select first button in group boolean selected = group.getButtonCount() == 0; 
+  JRadioButton button = new JRadioButton(label, selected); 
+  buttonPanel.add(button); 
+  group.add(button); 
+  button.addActionListener(event -> canvas.setDash(style)); 
+  } 
+  92 93 94 95 96 97 98 99 100 101 102 103 104 105 106 107   } 
+  108 109   /** (Continues)   From the Library of Hristo Dimov Hristov   794   Chapter 11   Advanced AWT   Listing 11.2 (Continued) 110 111 112 113 114 115 116   * This component draws two joined lines, using different stroke objects, and allows the user to * drag the three points defining the lines. 
+  */ class StrokeComponent extends JComponent { private static final Dimension PREFERRED_SIZE = new Dimension(400, 400); 
+  private static int SIZE = 10; 
+  117 118 119 120 121 122 123   private Point2D[] points; 
+  private int current; 
+  private float width; 
+  private int cap; 
+  private int join; 
+  private boolean dash; 
+  124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143   public StrokeComponent() { addMouseListener(new MouseAdapter() { public void mousePressed(MouseEvent event) { Point p = event.getPoint(); 
+  for (int i = 0; i < points.length; i++) { double x = points[i].getX() - SIZE / 2; 
+  double y = points[i].getY() - SIZE / 2; 
+  Rectangle2D r = new Rectangle2D.Double(x, y, SIZE, SIZE); 
+  if (r.contains(p)) { current = i; 
+  return; 
+  } 
+  } 
+  } 
+  144 145 146 147 148 149   public void mouseReleased(MouseEvent event) { current = -1; 
+  } 
+  }); 
+  150 151 152 153 154 155 156 157   addMouseMotionListener(new MouseMotionAdapter() { public void mouseDragged(MouseEvent event) { if (current == -1) return; 
+  points[current] = event.getPoint(); 
+  repaint(); 
+  From the Library of Hristo Dimov Hristov   11.4 Strokes   795   } 
+  }); 
+  158 159 160   points = new Point2D[3]; 
+  points[0] = new Point2D.Double(200, 100); 
+  points[1] = new Point2D.Double(100, 200); 
+  points[2] = new Point2D.Double(200, 200); 
+  current = -1; 
+  width = 8.0F; 
+  161 162 163 164 165 166 167   } 
+  168 169 170 171 172 173 174 175 176 177 178 179 180 181 182 183 184 185 186 187 188   public void paintComponent(Graphics g) { Graphics2D g2 = (Graphics2D) g; 
+  GeneralPath path = new GeneralPath(); 
+  path.moveTo((float) points[0].getX(), (float) points[0].getY()); 
+  for (int i = 1; i < points.length; i++) path.lineTo((float) points[i].getX(), (float) points[i].getY()); 
+  BasicStroke stroke; 
+  if (dash) { float miterLimit = 10.0F; 
+  float[] dashPattern = { 10F, 10F, 10F, 10F, 10F, 10F, 30F, 10F, 30F, 10F, 30F, 10F, 10F, 10F, 10F, 10F, 10F, 30F }; 
+  float dashPhase = 0; 
+  stroke = new BasicStroke(width, cap, join, miterLimit, dashPattern, dashPhase); 
+  } 
+  else stroke = new BasicStroke(width, cap, join); 
+  g2.setStroke(stroke); 
+  g2.draw(path); 
+  } 
+  189 190 191 192 193 194 195 196 197 198   /** * Sets the join style. 
+  * @param j the join style */ public void setJoin(int j) { join = j; 
+  repaint(); 
+  } 
+  199 200 201 202 203 204 205 206   /** * Sets the cap style. 
+  * @param c the cap style */ public void setCap(int c) { cap = c; 
+  (Continues)   From the Library of Hristo Dimov Hristov   796   Chapter 11   Advanced AWT   Listing 11.2 (Continued) repaint(); 
+  207   } 
+  208 209   /** * Sets solid or dashed lines. 
+  * @param d false for solid, true for dashed lines */ public void setDash(boolean d) { dash = d; 
+  repaint(); 
+  } 
+  210 211 212 213 214 215 216 217 218 219   public Dimension getPreferredSize() { return PREFERRED_SIZE; } 
+  220 221   } 
+  java.awt.Graphics2D 1.2   • void setStroke(Stroke s) sets the stroke of this graphics context to the given object that implements the Stroke interface. 
+  java.awt.BasicStroke 1.2   • • • •   BasicStroke(float width) BasicStroke(float width, int cap, int join) BasicStroke(float width, int cap, int join, float miterlimit) BasicStroke(float width, int cap, int join, float miterlimit, float[] dash, float dashPhase)   constructs a stroke object with the given attributes. 
+  Parameters:   width   The width of the pen   cap   The end cap style—one of CAP_BUTT, CAP_ROUND, and CAP_SQUARE   join   The join style—one of JOIN_BEVEL, JOIN_MITER, and JOIN_ROUND   miterlimit   The angle, in degrees, below which a miter join is rendered as a bevel join   dash   An array of the lengths of the alternating filled and blank portions of a dashed stroke   dashPhase   The “phase” of the dash pattern; a segment of this length, preceding the starting point of the stroke, is assumed to have the dash pattern already applied. 

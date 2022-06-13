@@ -1,0 +1,17 @@
+  Most Swing applications will be built inside a basic JFrame, which creates the window in whatever operating system you’re using. The title of the window can be set using the JFrame constructor, like this: 
+  setDefaultCloseOperation( ) tells the JFrame what to do when the user executes a shutdown maneuver. The EXIT_ON_CLOSE constant tells it to exit the program. Without this call, the default behavior is to do nothing, so the application wouldn’t close. 
+  setSize( ) sets the size of the window in pixels. 
+  Notice the last line: 
+  frame.setVisible(true); 
+  Without this, you won’t see anything on the screen. 
+  We can make things a little more interesting by adding a JLabel to the JFrame: 
+  After one second, the text of the JLabel changes. While this is entertaining and safe for such a trivial program, it’s really not a good idea for the main( ) thread to write directly to the GUI components. Swing has its own thread dedicated to receiving UI events and updating the screen. If you start manipulating the screen with other threads, you can have the collisions and deadlock described in the Concurrency chapter. 
+  Instead, other threads—like main( ), here—should submit tasks to be executed by the Swing 4 event dispatch thread. You do this by handing a task to SwingUtilities.invokeLater( ), which puts it on the event queue to be (eventually) executed by the event dispatch thread. If we do this with the previous example, it looks like this: 
+  Now you are no longer manipulating the JLabel directly. Instead, you submit a Runnable, and the event dispatch thread will do the actual manipulation, when it gets to that task in the event queue. And when it’s executing this Runnable, it’s not doing anything else, so there won’t be any collisions—if all the code in your program follows this approach of submitting manipulations through SwingUtilities.invokeLater( ). This includes starting the program itself—main( ) should not call the Swing methods as it does in the above program, but        5 instead should submit a task to the event queue. So the properly written program will look something like this: 
+  Notice that the call to sleep( ) is not inside the constructor. If you put it there, the original JLabel text never appears, for one thing, because the constructor doesn’t complete until after the sleep( ) finishes and the new label is inserted. But if sleep( ) is inside the constructor, or inside any UI operation, it means that you’re halting the event dispatch thread during the sleep( ), which is generally a bad idea. 
+  Exercise 1: (1) Modify HelloSwing.java to prove to yourself that the application will not close without the call to setDefaultCloseOperation( ). 
+  Exercise 2: (2) Modify HelloLabel.java to show that label addition is dynamic, by adding a random number of labels. 
+A display framework
+  We can combine the ideas above and reduce redundant code by creating a display framework for use in the Swing examples in the rest of this chapter: 
+  This is a tool you may want to use yourself, so it’s placed in the library net.mindview.util. To use it, your application must be in a JFrame (which all the examples in this book are). The static run( ) method sets the title of the window to the simple class name of the JFrame. 
+  Exercise 3: (3) Modify SubmitSwingProgram.java so that it uses SwingConsole. 

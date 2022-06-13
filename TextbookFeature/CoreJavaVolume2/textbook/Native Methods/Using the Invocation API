@@ -1,0 +1,97 @@
+  Up to now, we have considered programs in the Java programming language that made a few C calls, presumably because C was faster or allowed access to functionality inaccessible from the Java platform. Suppose you are in the opposite situation. You have a C or C++ program and would like to make calls to Java code. The invocation API enables you to embed the Java virtual machine into a C or C++ program. Here is the minimal code that you need to initialize a virtual machine: JavaVMOption options[1]; 
+  JavaVMInitArgs vm_args; 
+  JavaVM *jvm; 
+  JNIEnv *env; 
+  options[0].optionString = "-Djava.class.path=."; 
+  memset(&vm_args, 0, sizeof(vm_args)); 
+  vm_args.version = JNI_VERSION_1_2; 
+  vm_args.nOptions = 1; 
+  vm_args.options = options; 
+  JNI_CreateJavaVM(&jvm, (void**) &env, &vm_args); 
+  The call to JNI_CreateJavaVM creates the virtual machine and fills in a pointer jvm to the virtual machine and a pointer env to the execution environment. 
+  You can supply any number of options to the virtual machine. Simply increase the size of the options array and the value of vm_args.nOptions. For example, options[i].optionString = "-Djava.compiler=NONE"; 
+  deactivates the just-in-time compiler. 
+  TIP: When you run into trouble and your program crashes, refuses to initialize the JVM, or can’t load your classes, turn on the JNI debugging mode. Set an option to options[i].optionString = "-verbose:jni"; 
+  You will see a flurry of messages that indicate the progress in initializing the JVM. If you don’t see your classes loaded, check both your path and class path settings. 
+  Once you have set up the virtual machine, you can call Java methods as described in the preceding sections. Simply use the env pointer in the usual way. 
+  From the Library of Hristo Dimov Hristov   12.9 Using the Invocation API   981   You’ll need the jvm pointer only to call other functions in the invocation API. 
+  Currently, there are only four such functions. The most important one is the function to terminate the virtual machine: (*jvm)->DestroyJavaVM(jvm); 
+  Unfortunately, under Windows, it has become difficult to dynamically link to the JNI_CreateJavaVM function in the jre/bin/client/jvm.dll library, due to the changed linking rules in Vista and Oracle’s reliance on an older C runtime library. Our sample program overcomes this problem by loading the library manually. This is the same approach used by the java program—see the file launcher/java_md.c in the src.jar file that is a part of the JDK. 
+  The C program in Listing 12.20 sets up a virtual machine and calls the main method of the Welcome class, which was discussed in Volume I, Chapter 2. (Make sure to compile the Welcome.java file before starting the invocation test program.)   Listing 12.20 1 2 3 4   invocation/InvocationTest.c   /** @version 1.20 2007-10-26 @author Cay Horstmann */   5 6 7   #include <jni.h> #include <stdlib.h>   8 9   #ifdef _WINDOWS   10 11 12 13   #include <windows.h> static HINSTANCE loadJVMLibrary(void); 
+  typedef jint (JNICALL *CreateJavaVM_t)(JavaVM **, void **, JavaVMInitArgs *); 
+  14 15   #endif   16 17 18 19 20 21 22 23   int main() { JavaVMOption options[2]; 
+  JavaVMInitArgs vm_args; 
+  JavaVM *jvm; 
+  JNIEnv *env; 
+  long status; 
+  24 25 26 27   jclass class_Welcome; 
+  jclass class_String; 
+  jobjectArray args; 
+  (Continues)   From the Library of Hristo Dimov Hristov   982   Chapter 12   Native Methods   Listing 12.20 (Continued) jmethodID id_main; 
+  28 29 30 31 32 33   #ifdef _WINDOWS HINSTANCE hjvmlib; 
+  CreateJavaVM_t createJavaVM; 
+  #endif   34   options[0].optionString = "-Djava.class.path=."; 
+  35 36   memset(&vm_args, 0, sizeof(vm_args)); 
+  vm_args.version = JNI_VERSION_1_2; 
+  vm_args.nOptions = 1; 
+  vm_args.options = options; 
+  37 38 39 40 41 42 43 44 45 46 47 48 49   #ifdef _WINDOWS hjvmlib = loadJVMLibrary(); 
+  createJavaVM = (CreateJavaVM_t) GetProcAddress(hjvmlib, "JNI_CreateJavaVM"); 
+  status = (*createJavaVM)(&jvm, (void **) &env, &vm_args); 
+  #else status = JNI_CreateJavaVM(&jvm, (void **) &env, &vm_args); 
+  #endif   50   if (status == JNI_ERR) { fprintf(stderr, "Error creating VM\n"); 
+  return 1; 
+  } 
+  51 52 53 54 55 56   class_Welcome = (*env)->FindClass(env, "Welcome"); 
+  id_main = (*env)->GetStaticMethodID(env, class_Welcome, "main", "([Ljava/lang/String;)V"); 
+  57 58 59   class_String = (*env)->FindClass(env, "java/lang/String"); 
+  args = (*env)->NewObjectArray(env, 0, class_String, NULL); 
+  (*env)->CallStaticVoidMethod(env, class_Welcome, id_main, args); 
+  60 61 62 63   (*jvm)->DestroyJavaVM(jvm); 
+  64 65   return 0; 
+  66 67   } 
+  68 69   #ifdef _WINDOWS   70 71 72 73   static int GetStringFromRegistry(HKEY key, const char *name, char *buf, jint bufsize) { DWORD type, size; 
+  From the Library of Hristo Dimov Hristov   12.9 Using the Invocation API   983   74   return RegQueryValueEx(key, name, 0, &type, 0, &size) == 0 && type == REG_SZ && size < (unsigned int) bufsize && RegQueryValueEx(key, name, 0, 0, buf, &size) == 0; 
+  75 76 77 78 79   } 
+  80 81 82 83 84   static void GetPublicJREHome(char *buf, jint bufsize) { HKEY key, subkey; 
+  char version[MAX_PATH]; 
+  85   /* Find the current version of the JRE */ char *JRE_KEY = "Software\\JavaSoft\\Java Runtime Environment"; 
+  if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, JRE_KEY, 0, KEY_READ, &key) != 0) { fprintf(stderr, "Error opening registry key '%s'\n", JRE_KEY); 
+  exit(1); 
+  } 
+  86 87 88 89 90 91 92 93   if (!GetStringFromRegistry(key, "CurrentVersion", version, sizeof(version))) { fprintf(stderr, "Failed reading value of registry key:\n\t%s\\CurrentVersion\n", JRE_KEY); 
+  RegCloseKey(key); 
+  exit(1); 
+  } 
+  94 95 96 97 98 99 100   /* Find directory where the current version is installed. */ if (RegOpenKeyEx(key, version, 0, KEY_READ, &subkey) != 0) { fprintf(stderr, "Error opening registry key '%s\\%s'\n", JRE_KEY, version); 
+  RegCloseKey(key); 
+  exit(1); 
+  } 
+  101 102 103 104 105 106 107 108   if (!GetStringFromRegistry(subkey, "JavaHome", buf, bufsize)) { fprintf(stderr, "Failed reading value of registry key:\n\t%s\\%s\\JavaHome\n", JRE_KEY, version); 
+  RegCloseKey(key); 
+  RegCloseKey(subkey); 
+  exit(1); 
+  } 
+  109 110 111 112 113 114 115 116 117   RegCloseKey(key); 
+  RegCloseKey(subkey); 
+  118 119 120   } 
+  121   (Continues)   From the Library of Hristo Dimov Hristov   984   Chapter 12   Native Methods   Listing 12.20 (Continued) 122 123 124 125 126 127 128 129 130 131 132   static HINSTANCE loadJVMLibrary(void) { HINSTANCE h1, h2; 
+  char msvcdll[MAX_PATH]; 
+  char javadll[MAX_PATH]; 
+  GetPublicJREHome(msvcdll, MAX_PATH); 
+  strcpy(javadll, msvcdll); 
+  strncat(msvcdll, "\\bin\\msvcr71.dll", MAX_PATH - strlen(msvcdll)); 
+  msvcdll[MAX_PATH - 1] = '\0'; 
+  strncat(javadll, "\\bin\\client\\jvm.dll", MAX_PATH - strlen(javadll)); 
+  javadll[MAX_PATH - 1] = '\0'; 
+  133   h1 = LoadLibrary(msvcdll); 
+  if (h1 == NULL) { fprintf(stderr, "Can't load library msvcr71.dll\n"); 
+  exit(1); 
+  } 
+  134 135 136 137 138 139 140   h2 = LoadLibrary(javadll); 
+  if (h2 == NULL) { fprintf(stderr, "Can't load library jvm.dll\n"); 
+  exit(1); 
+  } 
+  return h2; 
+  141 142 143 144 145 146 147 148   } 
+  149 150   #endif   To compile this program under Linux, use gcc -I jdk/include -I jdk/include/linux -o InvocationTest -L jdk/jre/lib/i386/client -ljvm InvocationTest.c   Under Solaris, use cc -I jdk/include -I jdk/include/solaris -o InvocationTest -L jdk/jre/lib/sparc -ljvm InvocationTest.c   When compiling in Windows with the Microsoft compiler, use the command line cl -D_WINDOWS -I jdk\include -I jdk\include\win32 InvocationTest.c jdk\lib\jvm.lib advapi32.lib   You will need to make sure that the INCLUDE and LIB environment variables include the paths to the Windows API header and library files. 

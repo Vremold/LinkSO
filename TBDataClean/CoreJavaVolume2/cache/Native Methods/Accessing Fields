@@ -1,0 +1,338 @@
+All the native methods you saw so far were static methods with number and
+string parameters. We’ll now consider native methods that operate on objects.
+As an exercise, we will reimplement as native a method of the Employee class that
+was introduced in Volume I, Chapter 4. Again, this is not something you would
+normally want to do, but it does illustrate how to access fields from a native
+method when you need to do so.
+
+12.4.1 Accessing Instance Fields
+To see how to access instance fields from a native method, we will reimplement
+the raiseSalary method. Here is the code in Java:
+public void raiseSalary(double byPercent)
+{
+salary *= 1 + byPercent / 100;
+}
+
+Let us rewrite this as a native method. Unlike the previous examples of native
+methods, this is not a static method. Running javah gives the following prototype:
+JNIEXPORT void JNICALL Java_Employee_raiseSalary(JNIEnv *, jobject, jdouble);
+
+Note the second argument. It is no longer of type jclass but of type jobject. In fact,
+it is an equivalent of the this reference. Static methods obtain a reference to the
+class, whereas nonstatic methods obtain a reference to the implicit this argument
+object.
+Now we access the salary field of the implicit argument. In the “raw” Java-to-C
+binding of Java 1.0, this was easy—a programmer could directly access object
+data fields. However, direct access requires all virtual machines to expose their
+internal data layout. For that reason, the JNI requires programmers to get and
+set the values of data fields by calling special JNI functions.
+In our case, we need to use the GetDoubleField and SetDoubleField functions because
+the type of salary is double. There are other functions—GetIntField/SetIntField,
+GetObjectField/SetObjectField, and so on for other field types. The general syntax is:
+x = (*env)->GetXxxField(env, this_obj, fieldID);
+(*env)->SetXxxField(env, this_obj, fieldID, x);
+
+From the Library of Hristo Dimov Hristov
+
+12.4 Accessing Fields
+
+957
+
+Here, fieldID is a value of a special type, jfieldID, that identifies a field in a structure,
+and Xxx represents a Java data type (Object, Boolean, Byte, and so on). To obtain the
+fieldID, you must first get a value representing the class, which you can do in one
+of two ways. The GetObjectClass function returns the class of any object. For example:
+jclass class_Employee = (*env)->GetObjectClass(env, this_obj);
+
+The FindClass function lets you specify the class name as a string (curiously, with
+/ characters instead of periods as package name separators).
+jclass class_String = (*env)->FindClass(env, "java/lang/String");
+
+Use the GetFieldID function to obtain the fieldID. You must supply the name of the
+field and its signature, an encoding of its type. For example, here is the code to
+obtain the field ID of the salary field:
+jfieldID id_salary = (*env)->GetFieldID(env, class_Employee, "salary", "D");
+
+The string "D" denotes the type double. You’ll learn the complete rules for encoding
+signatures in the next section.
+You might be thinking that accessing a data field is quite convoluted. The designers
+of the JNI did not want to expose the data fields directly, so they had to supply
+functions for getting and setting field values. To minimize the cost of these functions, computing the field ID from the field name—which is the most expensive
+step—is factored out into a separate step. That is, if you repeatedly get and set
+the value of a particular field, you can incur the cost of computing the field
+identifier only once.
+Let us put all the pieces together. The following code reimplements the raiseSalary
+method as a native method:
+JNIEXPORT void JNICALL Java_Employee_raiseSalary(JNIEnv* env, jobject this_obj, jdouble byPercent)
+{
+/* get the class */
+jclass class_Employee = (*env)->GetObjectClass(env, this_obj);
+/* get the field ID */
+jfieldID id_salary = (*env)->GetFieldID(env, class_Employee, "salary", "D");
+/* get the field value */
+jdouble salary = (*env)->GetDoubleField(env, this_obj, id_salary);
+salary *= 1 + byPercent / 100;
+/* set the field value */
+(*env)->SetDoubleField(env, this_obj, id_salary, salary);
+}
+
+From the Library of Hristo Dimov Hristov
+
+958
+
+Chapter 12
+
+Native Methods
+
+CAUTION: Class references are only valid until the native method returns. You
+cannot cache the return values of GetObjectClass in your code. Do not store away
+a class reference for reuse in a later method call. You must call GetObjectClass
+every time the native method executes. If this is intolerable, you can lock the
+reference with a call to NewGlobalRef:
+static jclass class_X = 0;
+static jfieldID id_a;
+...
+if (class_X == 0)
+{
+jclass cx = (*env)->GetObjectClass(env, obj);
+class_X = (*env)->NewGlobalRef(env, cx);
+id_a = (*env)->GetFieldID(env, cls, "a", ". . .");
+}
+
+Now you can use the class reference and field IDs in subsequent calls. When
+you are done using the class, make sure to call
+(*env)->DeleteGlobalRef(env, class_X);
+
+Listings 12.11 and 12.12 show the Java code for a test program and the Employee
+class. Listing 12.13 contains the C code for the native raiseSalary method.
+
+Listing 12.11
+1
+2
+3
+4
+
+employee/EmployeeTest.java
+
+/**
+* @version 1.10 1999-11-13
+* @author Cay Horstmann
+*/
+
+5
+6
+7
+8
+9
+10
+
+public class EmployeeTest
+{
+public static void main(String[] args)
+{
+Employee[] staff = new Employee[3];
+
+11
+
+staff[0] = new Employee("Harry Hacker", 35000);
+staff[1] = new Employee("Carl Cracker", 75000);
+staff[2] = new Employee("Tony Tester", 38000);
+
+12
+13
+14
+15
+
+for (Employee e : staff)
+e.raiseSalary(5);
+for (Employee e : staff)
+e.print();
+
+16
+17
+18
+19
+
+}
+
+20
+21
+
+}
+
+From the Library of Hristo Dimov Hristov
+
+12.4 Accessing Fields
+
+Listing 12.12
+1
+2
+3
+4
+
+959
+
+employee/Employee.java
+
+/**
+* @version 1.10 1999-11-13
+* @author Cay Horstmann
+*/
+
+5
+6
+7
+8
+9
+
+public class Employee
+{
+private String name;
+private double salary;
+
+10
+
+public native void raiseSalary(double byPercent);
+
+11
+12
+
+public Employee(String n, double s)
+{
+name = n;
+salary = s;
+}
+
+13
+14
+15
+16
+17
+18
+
+public void print()
+{
+System.out.println(name + " " + salary);
+}
+
+19
+20
+21
+22
+23
+
+static
+{
+System.loadLibrary("Employee");
+}
+
+24
+25
+26
+27
+28
+
+}
+
+Listing 12.13
+1
+2
+3
+4
+
+employee/Employee.c
+
+/**
+@version 1.10 1999-11-13
+@author Cay Horstmann
+*/
+
+5
+6
+
+#include "Employee.h"
+
+7
+8
+
+#include <stdio.h>
+
+9
+10
+11
+12
+13
+
+JNIEXPORT void JNICALL Java_Employee_raiseSalary(JNIEnv* env, jobject this_obj, jdouble byPercent)
+{
+/* get the class */
+jclass class_Employee = (*env)->GetObjectClass(env, this_obj);
+
+14
+
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+960
+
+Chapter 12
+
+Native Methods
+
+Listing 12.13 (Continued)
+/* get the field ID */
+jfieldID id_salary = (*env)->GetFieldID(env, class_Employee, "salary", "D");
+
+15
+16
+17
+
+/* get the field value */
+jdouble salary = (*env)->GetDoubleField(env, this_obj, id_salary);
+
+18
+19
+20
+
+salary *= 1 + byPercent / 100;
+
+21
+22
+
+/* set the field value */
+(*env)->SetDoubleField(env, this_obj, id_salary, salary);
+
+23
+24
+25
+
+}
+
+12.4.2 Accessing Static Fields
+Accessing static fields is similar to accessing nonstatic fields. Use the GetStaticFieldID
+and GetStaticXxxField/SetStaticXxxField functions that work almost identically to their
+nonstatic counterparts, with two differences:
+• As you have no object, you must use FindClass instead of GetObjectClass to obtain
+the class reference.
+• You have to supply the class, not the instance object, when accessing the field.
+For example, here is how you can get a reference to System.out:
+/* get the class */
+jclass class_System = (*env)->FindClass(env, "java/lang/System");
+/* get the field ID */
+jfieldID id_out = (*env)->GetStaticFieldID(env, class_System, "out",
+"Ljava/io/PrintStream;");
+/* get the field value */
+jobject obj_out = (*env)->GetStaticObjectField(env, class_System, id_out);
+
+Accessing Fields
+
+• jfieldID GetFieldID(JNIEnv *env, jclass cl, const char name[], const char fieldSignature[])
+returns the identifier of a field in a class.
+• Xxx GetXxxField(JNIEnv *env, jobject obj, jfieldID id)
+returns the value of a field. The field type Xxx is one of Object, Boolean, Byte, Char,
+Short, Int, Long, Float, or Double.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+

@@ -1,0 +1,289 @@
+
+361
+
+There is a LocalDateTime class representing a date and time. That class is suitable for
+storing points in time in a fixed time zone—for example, for a schedule of classes
+or events. However, if you need to make calculations that span the daylight savings time, or if you need to deal with users in different time zones, you should
+use the ZonedDateTime class that we discuss next.
+
+6.5 Zoned Time
+Time zones, perhaps because they are an entirely human creation, are even messier
+than the complications caused by the earth’s irregular rotation. In a rational world,
+we’d all follow the clock in Greenwich, and some of us would eat our lunch at
+02:00, others at 22:00. Our stomachs would figure it out. This is actually done in
+China, which spans four conventional time zones. Elsewhere, we have time zones
+with irregular and shifting boundaries and, to make matters worse, the daylight
+savings time.
+As capricious as the time zones may appear to the enlightened, they are a fact of
+life. When you implement a calendar application, it needs to work for people
+who fly from one country to another. When you have a conference call at 10:00
+in New York, but happen to be in Berlin, you expect to be alerted at the correct
+local time.
+The Internet Assigned Numbers Authority (IANA) keeps a database of all known
+time zones around the world (www.iana.org/time-zones), which is updated several times
+per year. The bulk of the updates deals with the changing rules for daylight
+savings time. Java uses the IANA database.
+Each time zone has an ID, such as America/New_York or Europe/Berlin. To find out all
+available time zones, call ZoneId.getAvailableZoneIds. At the time of this writing, there
+were almost 600 IDs.
+Given a time zone ID, the static method ZoneId.of(id) yields a ZoneId object. You can
+use that object to turn a LocalDateTime object into a ZonedDateTime object by calling
+local.atZone(zoneId), or you can construct a ZonedDateTime by calling the static method
+ZonedDateTime.of(year, month, day, hour, minute, second, nano, zoneId). For example,
+ZonedDateTime apollo11launch = ZonedDateTime.of(1969, 7, 16, 9, 32, 0, 0,
+ZoneId.of("America/New_York"));
+// 1969-07-16T09:32-04:00[America/New_York]
+
+This is a specific instant in time. Call apollo11launch.toInstant to get the Instant. Conversely, if you have an instant in time, call instant.atZone(ZoneId.of("UTC")) to get the
+ZonedDateTime at the Greenwich Royal Observatory, or use another ZoneId to get it
+elsewhere on the planet.
+
+From the Library of Hristo Dimov Hristov
+
+362
+
+Chapter 6
+
+The Date and Time API
+
+NOTE: UTC stands for “Coordinated Universal Time,” and the acronym is a
+compromise between the aforementioned English and the French “Temps
+Universel Coordiné,” having the distinction of being incorrect in either language.
+UTC is the time at the Greenwich Royal Observatory, without daylight
+savings time.
+
+Many of the methods of ZonedDateTime are the same as those of LocalDateTime (see
+Table 6.5). Most are straightforward, but daylight savings time introduces some
+complications.
+When daylight savings time starts, clocks advance by an hour. What happens
+when you construct a time that falls into the skipped hour? For example, in 2013,
+Central Europe switched to daylight savings time on March 31 at 2:00. If you try
+to construct nonexistent time March 31 2:30, you actually get 3:30.
+ZonedDateTime skipped = ZonedDateTime.of(
+LocalDate.of(2013, 3, 31),
+LocalTime.of(2, 30),
+ZoneId.of("Europe/Berlin"));
+// Constructs March 31 3:30
+
+Conversely, when daylight time ends, clocks are set back by an hour, and there
+are two instants with the same local time! When you construct a time within that
+span, you get the earlier of the two.
+ZonedDateTime ambiguous = ZonedDateTime.of(
+LocalDate.of(2013, 10, 27), // End of daylight savings time
+LocalTime.of(2, 30),
+ZoneId.of("Europe/Berlin"));
+// 2013-10-27T02:30+02:00[Europe/Berlin]
+ZonedDateTime anHourLater = ambiguous.plusHours(1);
+// 2013-10-27T02:30+01:00[Europe/Berlin]
+
+An hour later, the time has the same hours and minutes, but the zone offset has
+changed.
+You also need to pay attention when adjusting a date across daylight savings
+time boundaries. For example, if you set a meeting for next week, don’t add a
+duration of seven days:
+ZonedDateTime nextMeeting = meeting.plus(Duration.ofDays(7));
+// Caution! Won't work with daylight savings time
+
+Instead, use the Period class.
+ZonedDateTime nextMeeting = meeting.plus(Period.ofDays(7)); // OK
+
+From the Library of Hristo Dimov Hristov
+
+6.5 Zoned Time
+
+Table 6.5
+
+363
+
+ZonedDateTime Methods
+
+Method
+
+Description
+
+now, of, ofInstant
+
+Construct a ZonedDateTime from the current time, or from
+a LocalDateTime, or LocalDate/LocalTime, or
+year/month/day/hour/minute/second/nanosecond,
+together with a ZoneId, or from an Instant and ZoneId.
+These are static methods.
+
+plusDays, plusWeeks, plusMonths,
+plusYears, plusHours, plusMinutes,
+plusSeconds, plusNanos
+
+Adds a number of temporal units to this ZonedDateTime.
+
+minusDays, minusWeeks, minusMonths,
+minusYears, minusHours,
+minusMinutes, minusSeconds,
+minusNanos
+
+Subtracts a number of temporal units from this
+ZonedDateTime.
+
+plus, minus
+
+Adds or subtracts a Duration or Period.
+
+withDayOfMonth, withDayOfYear,
+withMonth, withYear, withHour,
+withMinute, withSecond, withNano
+
+Returns a new ZonedDateTime, with one temporal unit
+changed to the given value.
+
+withZoneSameInstant,
+withZoneSameLocal
+
+Returns a new ZonedDateTime in the given time zone,
+either representing the same instant or the same local
+time.
+
+getDayOfMonth
+
+Gets the day of the month (between 1 and 31).
+
+getDayOfYear
+
+Gets the day of the year (between 1 and 366).
+
+getDayOfWeek
+
+Gets the day of the week, returning a value of the
+DayOfWeek enumeration.
+
+getMonth, getMonthValue
+
+Gets the month as a value of the Month enumeration,
+or as a number between 1 and 12.
+
+getYear
+
+Gets the year, between –999,999,999 and 999,999,999.
+
+getHour, getMinute, getSecond,
+getNano
+
+Gets the hour, minute, second, or nanosecond of this
+ZonedDateTime.
+
+getOffset
+
+Gets the offset from UTC, as a ZoneOffset instance.
+Offsets can vary from –12:00 to +14:00. Some time
+zones have fractional offsets. Offsets change with
+daylight savings time.
+
+toLocalDate, toLocalTime, toInstant
+
+Yields the local date or local time, or the corresponding
+instant.
+
+isBefore, isAfter
+
+Compares this ZonedDateTime with another.
+
+From the Library of Hristo Dimov Hristov
+
+364
+
+Chapter 6
+
+The Date and Time API
+
+CAUTION: There is also an OffsetDateTime class that represents times with an
+offset from UTC, but without time zone rules. That class is intended for specialized applications that specifically require the absence of those rules, such as
+certain network protocols. For human time, use ZonedDateTime.
+
+The example program in Listing 6.3 demonstrates the ZonedDateTime class.
+
+Listing 6.3
+1
+
+zonedtimes/ZonedTimes.java
+
+package zonedtimes;
+
+2
+3
+
+import java.time.*;
+
+4
+5
+6
+7
+8
+9
+10
+11
+12
+
+public class ZonedTimes
+{
+public static void main(String[] args)
+{
+ZonedDateTime apollo11launch = ZonedDateTime.of(1969, 7, 16, 9, 32, 0, 0,
+ZoneId.of("America/New_York"));
+// 1969-07-16T09:32-04:00[America/New_York]
+System.out.println("apollo11launch: " + apollo11launch);
+
+13
+14
+15
+
+Instant instant = apollo11launch.toInstant();
+System.out.println("instant: " + instant);
+
+16
+17
+18
+
+ZonedDateTime zonedDateTime = instant.atZone(ZoneId.of("UTC"));
+System.out.println("zonedDateTime: " + zonedDateTime);
+
+19
+20
+21
+22
+23
+
+ZonedDateTime skipped = ZonedDateTime.of(LocalDate.of(2013, 3, 31),
+LocalTime.of(2, 30), ZoneId.of("Europe/Berlin"));
+// Constructs March 31 3:30
+System.out.println("skipped: " + skipped);
+
+24
+25
+26
+27
+28
+29
+30
+31
+32
+
+ZonedDateTime ambiguous = ZonedDateTime.of(LocalDate.of(2013, 10, 27),
+// End of daylight savings time
+LocalTime.of(2, 30), ZoneId.of("Europe/Berlin"));
+// 2013-10-27T02:30+02:00[Europe/Berlin]
+ZonedDateTime anHourLater = ambiguous.plusHours(1);
+// 2013-10-27T02:30+01:00[Europe/Berlin]
+System.out.println("ambiguous: " + ambiguous);
+System.out.println("anHourLater: " + anHourLater);
+
+33
+34
+35
+36
+37
+
+ZonedDateTime meeting = ZonedDateTime.of(LocalDate.of(2013, 10, 31),
+LocalTime.of(14, 30), ZoneId.of("America/Los_Angeles"));
+System.out.println("meeting: " + meeting);
+ZonedDateTime nextMeeting = meeting.plus(Duration.ofDays(7));
+
+From the Library of Hristo Dimov Hristov
+

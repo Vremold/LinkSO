@@ -1,0 +1,202 @@
+  A Java compiler converts source instructions into code for the Java virtual machine. 
+  The virtual machine code is stored in a class file with a .class extension. Each class file contains the definition and implementation code for one class or interface. In the following section, you will see how the virtual machine loads these class files. 
+9.1.1 The Class Loading Process
+  The virtual machine loads only those class files that are needed for the execution of a program. For example, suppose program execution starts with MyProgram.class. 
+  Here are the steps that the virtual machine carries out: 1. 
+  2. 
+  The virtual machine has a mechanism for loading class files—for example, by reading the files from disk or by requesting them from the Web; it uses this mechanism to load the contents of the MyProgram class file. 
+  If the MyProgram class has fields or superclasses of another class type, their class files are loaded as well. (The process of loading all the classes that a given class depends on is called resolving the class.)   From the Library of Hristo Dimov Hristov   9.1 Class Loaders   3. 
+  4. 
+  493   The virtual machine then executes the main method in MyProgram (which is static, so no instance of a class needs to be created). 
+  If the main method or a method that main calls requires additional classes, these are loaded next. 
+  The class loading mechanism doesn’t just use a single class loader, however. Every Java program has at least three class loaders: • The bootstrap class loader • The extension class loader • The system class loader (sometimes also called the application class loader) The bootstrap class loader loads the system classes (typically, from the JAR file rt.jar). It is an integral part of the virtual machine and is usually implemented in C. There is no ClassLoader object corresponding to the bootstrap class loader. For example, String.class.getClassLoader()   returns null. 
+  The extension class loader loads “standard extensions” from the jre/lib/ext directory. You can drop JAR files into that directory, and the extension class loader will find the classes in them, even without any class path. (Some people recommend this mechanism to avoid the “class path hell,” but see the next cautionary note.) The system class loader loads the application classes. It locates classes in the directories and JAR/ZIP files on the class path, as set by the CLASSPATH environment variable or the -classpath command-line option. 
+  In Oracle Java implementation, the extension and system class loaders are implemented in Java. Both are instances of the URLClassLoader class. 
+  CAUTION: You can run into grief if you drop a JAR file into the jre/lib/ext directory and one of its classes needs to load a class that is not a system or extension class. The extension class loader does not use the class path. Keep that in mind before you use the extension directory as a way to manage your class file hassles. 
+  From the Library of Hristo Dimov Hristov   494   Chapter 9   Security   NOTE: In addition to all the places already mentioned, classes can be loaded from the jre/lib/endorsed directory. This mechanism can only be used to replace certain standard Java libraries (such as those for XML and CORBA support) with newer versions. See http://docs.oracle.com/javase/8/docs/technotes/guides/ standards for details. 
+9.1.2 The Class Loader Hierarchy
+  Class loaders have a parent/child relationship. Every class loader except for the bootstrap one has a parent class loader. A class loader is supposed to give its parent a chance to load any given class and to only load it if the parent has failed. 
+  For example, when the system class loader is asked to load a system class (say, java.util.ArrayList), it first asks the extension class loader. That class loader first asks the bootstrap class loader. The bootstrap class loader finds and loads the class in rt.jar, so neither of the other class loaders searches any further. 
+  Some programs have a plugin architecture in which certain parts of the code are packaged as optional plugins. If the plugins are packaged as JAR files, you can simply load the plugin classes with an instance of URLClassLoader. 
+  URL url = new URL("file:///path/to/plugin.jar"); 
+  URLClassLoader pluginLoader = new URLClassLoader(new URL[] { url }); 
+  Class<?> cl = pluginLoader.loadClass("mypackage.MyClass"); 
+  Since no parent was specified in the URLClassLoader constructor, the parent of the pluginLoader is the system class loader. Figure 9.1 shows the hierarchy. 
+  Most of the time, you don’t have to worry about the class loader hierarchy. Generally, classes are loaded because they are required by other classes, and that process is transparent to you. 
+  Occasionally, however, you need to intervene and specify a class loader. Consider this example: • Your application code contains a helper method that calls Class.forName( classNameString). 
+  • That method is called from a plugin class. 
+  • The classNameString specifies a class that is contained in the plugin JAR. 
+  The author of the plugin has reasons to expect that the class should be loaded. 
+  However, the helper method’s class was loaded by the system class loader, and that is the class loader used by Class.forName. The classes in the plugin JAR are not visible. This phenomenon is called classloader inversion. 
+  From the Library of Hristo Dimov Hristov   9.1 Class Loaders   495   Figure 9.1 The class loader hierarchy To overcome this problem, the helper method needs to use the correct class loader. It can require the class loader as a parameter. Alternatively, it can require that the correct class loader is set as the context class loader of the current thread. 
+  This strategy is used by many frameworks (such as the JAXP and JNDI frameworks that we discussed in Chapters 3 and 5). 
+  Each thread has a reference to a class loader, called the context class loader. The main thread’s context class loader is the system class loader. When a new thread is created, its context class loader is set to the creating thread’s context class loader. Thus, if you don’t do anything, all threads will have their context class loaders set to the system class loader. 
+  However, you can set any class loader by calling   From the Library of Hristo Dimov Hristov   496   Chapter 9   Security   Thread t = Thread.currentThread(); 
+  t.setContextClassLoader(loader); 
+  The helper method can then retrieve the context class loader: Thread t = Thread.currentThread(); 
+  ClassLoader loader = t.getContextClassLoader(); 
+  Class cl = loader.loadClass(className); 
+  The question remains when the context class loader is set to the plugin class loader. The application designer must make this decision. Generally, it is a good idea to set the context class loader when invoking a method of a plugin class that was loaded with a different class loader. Alternatively, the caller of the helper method can set the context class loader. 
+  TIP: If you write a method that loads a class by name, it is a good idea to offer the caller the choice between passing an explicit class loader and using the context class loader. Don’t simply use the class loader of the method’s class. 
+9.1.3 Using Class Loaders as Namespaces
+  Every Java programmer knows that package names are used to eliminate name conflicts. There are two classes called Date in the standard library, but of course their real names are java.util.Date and java.sql.Date. The simple name is only a programmer convenience and requires the inclusion of appropriate import statements. 
+  In a running program, all class names contain their package names. 
+  It might surprise you, however, that you can have two classes in the same virtual machine that have the same class and package name. A class is determined by its full name and the class loader. This technique is useful for loading code from multiple sources. For example, a browser uses separate instances of the applet class loader for each web page. This allows the virtual machine to separate classes from different web pages, no matter what they are named. Figure 9.2 shows an example. Suppose a web page contains two applets, provided by different advertisers, and each applet has a class called Banner. Since each applet is loaded by a separate class loader, these classes are entirely distinct and do not conflict with each other. 
+  NOTE: This technique has other uses as well, such as “hot deployment” of servlets and Enterprise JavaBeans. See http://zeroturnaround.com/labs/rjc301 for more information. 
+  From the Library of Hristo Dimov Hristov   9.1 Class Loaders   497   Figure 9.2 Two class loaders load different classes with the same name. 
+9.1.4 Writing Your Own Class Loader
+  You can write your own class loader for specialized purposes. That lets you carry out custom checks before you pass the bytecodes to the virtual machine. For example, your class loader can refuse to load a class that has not been marked as “paid for.” To write your own class loader, simply extend the ClassLoader class and override the method   From the Library of Hristo Dimov Hristov   498   Chapter 9   Security   findClass(String className)   The loadClass method of the ClassLoader superclass takes care of the delegation to the parent and calls findClass only if the class hasn’t already been loaded and if the parent class loader was unable to load the class. 
+  Your implementation of this method must do the following: 1. 
+  2. 
+  Load the bytecodes for the class from the local file system or some other source. 
+  Call the defineClass method of the ClassLoader superclass to present the bytecodes to the virtual machine. 
+  In the program of Listing 9.1, we implement a class loader that loads encrypted class files. The program asks the user for the name of the first class to load (that is, the class containing main) and the decryption key. It then uses a special class loader to load the specified class and calls the main method. The class loader decrypts the specified class and all nonsystem classes that are referenced by it. 
+  Finally, the program calls the main method of the loaded class (see Figure 9.3). 
+  For simplicity, we ignore the 2,000 years of progress in the field of cryptography and use the venerable Caesar cipher for encrypting the class files. 
+  NOTE: David Kahn’s wonderful book The Codebreakers (Macmillan, 1967, p. 84) refers to Suetonius as a historical source for the Caesar cipher. Caesar shifted the 24 letters of the Roman alphabet by 3 letters, which at the time baffled his adversaries. 
+  When this chapter was first written, the U.S. government restricted the export of strong encryption methods. Therefore, we used Caesar’s method for our example because it was clearly legal for export. 
+  Our version of the Caesar cipher has as a key a number between 1 and 255. To decrypt, simply add that key to every byte and reduce modulo 256. The Caesar.java program of Listing 9.2 carries out the encryption. 
+  To not confuse the regular class loader, we use a different extension, .caesar, for the encrypted class files. 
+  To decrypt, the class loader simply subtracts the key from every byte. In the companion code for this book, you will find four class files, encrypted with a key value of 3—the traditional choice. To run the encrypted program, you’ll need the custom class loader defined in our ClassLoaderTest program. 
+  From the Library of Hristo Dimov Hristov   9.1 Class Loaders   499   Figure 9.3 The ClassLoaderTest program Encrypting class files has a number of practical uses (provided, of course, that you use something stronger than the Caesar cipher). Without the decryption key, the class files are useless. They can neither be executed by a standard virtual machine nor readily disassembled. 
+  This means that you can use a custom class loader to authenticate the user of the class or to ensure that a program has been paid for before it will be allowed to run. Of course, encryption is only one application of a custom class loader. You can use other types of class loaders to solve other problems—for example, storing class files in a database. 
+  Listing 9.1 1   classLoader/ClassLoaderTest.java   package classLoader; 
+  2 3 4 5 6 7 8   import java.io.*; 
+  import java.lang.reflect.*; 
+  import java.nio.file.*; 
+  import java.awt.*; 
+  import java.awt.event.*; 
+  import javax.swing.*; 
+9
+  10 11 12 13 14 15 16   /** * This program demonstrates a custom class loader that decrypts class files. 
+  * @version 1.24 2016-05-10 * @author Cay Horstmann */ public class ClassLoaderTest { (Continues)   From the Library of Hristo Dimov Hristov   500   Chapter 9   Security   Listing 9.1 (Continued) public static void main(String[] args) { EventQueue.invokeLater(() -> { JFrame frame = new ClassLoaderFrame(); 
+  frame.setTitle("ClassLoaderTest"); 
+  frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
+  frame.setVisible(true); 
+  }); 
+  } 
+  17 18 19 20 21 22 23 24 25 26 27   } 
+  28 29 30 31 32 33 34 35 36 37   /** * This frame contains two text fields for the name of the class to load and the decryption key. 
+  */ class ClassLoaderFrame extends JFrame { private JTextField keyField = new JTextField("3", 4); 
+  private JTextField nameField = new JTextField("Calculator", 30); 
+  private static final int DEFAULT_WIDTH = 300; 
+  private static final int DEFAULT_HEIGHT = 200; 
+  38 39 40 41 42 43 44 45 46 47 48 49 50 51   public ClassLoaderFrame() { setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT); 
+  setLayout(new GridBagLayout()); 
+  add(new JLabel("Class"), new GBC(0, 0).setAnchor(GBC.EAST)); 
+  add(nameField, new GBC(1, 0).setWeight(100, 0).setAnchor(GBC.WEST)); 
+  add(new JLabel("Key"), new GBC(0, 1).setAnchor(GBC.EAST)); 
+  add(keyField, new GBC(1, 1).setWeight(100, 0).setAnchor(GBC.WEST)); 
+  JButton loadButton = new JButton("Load"); 
+  add(loadButton, new GBC(0, 2, 2, 1)); 
+  loadButton.addActionListener(event -> runClass(nameField.getText(), keyField.getText())); 
+  pack(); 
+  } 
+  52 53 54 55 56 57 58 59 60 61 62   /** * Runs the main method of a given class. 
+  * @param name the class name * @param key the decryption key for the class files */ public void runClass(String name, String key) { try { ClassLoader loader = new CryptoClassLoader(Integer.parseInt(key)); 
+  From the Library of Hristo Dimov Hristov   9.1 Class Loaders   501   Class<?> c = loader.loadClass(name); 
+  Method m = c.getMethod("main", String[].class); 
+  m.invoke(null, (Object) new String[] {}); 
+  63 64 65   } 
+  catch (Throwable e) { JOptionPane.showMessageDialog(this, e); 
+  } 
+  66 67 68 69 70   } 
+  71 72 73   } 
+  74 75 76 77 78 79 80   /** * This class loader loads encrypted class files. 
+  */ class CryptoClassLoader extends ClassLoader { private int key; 
+  81 82 83 84 85 86 87 88 89   /** * Constructs a crypto class loader. 
+  * @param k the decryption key */ public CryptoClassLoader(int k) { key = k; 
+  } 
+  90 91 92 93 94 95 96 97 98 99 100 101 102 103 104 105   protected Class<?> findClass(String name) throws ClassNotFoundException { try { byte[] classBytes = null; 
+  classBytes = loadClassBytes(name); 
+  Class<?> cl = defineClass(name, classBytes, 0, classBytes.length); 
+  if (cl == null) throw new ClassNotFoundException(name); 
+  return cl; 
+  } 
+  catch (IOException e) { throw new ClassNotFoundException(name); 
+  } 
+  } 
+  106 107 108 109 110 111   /** * Loads and decrypt the class file bytes. 
+  * @param name the class name * @return an array with the class file bytes */ (Continues)   From the Library of Hristo Dimov Hristov   502   Chapter 9   Security   Listing 9.1 (Continued) private byte[] loadClassBytes(String name) throws IOException { String cname = name.replace('.', '/') + ".caesar"; 
+  byte[] bytes = Files.readAllBytes(Paths.get(cname)); 
+  for (int i = 0; i < bytes.length; i++) bytes[i] = (byte) (bytes[i] - key); 
+  return bytes; 
+  } 
+  112 113 114 115 116 117 118 119 120   } 
+  Listing 9.2 1   classLoader/Caesar.java   package classLoader; 
+  2 3   import java.io.*; 
+  4 5 6 7 8 9 10 11 12 13 14 15 16 17 18   /** * Encrypts a file using the Caesar cipher. 
+  * @version 1.01 2012-06-10 * @author Cay Horstmann */ public class Caesar { public static void main(String[] args) throws Exception { if (args.length != 3) { System.out.println("USAGE: java classLoader.Caesar in out key"); 
+  return; 
+  } 
+  19   try(FileInputStream in = new FileInputStream(args[0]); 
+  FileOutputStream out = new FileOutputStream(args[1])) { int key = Integer.parseInt(args[2]); 
+  int ch; 
+  while ((ch = in.read()) != -1) { byte c = (byte) (ch + key); 
+  out.write(c); 
+  } 
+  } 
+  20 21 22 23 24 25 26 27 28 29 30   } 
+  31 32   } 
+  From the Library of Hristo Dimov Hristov   9.1 Class Loaders   503   java.lang.Class 1.0   • ClassLoader getClassLoader() gets the class loader that loaded this class. 
+  java.lang.ClassLoader 1.0   • ClassLoader getParent() 1.2 returns the parent class loader, or null if the parent class loader is the bootstrap class loader. 
+  • static ClassLoader getSystemClassLoader() 1.2 gets the system class loader—that is, the class loader that was used to load the first application class. 
+  • protected Class findClass(String name) 1.2 should be overridden by a class loader to find the bytecodes for a class and present them to the virtual machine by calling the defineClass method. In the name of the class, use . as package name separator, and don’t use a .class suffix. 
+  • Class defineClass(String name, byte[] byteCodeData, int offset, int length) adds a new class to the virtual machine whose bytecodes are provided in the given data range. 
+  java.net.URLClassLoader 1.2   • URLClassLoader(URL[] urls) • URLClassLoader(URL[] urls, ClassLoader parent) constructs a class loader that loads classes from the given URLs. If a URL ends in a /, it is assumed to be a directory, otherwise it is assumed to be a JAR file. 
+  java.lang.Thread 1.0   • ClassLoader getContextClassLoader() 1.2 gets the class loader that the creator of this thread has designated as the most reasonable class loader to use when executing this thread. 
+  • void setContextClassLoader(ClassLoader loader) 1.2 sets a class loader for code in this thread to retrieve for loading classes. If no context class loader is set explicitly when a thread is started, the parent’s context class loader is used. 
+  From the Library of Hristo Dimov Hristov   504   Chapter 9   Security   9.1.5 Bytecode Verification When a class loader presents the bytecodes of a newly loaded Java platform class to the virtual machine, these bytecodes are first inspected by a verifier. The verifier checks that the instructions cannot perform actions that are obviously damaging. 
+  All classes except for system classes are verified. 
+  Here are some of the checks that the verifier carries out: • • • • •   Variables are initialized before they are used. 
+  Method calls match the types of object references. 
+  Rules for accessing private data and methods are not violated. 
+  Local variable accesses fall within the runtime stack. 
+  The runtime stack does not overflow. 
+  If any of these checks fails, the class is considered corrupted and will not be loaded. 
+  NOTE: If you are familiar with Gödel’s theorem, you might wonder how the verifier can prove that a class file is free from type mismatches, uninitialized variables, and stack overflows. Gödel’s theorem states that it is impossible to design algorithms that process program files and decide whether the input programs have a particular property (such as being free from stack overflows). Is this a conflict between the public relations department at Oracle and the laws of logic? No—in fact, the verifier is not a decision algorithm in the sense of Gödel. If the verifier accepts a program, it is indeed safe. However, the verifier might reject virtual machine instructions even though they would actually be safe. (You might have run into this issue when you were forced to initialize a variable with a dummy value because the verifier couldn’t see that it was going to be properly initialized.)   This strict verification is an important security consideration. Accidental errors, such as uninitialized variables, can easily wreak havoc if they are not caught. 
+  More importantly, in the wide open world of the Internet, you must be protected against malicious programmers who create evil effects on purpose. For example, by modifying values on the runtime stack or by writing to the private data fields of system objects, a program can break through the security system of a browser. 
+  You might wonder, however, why a special verifier checks all these features. After all, the compiler would never allow you to generate a class file in which an uninitialized variable is used or in which a private data field is accessed from another class. Indeed, a class file generated by a compiler for the Java programming language always passes verification. However, the bytecode format used   From the Library of Hristo Dimov Hristov   9.1 Class Loaders   505   in the class files is well documented, and it is an easy matter for someone with experience in assembly programming and a hex editor to manually produce a class file containing valid but unsafe instructions for the Java virtual machine. 
+  The verifier is always guarding against maliciously altered class files, not just checking the class files produced by a compiler. 
+  Here’s an example of how to construct such an altered class file. We start with the program VerifierTest.java of Listing 9.3. This is a simple program that calls a method and displays the method’s result. The program can be run both as a console program and as an applet. The fun method itself just computes 1 + 2. 
+  static int fun() { int m; 
+  int n; 
+  m = 1; 
+  n = 2; 
+  int r = m + n; 
+  return r; 
+  } 
+  As an experiment, try to compile the following modification of this program: static int fun() { int m = 1; 
+  int n; 
+  m = 1; 
+  m = 2; 
+  int r = m + n; 
+  return r; 
+  } 
+  In this case, n is not initialized, and it could have any random value. Of course, the compiler detects that problem and refuses to compile the program. To create a bad class file, we have to work a little harder. First, run the javap program to find out how the compiler translates the fun method. The command javap -c verifier.VerifierTest   shows the bytecodes in the class file in mnemonic form. 
+  Method int fun() 0 iconst_1 1 istore_0 2 iconst_2 3 istore_1 4 iload_0 5 iload_1 6 iadd   From the Library of Hristo Dimov Hristov   506   Chapter 9   Security   7 istore_2 8 iload_2 9 ireturn   Use a hex editor to change instruction 3 from istore_1 to istore_0. That is, local variable 0 (which is m) is initialized twice, and local variable 1 (which is n) is not initialized at all. We need to know the hexadecimal values for these instructions; 
+  these values are readily available from The Java™ Virtual Machine Specification, Second Edition, by Tim Lindholm and Frank Yellin (Prentice Hall, 1999). 
+  0 iconst_1 04 1 istore_0 3B 2 iconst_2 05 3 istore_1 3C 4 iload_0 1A 5 iload_1 1B 6 iadd 60 7 istore_2 3D 8 iload_2 1C 9 ireturn AC   You can use any hex editor to carry out the modification. In Figure 9.4, you see the class file VerifierTest.class loaded into the Gnome hex editor, with the bytecodes of the fun method highlighted. 
+  Change 3C to 3B and save the class file. Then try running the VerifierTest program. 
+  You get an error message: Exception in thread "main" java.lang.VerifyError: (class: VerifierTest, method:fun signature: ()I) Accessing value from uninitialized register 1   That is good—the virtual machine detected our modification. 
+  Now run the program with the -noverify (or -Xverify:none) option. 
+  java -noverify verifier.VerifierTest   The fun method returns a seemingly random value. This is actually 2 plus the value that happened to be stored in the variable n, which never was initialized. 
+  Here is a typical printout: 1 + 2 == 15102330   To see how browsers handle verification, we wrote this program to run either as an application or an applet. Load the applet into a browser, using a file URL such as file:///C:/CoreJavaBook/v2ch9/verifier/VerifierTest.html   You then see an error message displayed indicating that verification has failed (Figure 9.5). 
+  From the Library of Hristo Dimov Hristov   9.1 Class Loaders   507   Figure 9.4 Modifying bytecodes with a hex editor Listing 9.3 1   verifier/VerifierTest.java   package verifier; 
+  2 3 4   import java.applet.*; 
+  import java.awt.*; 
+  5 6 7 8 9 10 11 12 13 14 15 16 17   /** * This application demonstrates the bytecode verifier of the virtual machine. If you use a hex * editor to modify the class file, then the virtual machine should detect the tampering. 
+  * @version 1.00 1997-09-10 * @author Cay Horstmann */ public class VerifierTest extends Applet { public static void main(String[] args) { System.out.println("1 + 2 == " + fun()); 
+  } 
+  18   (Continues)   From the Library of Hristo Dimov Hristov   508   Chapter 9   Security   Figure 9.5 Loading a corrupted class file raises a method verification error. 
+  Listing 9.3 (Continued) /** * A function that computes 1 + 2. 
+  * @return 3, if the code has not been corrupted */ public static int fun() { int m; 
+  int n; 
+  m = 1; 
+  n = 2; 
+  // use hex editor to change to "m = 2" in class file int r = m + n; 
+  return r; 
+  } 
+  19 20 21 22 23 24 25 26 27 28 29 30 31 32 33   public void paint(Graphics g) { g.drawString("1 + 2 == " + fun(), 20, 20); 
+  } 
+  34 35 36 37 38   } 

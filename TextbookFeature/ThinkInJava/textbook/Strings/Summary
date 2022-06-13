@@ -1,0 +1,2 @@
+  In the past, Java support for string manipulation was rudimentary, but in recent editions of the language we’ve seen far more sophisticated support adopted from other languages. At this point, the support for strings is reasonably complete, although you must sometimes pay attention to efficiency details such as the appropriate use of StringBuilder. 
+  Solutions to selected exercises can be found in the electronic document The Thinking in Java Annotated Solution Guide, available for sale from www.MindView.net. 

@@ -1,0 +1,4 @@
+  We’ve established that all enums extend java.lang.Enum. Since Java does not support multiple inheritance, this means that you cannot create an enum via inheritance: 
+  enum NotPossible extends Pet { ... // Won’t work  However, it is possible to create an enum that implements one or more interfaces: 
+  The result is slightly odd, because to call a method you must have an instance of the enum to call it on. However, a CartoonCharacter can now be accepted by any method that takes a Generator; for example, printNext( ). 
+  Exercise 2: (2) Instead of implementing an interface, make next( ) a static method. What are the benefits and drawbacks of this approach? 

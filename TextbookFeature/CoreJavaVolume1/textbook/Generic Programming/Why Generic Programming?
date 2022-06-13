@@ -1,0 +1,29 @@
+  Generic programming means writing code that can be reused for objects of many different types. For example, you don’t want to program separate   classes to collect String and File objects. And you don’t have to—the single class ArrayList collects objects of any class. This is one example of generic programming. 
+  Actually, Java had an ArrayList class before it had generic classes. Let us investigate how the mechanism for generic programming has evolved, and what that means for users and implementors. 
+8.1.1 The Advantage of Type Parameters
+  Before generic classes were added to Java, generic programming was achieved with inheritance. The ArrayList class simply maintained an array of Object references: public class ArrayList // before generic classes { private Object[] elementData; 
+  . . . 
+  public Object get(int i) { . . . } 
+  public void add(Object o) { . . . } 
+  } 
+  This approach has two problems. A cast is necessary whenever you retrieve a value: ArrayList files = new ArrayList(); 
+  . . . 
+  String filename = (String) files.get(0); 
+  Moreover, there is no error checking. You can add values of any class: files.add(new File(". . .")); 
+  This call compiles and runs without error. Elsewhere, casting the result of get to a String will cause an error. 
+  Generics offer a better solution: type parameters. The ArrayList class now has a type parameter that indicates the element type: var files = new ArrayList<String>(); 
+  This makes your code easier to read. You can tell right away that this particular array list contains String objects. 
+  Note If you declare a variable with an explicit type instead of var, you can omit the type parameter in the constructor by using the "diamond" syntax: ArrayList<String> files = new ArrayList<>(); 
+  The omitted type is inferred from the type of the variable. 
+  Java 9 expands the use of the diamond syntax to situations where it was previously not accepted. For example, you can now use diamonds with anonymous subclasses:   ArrayList<String> passwords = new ArrayList<> () // diamond OK in Java 9 { public String get(int n) { return super.get(n).replaceAll(".", "*" 
+  }; 
+  The compiler can make good use of the type information too. No cast is required for calling get. The compiler knows that the return type is String, not Object: String filename = files.get(0); 
+  The compiler also knows that the add method of an ArrayList<String> has a parameter of type String. That is a lot safer than having an Object parameter. Now the compiler can check that you don’t insert objects of the wrong type. For example, the statement files.add(new File(". . .")); // can only add String objects to an ArrayList<String>   will not compile. A compiler error is much better than a class cast exception at runtime. 
+  This is the appeal of type parameters: They make your programs easier to read and safer. 
+8.1.2 Who Wants to Be a Generic Programmer?
+   
+  It is easy to use a generic class such as ArrayList. Most Java programmers will simply use types such as ArrayList<String> as if they had been built into the language, just like String[] arrays. (Of course, array lists are better than arrays because they can expand automatically.) However, it is not so easy to implement a generic class. The programmers who use your code will want to plug in all sorts of classes for your type parameters. They will expect everything to work without onerous restrictions and confusing error messages. Your job as a generic programmer, therefore, is to anticipate all the potential future uses of your class. 
+  How hard can this get? Here is a typical issue that the designers of the standard class library had to grapple with. The ArrayList class has a method addAll to add all elements of another collection. A programmer may want to add all elements from an ArrayList<Manager> to an ArrayList<Employee>. But, of course, doing it the other way round should not be legal. How do you allow one call and disallow the other? The Java language designers invented an ingenious new concept, the wildcard type, to solve this problem. Wildcard types are rather abstract, but they allow a library builder to make methods as flexible as possible. 
+  Generic programming falls into three skill levels. At a basic level, you just use generic classes—typically, collections such as ArrayList—without thinking how and why they work. Most application programmers will want to stay at that level until something goes wrong. You may, however, encounter a confusing error message when mixing different generic classes, or when interfacing with legacy code that knows nothing about type parameters; at that point, you’ll need to learn enough about Java generics to solve problems systematically rather than through random tinkering. Finally, of course, you may want to implement your own generic classes and methods. 
+  Application programmers probably won’t write lots of generic code. The JDK developers have already done the heavy lifting and supplied type parameters for all the collection classes. As a rule of thumb, only code that traditionally involved lots of casts from very general types (such as Object or the Comparable interface) will benefit from using type parameters. 
+  In this chapter, we will show you everything you need to know to implement your own generic code. However, we expect that most readers will use this knowledge primarily for help with troubleshooting and to satisfy their curiosity about the inner workings of the parameterized collection classes. 

@@ -1,0 +1,52 @@
+  In the final section of this chapter, we discuss proxies. You can use a proxy to create, at runtime, new classes that implement a given set of interfaces. 
+  Proxies are only necessary when you don’t yet know at compile time which interfaces you need to implement. This is not a common situation for application programmers, so feel free to skip this section if you are not interested in advanced wizardry. However, for certain systems programming applications, the flexibility that proxies offer can be very important. 
+6.5.1 When to Use Proxies
+  Suppose you want to construct an object of a class that implements one or more interfaces whose exact nature you may not know at compile time. This is a difficult problem. To construct an actual class, you can simply use the newInstance method or use reflection to find a constructor. But you can’t instantiate an interface. You need to define a new class in a running program. 
+  To overcome this problem, some programs generate code, place it into a file, invoke the compiler, and then load the resulting class file. Naturally, this is slow, and it also requires deployment of the compiler together with the program. The proxy mechanism is a better solution. The proxy class can create brand-new classes at runtime. Such a proxy class implements the interfaces that you specify. In particular, the proxy class has the following methods: All methods required by the specified interfaces; and All methods defined in the Object class (toString, equals, and so on). 
+  However, you cannot define new code for these methods at runtime. Instead, you must supply an invocation handler. An invocation handler is an object of any class that implements the InvocationHandler interface. That interface has a single method:   Object invoke(Object proxy, Method method, Object[] args)   Whenever a method is called on the proxy object, the invoke method of the invocation handler gets called, with the Method object and parameters of the original call. The invocation handler must then figure out how to handle the call. 
+6.5.2 Creating Proxy Objects
+  To create a proxy object, use the newProxyInstance method of the Proxy class. The method has three parameters: A class loader. As part of the Java security model, different class loaders can be used for platform and application classes, classes that are downloaded from the Internet, and so on. We will discuss class loaders in Chapter 9 of Volume II. In this example, we specify the "system class loader" that loads platform and application classes. 
+  An array of Class objects, one for each interface to be implemented. 
+  An invocation handler. 
+  There are two remaining questions. How do we define the handler? And what can we do with the resulting proxy object? The answers depend, of course, on the problem that we want to solve with the proxy mechanism. Proxies can be used for many purposes, such as Routing method calls to remote servers Associating user interface events with actions in a running program Tracing method calls for debugging purposes In our example program, we use proxies and invocation handlers to trace method calls. We define a TraceHandler wrapper class that stores a wrapped object. Its invoke method simply prints the name and parameters of the method to be called and then calls the method with the wrapped object as the implicit parameter. 
+  class TraceHandler implements InvocationHandler {   private Object target; 
+  public TraceHandler(Object t) { target = t; 
+  } 
+  public Object invoke(Object proxy, Method m, Object[] args) throws Throwable { // print method name and parameters . . . 
+  // invoke actual method return m.invoke(target, args); 
+  } 
+  } 
+  Here is how you construct a proxy object that causes the tracing behavior whenever one of its methods is called: Object value = . . .; 
+  // construct wrapper var handler = new TraceHandler(value); 
+  // construct proxy for one or more interfaces var interfaces = new Class[] { Comparable.class}; 
+  Object proxy = Proxy.newProxyInstance( ClassLoader.getSystemClassLoader(), new Class[] { Comparable.class } , handler); 
+  Now, whenever a method from one of the interfaces is called on proxy, the method name and parameters are printed out and the method is then invoked on value. 
+  In the program shown in Listing 6.10, we use proxy objects to trace a binary search. We fill an array with proxies to the integers 1 . . . 1000. Then we invoke the binarySearch method of the Arrays class to search for a random integer in the array. Finally, we print the matching element. 
+  var elements = new Object[1000]; 
+  // fill elements with proxies for the integers 1 . . . 1000 for (int i = 0; i < elements.length; i++) { Integer value = i + 1; 
+  elements[i] = Proxy.newProxyInstance(. . .); // proxy for value; 
+  } 
+  // construct a random integer   Integer key = new Random().nextInt(elements.length) + 1; 
+  // search for the key int result = Arrays.binarySearch(elements, key); 
+  // print match if found if (result >= 0) System.out.println(elements[result]); 
+  The Integer class implements the Comparable interface. The proxy objects belong to a class that is defined at runtime. (It has a name such as $Proxy0.) That class also implements the Comparable interface. 
+  However, its compareTo method calls the invoke method of the proxy object’s handler. 
+  Note As you saw earlier in this chapter, the Integer class actually implements Comparable<Integer>. However, at runtime, all generic types are erased and the proxy is constructed with the class object for the raw Comparable class. 
+  The binarySearch method makes calls like this: if (elements[i].compareTo(key) < 0) . . . 
+  Since we filled the array with proxy objects, the compareTo calls the invoke method of the TraceHandler class. That method prints the method name and parameters and then invokes compareTo on the wrapped Integer object. 
+  Finally, at the end of the sample program, we call System.out.println(elements[result]); 
+  The println method calls toString on the proxy object, and that call is also redirected to the invocation handler. 
+  Here is the complete trace of a program run:   500.compareTo(288) 250.compareTo(288) 375.compareTo(288) 312.compareTo(288) 281.compareTo(288) 296.compareTo(288) 288.compareTo(288) 288.toString()   You can see how the binary search algorithm homes in on the key by cutting the search interval in half in every step. Note that the toString method is proxied even though it does not belong to the Comparable interface—as you will see in the next section, certain Object methods are always proxied. 
+6.5.3 Properties of Proxy Classes
+     Now that you have seen proxy classes in action, let’s go over some of their properties. Remember that proxy classes are created on the fly in a running program. However, once they are created, they are regular classes, just like any other classes in the virtual machine. 
+  All proxy classes extend the class Proxy. A proxy class has only one instance field—the invocation handler, which is defined in the Proxy superclass. Any additional data required to carry out the proxy objects’ tasks must be stored in the invocation handler. For example, when we proxied Comparable objects in the program shown in Listing 6.10, the TraceHandler wrapped the actual objects. 
+  All proxy classes override the toString, equals, and hashCode methods of the Object class. Like all proxy methods, these methods simply call invoke on the invocation handler. The other methods of the Object class (such as clone and getClass) are not redefined. 
+  The names of proxy classes are not defined. The Proxy class in Oracle’s virtual machine generates class names that begin with the string $Proxy. 
+  There is only one proxy class for a particular class loader and ordered set of interfaces. That is, if you call the newProxyInstance method twice with the same class loader and interface array, you get two objects of the same class. You can also obtain that class with the getProxyClass method: Class proxyClass = Proxy.getProxyClass(null, interfaces); 
+  A proxy class is always public and final. If all interfaces that the proxy class implements are public, the proxy class does not belong to any particular package. Otherwise, all non-public interfaces must belong to the same package, and the proxy class will also belong to that package. 
+  You can test whether a particular Class object represents a proxy class by calling the isProxyClass method of the Proxy class. 
+  java.lang.reflect.InvocationHandler 1.3 Object invoke(Object proxy, Method method, Object[] args)   define this method to contain the action that you want carried out whenever a method was invoked on the proxy object. 
+  java.lang.reflect.Proxy 1.3 static Class<?> getProxyClass(ClassLoader loader, Class<?>... interfaces) returns the proxy class that implements the given interfaces. 
+  static Object newProxyInstance(ClassLoader loader, Class<?>[] interfaces, InvocationHandler handler) constructs a new instance of the proxy class that implements the given interfaces. All methods call the invoke method of the given handler object. 
+  static boolean isProxyClass(Class<?> cl) returns true if cl is a proxy class. 
+  This ends our final chapter on the object-oriented features of the Java programming language. Interfaces, lambda expressions, and inner classes are concepts that you will encounter frequently, whereas cloning, service loaders, and proxies are advanced techniques that are of interest mainly to library designers and tool builders, not application programmers. You are now ready to learn how to deal with exceptional situations in your programs in Chapter 7. 

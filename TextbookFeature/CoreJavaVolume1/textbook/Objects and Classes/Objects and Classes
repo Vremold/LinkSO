@@ -1,0 +1,4 @@
+  In this chapter, we Introduce you to object-oriented programming; Show you how you can create objects that belong to classes from the standard Java library; and Show you how to write your own classes.
+  If you do not have a background in object-oriented programming, you will want to read this
+  chapter carefully. Object-oriented programming requires a different way of thinking than procedural languages. The transition is not always easy, but you do need some familiarity with object concepts to go further with Java.
+  For experienced C++ programmers, this chapter, like the previous chapter, presents familiar information; however, there are enough differences between the two languages that you should read the later sections of this chapter carefully. You’ll find the C++ notes helpful for making the transition.

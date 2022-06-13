@@ -1,0 +1,181 @@
+  So far, all our user interface components have appeared inside a frame window that was created in the application. This is the most common situation if you write applets that run inside a web browser. But if you write applications, you usually want separate dialog boxes to pop up to give   information to, or get information from, the user. 
+  Just as with most windowing systems, AWT distinguishes between modal and modeless dialog boxes. A modal dialog box won’t let users interact with the remaining windows of the application until he or she deals with it. Use a modal dialog box when you need information from the user before you can proceed with execution. For example, when the user wants to read a file, a modal file dialog box is the one to pop up. The user must specify a file name before the program can begin the read operation. Only when the user closes the modal dialog box can the application proceed. 
+  A modeless dialog box lets the user enter information in both the dialog box and the remainder of the application. One example of a modeless dialog is a toolbar. The toolbar can stay in place as long as needed, and the user can interact with both the application window and the toolbar as needed. 
+  We will start this section with the simplest dialogs—modal dialogs with just a single message. Swing has a convenient JOptionPane class that lets you put up a simple dialog without writing any special dialog box code. Next, you will see how to write more complex dialogs by implementing your own dialog windows. Finally, you will see how to transfer data from your application into a dialog and back. 
+  We’ll conclude the discussion of dialog boxes by looking at the Swing JFileChooser. 
+11.7.1 Option Dialogs
+  Swing has a set of ready-made simple dialogs that suffice to ask the user for a single piece of information. The JOptionPane has four static methods to show these simple dialogs: showMessageDialog Show a message and wait for the user to click OK showConfirmDialog Show a message and get a confirmation (like OK/Cancel) showOptionDialog Show a message and get a user option from a set of options showInputDialog Show a message and get one line of user input   Figure 11.30 shows a typical dialog. As you can see, the dialog has the following components:   Figure 11.30 An option dialog An icon A message One or more option buttons The input dialog has an additional component for user input. This can be a text field into which the user can type an arbitrary string, or a combo box from which the user can select one item. 
+  The exact layout of these dialogs and the choice of icons for standard message types depend on the pluggable look-and-feel. 
+  The icon on the left side depends on one of five message types: ERROR_MESSAGE INFORMATION_MESSAGE WARNING_MESSAGE QUESTION_MESSAGE PLAIN_MESSAGE   The PLAIN_MESSAGE type has no icon. Each dialog type also has a method that lets you supply your own icon instead. 
+  For each dialog type, you can specify a message. This message can be a string, an icon, a user interface component, or any other object. Here is how the message object is displayed: String Icon Component   Draw the string Show the icon Show the component   Show all objects in the array, stacked on top of each other Any other object Apply toString and show the resulting string Object[]   Of course, supplying a message string is by far the most common case. 
+  Supplying a Component gives you ultimate flexibility because you can make the paintComponent method draw anything you want. 
+  The buttons at the bottom depend on the dialog type and the option type. 
+  When calling showMessageDialog and showInputDialog, you get only a standard set of buttons (OK and OK/Cancel, respectively). When calling showConfirmDialog, you can choose among four option types: DEFAULT_OPTION YES_NO_OPTION YES_NO_CANCEL_OPTION OK_CANCEL_OPTION   With the showOptionDialog you can specify an arbitrary set of options. 
+  You supply an array of objects for the options. Each array element is rendered as follows: String Make a button with the string as label Icon Make a button with the icon as label Component Show the component Any other Apply toString and make a button with the resulting string object as label The return values of these functions are as follows: showMessageDialog None showConfirmDialog An integer representing the chosen option showOptionDialog An integer representing the chosen option showInputDialog The string that the user supplied or selected The showConfirmDialog and showOptionDialog return integers to indicate which button the user chose. For the option dialog, this is simply the index of the chosen option or the value CLOSED_OPTION if the user closed the dialog instead of choosing an option. For the confirmation dialog, the return value can be one of the following:   OK_OPTION CANCEL_OPTION YES_OPTION NO_OPTION CLOSED_OPTION   This all sounds like a bewildering set of choices, but in practice it is simple. 
+  Follow these steps: 1. Choose the dialog type (message, confirmation, option, or input). 
+  2. Choose the icon (error, information, warning, question, none, or custom). 
+  3. Choose the message (string, icon, custom component, or a stack of them). 
+  4. For a confirmation dialog, choose the option type (default, Yes/No, Yes/No/Cancel, or OK/Cancel). 
+  5. For an option dialog, choose the options (strings, icons, or custom components) and the default option. 
+  6. For an input dialog, choose between a text field and a combo box. 
+  7. Locate the appropriate method to call in the JOptionPane API. 
+  For example, suppose you want to show the dialog in Figure 11.30. The dialog shows a message and asks the user to confirm or cancel. Thus, it is a confirmation dialog. The icon is a question icon. The message is a string. The option type is OK_CANCEL_OPTION. Here is the call you would make: int selection = JOptionPane.showConfirmDialog(parent, "Message", "Title", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE); 
+  if (selection == JOptionPane.OK_OPTION) . . . 
+  Tip The message string can contain newline ('\n') characters. Such a string is displayed in multiple lines. 
+  javax.swing.JOptionPane 1.2 static void showMessageDialog(Component parent, Object message, String title, int messageType, Icon icon) static void showMessageDialog(Component parent, Object message, String title, int messageType) static void showMessageDialog(Component parent, Object message) static void showInternalMessageDialog(Component parent, Object message, String title, int messageType, Icon icon) static void showInternalMessageDialog(Component parent, Object message, String title, int messageType) static void showInternalMessageDialog(Component parent, Object message) shows a message dialog or an internal message dialog. (An internal dialog is rendered entirely within its owner’s frame.) The parent component can be null. The message to show on the dialog can be a string, icon, component, or an array of them. The messageType parameter is one of ERROR_MESSAGE, INFORMATION_MESSAGE, WARNING_MESSAGE, QUESTION_MESSAGE, PLAIN_MESSAGE. 
+  static int showConfirmDialog(Component parent, Object message, String title, int optionType, int messageType, Icon icon) static int showConfirmDialog(Component parent, Object message, String title, int optionType, int messageType) static int showConfirmDialog(Component parent, Object message, String title, int optionType) static int showConfirmDialog(Component parent,   Object message) static int showInternalConfirmDialog(Component parent, Object message, String title, int optionType, int messageType, Icon icon) static int showInternalConfirmDialog(Component parent, Object message, String title, int optionType, int messageType) static int showInternalConfirmDialog(Component parent, Object message, String title, int optionType) static int showInternalConfirmDialog(Component parent, Object message) shows a confirmation dialog or an internal confirmation dialog. (An internal dialog is rendered entirely within its owner’s frame.) Returns the option selected by the user (one of OK_OPTION, CANCEL_OPTION, YES_OPTION, NO_OPTION), or CLOSED_OPTION if the user closed the dialog. The parent component can be null. The message to show on the dialog can be a string, icon, component, or an array of them. The messageType parameter is one of ERROR_MESSAGE, INFORMATION_MESSAGE, WARNING_MESSAGE, QUESTION_MESSAGE, PLAIN_MESSAGE, and optionType is one of DEFAULT_OPTION, YES_NO_OPTION, YES_NO_CANCEL_OPTION, OK_CANCEL_OPTION. 
+  static int showOptionDialog(Component parent, Object message, String title, int optionType, int messageType, Icon icon, Object[] options, Object default) static int showInternalOptionDialog(Component parent, Object message, String title, int optionType, int messageType, Icon icon, Object[] options, Object default) shows an option dialog or an internal option dialog. (An internal dialog is rendered entirely within its owner’s frame.) Returns the index of the   option selected by the user, or CLOSED_OPTION if the user canceled the dialog. The parent component can be null. The message to show on the dialog can be a string, icon, component, or an array of them. The messageType parameter is one of ERROR_MESSAGE, INFORMATION_MESSAGE, WARNING_MESSAGE, QUESTION_MESSAGE, PLAIN_MESSAGE, and optionType is one of DEFAULT_OPTION, YES_NO_OPTION, YES_NO_CANCEL_OPTION, OK_CANCEL_OPTION. The options parameter is an array of strings, icons, or components. 
+  static Object showInputDialog(Component parent, Object message, String title, int messageType, Icon icon, Object[] values, Object default) static String showInputDialog(Component parent, Object message, String title, int messageType) static String showInputDialog(Component parent, Object message) static String showInputDialog(Object message) static String showInputDialog(Component parent, Object message, Object default) 1.4 static String showInputDialog(Object message, Object default) 1.4 static Object showInternalInputDialog(Component parent, Object message, String title, int messageType, Icon icon, Object[] values, Object default) static String showInternalInputDialog(Component parent, Object message, String title, int messageType) static String showInternalInputDialog(Component parent, Object message) shows an input dialog or an internal input dialog. (An internal dialog is rendered entirely within its owner’s frame.) Returns the input string   typed by the user, or null if the user canceled the dialog. The parent component can be null. The message to show on the dialog can be a string, icon, component, or an array of them. The messageType parameter is one of ERROR_MESSAGE, INFORMATION_MESSAGE, WARNING_MESSAGE, QUESTION_MESSAGE, PLAIN_MESSAGE. 
+11.7.2 Creating Dialogs
+  In the last section, you saw how to use the JOptionPane class to show a simple dialog. In this section, you will see how to create such a dialog by hand. 
+  Figure 11.31 shows a typical modal dialog box—a program information box that is displayed when the user clicks the About button. 
+  Figure 11.31 An About dialog box To implement a dialog box, you extend the JDialog class. This is essentially the same process as extending JFrame for the main window for an application. More precisely: 1. In the constructor of your dialog box, call the constructor of the superclass JDialog. 
+  2. Add the user interface components of the dialog box. 
+  3. Add the event handlers. 
+  4. Set the size for the dialog box. 
+  When you call the superclass constructor, you will need to supply the owner frame, the title of the dialog, and the modality. 
+  The owner frame controls where the dialog is displayed. You can supply null as the owner; then, the dialog is owned by a hidden frame. 
+  The modality specifies which other windows of your application are blocked while the dialog is displayed. A modeless dialog does not block other windows. A modal dialog blocks all other windows of the application (except for the children of the dialog). You would use a modeless dialog for a toolbox that the user can always access. On the other hand, you would use a modal dialog if you want to force the user to supply required information before continuing. 
+  Here’s the code for a dialog box: public AboutDialog extends JDialog { public AboutDialog(JFrame owner) { super(owner, "About DialogTest", true); 
+  add(new JLabel( "<html><h1><i>Core Java</i></h1> <hr>By Cay Horstmann</html>"), BorderLayout.CENTER); 
+  var panel = new JPanel(); 
+  var ok = new JButton("OK"); 
+  ok.addActionListener(event -> setVisible(false)); 
+  panel.add(ok); 
+  add(panel, BorderLayout.SOUTH); 
+  setSize(250, 150); 
+  } 
+  } 
+  As you can see, the constructor adds user interface elements—in this case, labels and a button. It adds a handler to the button and sets the size of the dialog. 
+  To display the dialog box, create a new dialog object and make it visible: var dialog = new AboutDialog(this); 
+  dialog.setVisible(true); 
+  Actually, in the sample code below, we create the dialog box only once, and we can reuse it whenever the user clicks the About button. 
+  if (dialog == null) // first time dialog = new AboutDialog(this); 
+  dialog.setVisible(true); 
+  When the user clicks the OK button, the dialog box should close. This is handled in the event handler of the OK button: ok.addActionListener(event -> setVisible(false)); 
+  When the user closes the dialog by clicking the Close button, the dialog is also hidden. Just as with a JFrame, you can override this behavior with the setDefaultCloseOperation method. 
+  Listing 11.11 is the code for the frame class of the test program. Listing 11.12 shows the dialog class. 
+  javax.swing.JDialog 1.2 public JDialog(Frame parent, String title, boolean modal) constructs a dialog. The dialog is not visible until it is explicitly shown. 
+11.7.3 Data Exchange
+  The most common reason to put up a dialog box is to get information from the user. You have already seen how easy it is to make a dialog box object: Give it initial data and call setVisible(true) to display the dialog box on the screen. Now let’s see how to transfer data in and out of a dialog box. 
+  Consider the dialog box in Figure 11.32 that could be used to obtain a user name and a password to connect to some online service. 
+  Figure 11.32 Password dialog box Your dialog box should provide methods to set default data. For example, the PasswordChooser class of the example program has a method, setUser, to place default values into the next fields: public void setUser(User u) { username.setText(u.getName()); 
+  } 
+  Once you set the defaults (if desired), show the dialog by calling setVisible(true). The dialog is now displayed. 
+  The user then fills in the information and clicks the OK or Cancel button. The event handlers for both buttons call setVisible(false), which terminates the call to setVisible(true). Alternatively, the user may close the dialog. If you did not install a window listener for the dialog, the default window closing operation applies: The dialog becomes invisible, which also terminates the call to setVisible(true). 
+  The important issue is that the call to setVisible(true) blocks until the user has dismissed the dialog. This makes it easy to implement modal dialogs. 
+  You want to know whether the user has accepted or canceled the dialog. Our sample code sets the ok flag to false before showing the dialog. Only the event handler for the OK button sets the ok flag to true; that’s how you   retrieve the user input from the dialog. 
+  Note Transferring data out of a modeless dialog is not as simple. When a modeless dialog is displayed, the call to setVisible(true) does not block and the program continues running while the dialog is displayed. If the user selects items on a modeless dialog and then clicks OK, the dialog needs to send an event to some listener in the program. 
+  The example program contains another useful improvement. When you construct a JDialog object, you need to specify the owner frame. However, quite often you want to show the same dialog with different owner frames. It is better to pick the owner frame when you are ready to show the dialog, not when you construct the PasswordChooser object. 
+  The trick is to have the PasswordChooser extend JPanel instead of JDialog. Build a JDialog object on the fly in the showDialog method: public boolean showDialog(Frame owner, String title) { ok = false; 
+  if (dialog == null || dialog.getOwner() != owner) { dialog = new JDialog(owner, true); 
+  dialog.add(this); 
+  dialog.pack(); 
+  } 
+  dialog.setTitle(title); 
+  dialog.setVisible(true); 
+  return ok; 
+  } 
+  Note that it is safe to have owner equal to null. 
+  You can do even better. Sometimes, the owner frame isn’t readily available. 
+  It is easy enough to compute it from any parent component, like this:   Frame owner; 
+  if (parent instanceof Frame) owner = (Frame) parent; 
+  else owner = (Frame) SwingUtilities.getAncestorOfClass(Frame.class, parent); 
+  We use this enhancement in our sample program. The JOptionPane class also uses this mechanism. 
+  Many dialogs have a default button, which is automatically selected if the user presses a trigger key (Enter in most look-and-feel implementations). The default button is specially marked, often with a thick outline. 
+  Set the default button in the root pane of the dialog: dialog.getRootPane().setDefaultButton(okButton); 
+  If you follow our suggestion of laying out the dialog in a panel, then you must be careful to set the default button only after you wrapped the panel into a dialog. The panel dialog itself has no root pane. 
+  Listing 11.13 is for the frame class of the program that illustrates the data flow into and out of a dialog box. Listing 11.14 shows the dialog class. 
+  javax.swing.SwingUtilities 1.2 Container getAncestorOfClass(Class c, Component comp) returns the innermost parent container of the given component that belongs to the given class or one of its subclasses. 
+  javax.swing.JComponent 1.2 JRootPane getRootPane() gets the root pane enclosing this component, or null if this component does not have an ancestor with a root pane. 
+  javax.swing.JRootPane 1.2 void setDefaultButton(JButton button) sets the default button for this root pane. To deactivate the default button, call this method with a null parameter. 
+  javax.swing.JButton 1.2 boolean isDefaultButton() returns true if this button is the default button of its root pane. 
+11.7.4 File Dialogs
+  In an application, you often want to be able to open and save files. A good file dialog box that shows files and directories and lets the user navigate the file system is hard to write, and you definitely don’t want to reinvent that wheel. Fortunately, Swing provides a JFileChooser class that allows you to display a file dialog box similar to the one that most native applications use. JFileChooser dialogs are always modal. Note that the JFileChooser class is not a subclass of JDialog. Instead of calling setVisible(true), call showOpenDialog to display a dialog for opening a file, or call showSaveDialog to display a dialog for saving a file. The button for accepting a file is then automatically labeled Open or Save. You can also supply your own button label with the showDialog method. Figure 11.33 shows an example of the file chooser dialog box. 
+  Figure 11.33 A file chooser dialog box Here are the steps to put up a file dialog box and recover what the user chooses from the box: 1. Make a JFileChooser object. Unlike the constructor for the JDialog class, you do not supply the parent component. This allows you to reuse a file chooser dialog with multiple frames. 
+  For example: var chooser = new JFileChooser(); 
+  Tip Reusing a file chooser object is a good idea because the JFileChooser constructor can be quite slow, especially on   Windows when the user has many mapped network drives. 
+  2. Set the directory by calling the setCurrentDirectory method. 
+  For example, to use the current working directory chooser.setCurrentDirectory(new File(".")); 
+  you need to supply a File object. File objects are explained in detail in Chapter 2 of Volume II. All you need to know for now is that the constructor File(String filename) turns a file or directory name into a File object. 
+  3. If you have a default file name that you expect the user to choose, supply it with the setSelectedFile method: chooser.setSelectedFile(new File(filename)); 
+  4. To enable the user to select multiple files in the dialog, call the setMultiSelectionEnabled method. This is, of course, entirely optional and not all that common. 
+  chooser.setMultiSelectionEnabled(true); 
+  5. If you want to restrict the display of files in the dialog to those of a particular type (for example, all files with extension .gif), you need to set a file filter. We discuss file filters later in this section. 
+  6. By default, a user can select only files with a file chooser. If you want the user to select directories, use the setFileSelectionMode method. Call it with JFileChooser.FILES_ONLY (the default), JFileChooser.DIRECTORIES_ONLY, or JFileChooser.FILES_AND_DIRECTORIES. 
+  7. Show the dialog box by calling the showOpenDialog or showSaveDialog method. You must supply the parent component in these calls:   int result = chooser.showOpenDialog(parent); 
+  or int result = chooser.showSaveDialog(parent); 
+  The only difference between these calls is the label of the "approve button"—the button that the user clicks to finish the file selection. You can also call the showDialog method and pass an explicit text for the approve button: int result = chooser.showDialog(parent, "Select"); 
+  These calls return only when the user has approved, canceled, or dismissed the file dialog. The return value is JFileChooser.APPROVE_OPTION, JFileChooser.CANCEL_OPTION, or JFileChooser.ERROR_OPTION. 
+  8. Get the selected file or files with the getSelectedFile() or getSelectedFiles() method. These methods return either a single File object or an array of File objects. If you just need the name of the file object, call its getPath method. For example: String filename = chooser.getSelectedFile().getPath(); 
+  For the most part, these steps are simple. The major difficulty with using a file dialog is to specify a subset of files from which the user should choose. 
+  For example, suppose the user should choose a GIF image file. Then, the file chooser should only display files with the extension .gif. It should also give the user some kind of feedback that the displayed files are of a particular category, such as "GIF Images." But the situation can be more complex. If the user should choose a JPEG image file, the extension can be either .jpg or .jpeg. Instead of a way to codify these complexities, the designers of the file chooser provided a more elegant mechanism: to restrict the displayed files, supply an object that extends the abstract class javax.swing.filechooser.FileFilter. The file chooser passes each file to the file filter and displays only those files that the filter accepts. 
+  At the time of this writing, two such subclasses are supplied: the default filter that accepts all files, and a filter that accepts all files with a given extension. 
+  However, it is easy to write ad-hoc file filters. Simply implement the two abstract methods of the FileFilter superclass: public boolean accept(File f); 
+  public String getDescription(); 
+  The first method tests whether a file should be accepted. The second method returns a description of the file type that can be displayed in the file chooser dialog. 
+  Note An unrelated FileFilter interface in the java.io package has a single method, boolean accept(File f). It is used in the listFiles method of the File class to list files in a directory. 
+  We do not know why the designers of Swing didn’t extend this interface—perhaps the Java class library has now become so complex that even the programmers at Sun were no longer aware of all the standard classes and interfaces. 
+  You will need to resolve the name conflict between these two identically named types if you import both the java.io and the javax.swing.filechooser packages. The simplest remedy is to import javax.swing.filechooser.FileFilter, not javax.swing.filechooser.*. 
+  Once you have a file filter object, use the setFileFilter method of the JFileChooser class to install it into the file chooser object: chooser.setFileFilter(new FileNameExtensionFilter("Image files", "gif", "jpg")); 
+  You can install multiple filters to the file chooser by calling   chooser.addChoosableFileFilter(filter1); 
+  chooser.addChoosableFileFilter(filter2); 
+  . . . 
+  The user selects a filter from the combo box at the bottom of the file dialog. 
+  By default, the "All files" filter is always present in the combo box. This is a good idea—just in case a user of your program needs to select a file with a nonstandard extension. However, if you want to suppress the "All files" 
+  filter, call chooser.setAcceptAllFileFilterUsed(false)   Caution If you reuse a single file chooser for loading and saving different file types, call chooser.resetChoosableFilters()   to clear any old file filters before adding new ones. 
+  Finally, you can customize the file chooser by providing special icons and file descriptions for each file that the file chooser displays. Do this by supplying an object of a class extending the FileView class in the javax.swing.filechooser package. This is definitely an advanced technique. Normally, you don’t need to supply a file view—the pluggable look-and-feel supplies one for you. But if you want to show different icons for special file types, you can install your own file view. You need to extend the FileView class and implement five methods: Icon getIcon(File f) String getName(File f) String getDescription(File f) String getTypeDescription(File f) Boolean isTraversable(File f)   Then, use the setFileView method to install your file view into the file   chooser. 
+  The file chooser calls your methods for each file or directory that it wants to display. If your method returns null for the icon, name, or description, the file chooser then consults the default file view of the look-and-feel. That is good, because it means you need to deal only with the file types for which you want to do something different. 
+  The file chooser calls the isTraversable method to decide whether to open a directory when a user clicks on it. Note that this method returns a Boolean object, not a boolean value! This seems weird, but it is actually convenient—if you aren’t interested in deviating from the default file view, just return null. The file chooser will then consult the default file view. In other words, the method returns a Boolean to let you choose among three options: true (Boolean.TRUE), false (Boolean.FALSE), or don’t care (null). 
+  The example program contains a simple file view class. That class shows a particular icon whenever a file matches a file filter. We use it to display a palette icon for all image files. 
+  class FileIconView extends FileView { private FileFilter filter; 
+  private Icon icon; 
+  public FileIconView(FileFilter aFilter, Icon anIcon) { filter = aFilter; 
+  icon = anIcon; 
+  } 
+  public Icon getIcon(File f) { if (!f.isDirectory() && filter.accept(f)) return icon; 
+  else return null; 
+  } 
+  } 
+  Install this file view into your file chooser with the setFileView method: chooser.setFileView(new FileIconView(filter, new ImageIcon("palette.gif"))); 
+  The file chooser will then show the palette icon next to all files that pass the filter and use the default file view to show all other files. Naturally, we use the same filter that we set in the file chooser. 
+  Finally, you can customize a file dialog by adding an accessory component. 
+  For example, Figure 11.34 shows a preview accessory next to the file list. 
+  This accessory displays a thumbnail view of the currently selected file. 
+  Figure 11.34 A file dialog with a preview accessory An accessory can be any Swing component. In our case, we extend the JLabel class and set its icon to a scaled copy of the graphics image: class ImagePreviewer extends JLabel { public ImagePreviewer(JFileChooser chooser) { setPreferredSize(new Dimension(100, 100)); 
+  setBorder(BorderFactory.createEtchedBorder()); 
+  } 
+  public void loadImage(File f)   { var icon = new ImageIcon(f.getPath()); 
+  if(icon.getIconWidth() > getWidth()) icon = new ImageIcon(icon.getImage().getScaledInstance( getWidth(), -1, Image.SCALE_DEFAULT)); 
+  setIcon(icon); 
+  repaint(); 
+  } 
+  } 
+  There is just one challenge. We want to update the preview image whenever the user selects a different file. The file chooser uses the "JavaBeans" 
+  mechanism of notifying interested listeners whenever one of its properties changes. The selected file is a property that you can monitor by installing a PropertyChangeListener. Here is the code that you need to trap the notifications:   chooser.addPropertyChangeListener(event -> { if (event.getPropertyName() == JFileChooser.SELECTED_FILE_CHANGED_PROPERTY) { var newFile = (File) event.getNewValue(); 
+  // update the accessory . . . 
+  } 
+  }); 
+  javax.swing.JFileChooser 1.2 JFileChooser() creates a file chooser dialog box that can be used for multiple frames. 
+  void setCurrentDirectory(File dir) sets the initial directory for the file dialog box. 
+  void setSelectedFile(File file) void setSelectedFiles(File[] file) sets the default file choice for the file dialog box. 
+  void setMultiSelectionEnabled(boolean b) sets or clears the multiple selection mode. 
+  void setFileSelectionMode(int mode) lets the user select files only (the default), directories only, or both files and directories. The mode parameter is one of JFileChooser.FILES_ONLY, JFileChooser.DIRECTORIES_ONLY, and JFileChooser.FILES_AND_DIRECTORIES. 
+  int showOpenDialog(Component parent) int showSaveDialog(Component parent) int showDialog(Component parent, String approveButtonText) shows a dialog in which the approve button is labeled "Open", "Save", or with the approveButtonText string. Returns APPROVE_OPTION, CANCEL_OPTION (if the user selected the cancel button or dismissed the dialog), or ERROR_OPTION (if an error occurred). 
+  File getSelectedFile() File[] getSelectedFiles() gets the file or files that the user selected (or returns null if the user didn’t select any file). 
+  void setFileFilter(FileFilter filter) sets the file mask for the file dialog box. All files for which filter.accept returns true will be displayed. Also, adds the filter to the list of choosable filters. 
+  void addChoosableFileFilter(FileFilter filter) adds a file filter to the list of choosable filters. 
+  void setAcceptAllFileFilterUsed(boolean b) includes or suppresses an "All files" filter in the filter combo box. 
+  void resetChoosableFileFilters() clears the list of choosable filters. Only the "All files" filter remains   unless it is explicitly suppressed. 
+  void setFileView(FileView view) sets a file view to provide information about the files that the file chooser displays. 
+  void setAccessory(JComponent component) sets an accessory component. 
+  javax.swing.filechooser.FileFilter 1.2 boolean accept(File f) returns true if the file chooser should display this file. 
+  String getDescription() returns a description of this file filter—for example, "Image files (*.gif,*.jpeg)". 
+  javax.swing.filechooser.FileNameExtensionFilter 6 FileNameExtensionFilter(String description, String... extensions) constructs a file filter with the given description that accepts all directories and all files whose names end in a period followed by one of the given extension strings. 
+  javax.swing.filechooser.FileView 1.2 String getName(File f) returns the name of the file f, or null. Normally, this method simply returns f.getName(). 
+  String getDescription(File f)   returns a human-readable description of the file f, or null. For example, if f is an HTML document, this method might return its title. 
+  String getTypeDescription(File f) returns a human-readable description of the type of the file f, or null. 
+  For example, if f is an HTML document, this method might return a string "Hypertext document". 
+  Icon getIcon(File f) returns an icon for the file f, or null. For example, if f is a JPEG file, this method might return a thumbnail icon. 
+  Boolean isTraversable(File f) returns Boolean.TRUE if f is a directory that the user can open. This method might return Boolean.FALSE if a directory is conceptually a compound document. Like all FileView methods, this method can return null to signify that the file chooser should consult the default view instead. 
+  This ends our discussion of Swing programming. Turn to Volume II for more advanced Swing components and sophisticated graphics techniques. 

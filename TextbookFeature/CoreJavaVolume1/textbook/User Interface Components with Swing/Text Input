@@ -1,0 +1,69 @@
+  We are finally ready to start introducing the Swing user interface components. We begin with the components that let a user input and edit text. 
+  You can use the JTextField and JTextArea components for text input. 
+  A text field can accept only one line of text; a text area can accept multiple lines of text. A JPasswordField accepts one line of text without showing the contents. 
+  All three of these classes inherit from a class called JTextComponent. 
+  You will not be able to construct a JTextComponent yourself because it is an abstract class. On the other hand, as is so often the case in Java, when you go searching through the API documentation, you may find that the methods you are looking for are actually in the parent class JTextComponent rather than the derived class. For example, the methods that get or set the text in a text field or text area are actually in JTextComponent. 
+  javax.swing.text.JTextComponent 1.2 String getText() void setText(String text) gets or sets the text of this text component. 
+  boolean isEditable() void setEditable(boolean b) gets or sets the editable property that determines whether the user can edit the content of this text component. 
+11.3.1 Text Fields
+  The usual way to add a text field to a window is to add it to a panel or other container—just as you would add a button: var panel = new JPanel(); 
+  var textField = new JTextField("Default input", 20); 
+  panel.add(textField); 
+  This code adds a text field and initializes it by placing the string "Default input" inside it. The second parameter of this constructor sets the width. In this case, the width is 20 "columns." Unfortunately, a column is a rather imprecise measurement. One column is the expected width of one character in the font you are using for the text. The idea is that if you expect the inputs to be n characters or less, you are supposed to specify n as the column width. 
+  In practice, this measurement doesn’t work out too well, and you should add 1 or 2 to the maximum input length to be on the safe side. Also, keep in mind that the number of columns is only a hint to the AWT that gives the preferred size. If the layout manager needs to grow or shrink the text field, it can adjust its size. The column width that you set in the JTextField constructor is not an upper limit on the number of characters the user can enter. The user can still type in longer strings, but the input scrolls when the text exceeds the length of the field. Users tend to find scrolling text fields irritating, so you should size the fields generously. If you need to reset the number of columns at runtime, you can do that with the setColumns method. 
+  Tip After changing the size of a text box with the setColumns method, call the revalidate method of the surrounding container. 
+  textField.setColumns(10); 
+  panel.revalidate(); 
+  The revalidate method recomputes the size and layout of all   components in a container. After you use the revalidate method, the layout manager resizes the container, and the changed size of the text field will be visible. 
+  The revalidate method belongs to the JComponent class. It doesn’t immediately resize the component but merely marks it for resizing. This approach avoids repetitive calculations if multiple components request to be resized. However, if you want to recompute all components inside a JFrame, you have to call the validate method—JFrame doesn’t extend JComponent. 
+  In general, users add text (or edit an existing text) in a text field. Quite often these text fields start out blank. To make a blank text field, just leave out the string as a parameter for the JTextField constructor: var textField = new JTextField(20); 
+  You can change the content of the text field at any time by using the setText method from the JTextComponent parent class mentioned in the previous section. For example: textField.setText("Hello!"); 
+  And, as was mentioned in the previous section, you can find out what the user typed by calling the getText method. This method returns the exact text that the user has typed. To trim any extraneous leading and trailing spaces from the data in a text field, apply the trim method to the return value of getText: String text = textField.getText().trim(); 
+  To change the font in which the user text appears, use the setFont method. 
+  javax.swing.JTextField 1.2 JTextField(int cols) constructs an empty JTextField with the specified number of   columns. 
+  JTextField(String text, int cols) constructs a new JTextField with an initial string and the specified number of columns. 
+  int getColumns() void setColumns(int cols) gets or sets the number of columns that this text field should use. 
+  javax.swing.JComponent 1.2 void revalidate() causes the position and size of a component to be recomputed. 
+  void setFont(Font f) sets the font of this component. 
+  java.awt.Component 1.0 void validate() recomputes the position and size of a component. If the component is a container, the positions and sizes of its components are recomputed. 
+  Font getFont() gets the font of this component. 
+11.3.2 Labels and Labeling Components
+  Labels are components that hold text. They have no decorations (for example, no boundaries). They also do not react to user input. You can use a label to identify components. For example, unlike buttons, text fields have no label to identify them. To label a component that does not itself come with an identifier:   1. Construct a JLabel component with the correct text. 
+  2. Place it close enough to the component you want to identify so that the user can see that the label identifies the correct component. 
+  The constructor for a JLabel lets you specify the initial text or icon and, optionally, the alignment of the content. Use constants from the SwingConstants interface to specify alignment. That interface defines a number of useful constants such as LEFT, RIGHT, CENTER, NORTH, EAST, and so on. The JLabel class is one of several Swing classes that implement this interface. Therefore, you can specify a right-aligned label either as var label = new JLabel("User name: ", SwingConstants.RIGHT); 
+  or var label = new JLabel("User name: ", JLabel.RIGHT); 
+  The setText and setIcon methods let you set the text and icon of the label at runtime. 
+  Tip You can use both plain and HTML text in buttons, labels, and menu items. We don’t recommend HTML in buttons—it interferes with the look-and-feel. But HTML in labels can be very effective. Simply surround the label string with <html>. . .</html>, like this: label = new JLabel("<html><b>Required</b> entry:</html>"); 
+  Note that the first component with an HTML label may take some time to be displayed because the rather complex HTML rendering code must be loaded. 
+  Labels can be positioned inside a container like any other component. This means you can use the techniques you have seen before to place your labels   where you need them. 
+  javax.swing.JLabel 1.2 JLabel(String text) JLabel(Icon icon) JLabel(String text, int align) JLabel(String text, Icon icon, int align) constructs a label. The align parameter is one of the SwingConstants constants LEFT (default), CENTER, or RIGHT. 
+  String getText() void setText(String text) gets or sets the text of this label. 
+  Icon getIcon() void setIcon(Icon icon) gets or sets the icon of this label. 
+11.3.3 Password Fields
+  Password fields are a special kind of text fields. To prevent nosy bystanders from seeing your password, the characters that the user enters are not actually displayed. Instead, each typed character is represented by an echo character, such as a bullet (•). Swing supplies a JPasswordField class that implements such a text field. 
+  The password field is another example of the power of the model-viewcontroller architecture pattern. The password field uses the same model to store the data as a regular text field, but its view has been changed to display all characters as echo characters. 
+  javax.swing.JPasswordField 1.2   JPasswordField(String text, int columns) constructs a new password field. 
+  void setEchoChar(char echo) sets the echo character for this password field. This is advisory; a particular look-and-feel may insist on its own choice of echo character. 
+  A value of 0 resets the echo character to the default. 
+  char[] getPassword() returns the text contained in this password field. For stronger security, you should overwrite the content of the returned array after use. (The password is not returned as a String because a string would stay in the virtual machine until it is garbage-collected.) 11.3.4 Text Areas
+  Sometimes, you need to collect user input that is more than one line long. As mentioned earlier, you can use the JTextArea component for this. When you place a text area component in your program, a user can enter any number of lines of text, using the Enter key to separate them. Each line ends with a '\n'. Figure 11.11 shows a text area at work. 
+  Figure 11.11 Text components In the constructor for the JTextArea component, specify the number of rows and columns for the text area. For example, textArea = new JTextArea(8, 40); // 8 lines of 40 columns each   where the columns parameter works as before—and you still need to add a few more columns for safety’s sake. Also, as before, the user is not restricted to the number of rows and columns; the text simply scrolls when the user inputs too much. You can also use the setColumns method to change the number of columns and the setRows method to change the number of rows. 
+  These numbers only indicate the preferred size—the layout manager can still grow or shrink the text area. 
+  If there is more text than the text area can display, the remaining text is simply clipped. You can avoid clipping long lines by turning on line wrapping:   textArea.setLineWrap(true); // long lines are wrapped   This wrapping is a visual effect only; the text in the document is not changed —no automatic '\n' characters are inserted into the text. 
+11.3.5 Scroll Panes
+  In Swing, a text area does not have scrollbars. If you want scrollbars, you have to place the text area inside a scroll pane. 
+  textArea = new JTextArea(8, 40); 
+  var scrollPane = new JScrollPane(textArea); 
+  The scroll pane now manages the view of the text area. Scrollbars automatically appear if there is more text than the text area can display, and they vanish again if text is deleted and the remaining text fits inside the area. 
+  The scrolling is handled internally by the scroll pane—your program does not need to process scroll events. 
+  This is a general mechanism that works for any component, not just text areas. To add scrollbars to a component, put them inside a scroll pane. 
+  Listing 11.1 demonstrates the various text components. This program shows a text field, a password field, and a text area with scrollbars. The text field and password field are labeled. Click on "Insert" to insert the field contents into the text area. 
+  Note The JTextArea component displays plain text only, without special fonts or formatting. To display formatted text (such as HTML), you can use the JEditorPane class that is discussed in Volume II. 
+  javax.swing.JTextArea 1.2 JTextArea() JTextArea(int rows, int cols) JTextArea(String text, int rows, int cols) constructs a new text area. 
+  void setColumns(int cols) tells the text area the preferred number of columns it should use. 
+  void setRows(int rows) tells the text area the preferred number of rows it should use. 
+  void append(String newText) appends the given text to the end of the text already in the text area. 
+  void setLineWrap(boolean wrap) turns line wrapping on or off. 
+  void setWrapStyleWord(boolean word) If word is true, long lines are wrapped at word boundaries. If it is false, long lines are broken without taking word boundaries into account. 
+  void setTabSize(int c) sets tab stops every c columns. Note that the tabs aren’t converted to spaces but cause alignment with the next tab stop. 
+  javax.swing.JScrollPane 1.2   JScrollPane(Component c) creates a scroll pane that displays the content of the specified component. Scrollbars are supplied when the component is larger than the view. 

@@ -1,0 +1,89 @@
+  949   The function simply assembles a format string "%w.pf" in the variable fmt, then calls printf. It returns the number of characters printed. 
+  Listing 12.7 shows the test program that demonstrates the Printf1 class. 
+  Listing 12.7 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16   printf1/Printf1Test.java   /** * @version 1.10 1997-07-01 * @author Cay Horstmann */ class Printf1Test { public static void main(String[] args) { int count = Printf1.print(8, 4, 3.14); 
+  count += Printf1.print(8, 4, count); 
+  System.out.println(); 
+  for (int i = 0; i < count; i++) System.out.print("-"); 
+  System.out.println(); 
+  } 
+  } 
+  12.3 String Parameters Next, we want to consider how to transfer strings to and from native methods. 
+  Strings are quite different in the two languages: In Java they are sequences of UTF-16 code points whereas C strings are null-terminated sequences of bytes. 
+  JNI has two sets of functions for manipulating strings: One converts Java strings to “modified UTF-8” byte sequences and another converts them to arrays of UTF-16 values—that is, to jchar arrays. (The UTF-8, “modified UTF-8,” and UTF-16 formats were discussed in Chapter 2. Recall that the UTF-8 and “modified UTF-8” encodings leave ASCII characters unchanged, but all other Unicode characters are encoded as multibyte sequences.)   NOTE: The standard UTF-8 encoding and the “modified UTF-8” encoding differ only for “supplementary” characters with codes higher than 0xFFFF. In the standard UTF-8 encoding, these characters are encoded as 4-byte sequences. 
+  In the “modified” encoding, each such character is first encoded as a pair of “surrogates” in the UTF-16 encoding, and then each surrogate is encoded with UTF-8, yielding a total of 6 bytes. This is clumsy, but it is a historical accident— the JVM specification was written when Unicode was still limited to 16 bits. 
+  From the Library of Hristo Dimov Hristov   950   Chapter 12   Native Methods   If your C code already uses Unicode, you’ll want to use the second set of conversion functions. On the other hand, if all your strings are restricted to ASCII characters, you can use the “modified UTF-8” conversion functions. 
+  A native method with a String parameter actually receives a value of an opaque type called jstring. A native method with a return value of type String must return a value of type jstring. JNI functions read and construct these jstring objects. For example, the NewStringUTF function makes a new jstring object out of a char array that contains ASCII characters or, more generally, “modified UTF-8”-encoded byte sequences. 
+  JNI functions have a somewhat odd calling convention. Here is a call to the NewStringUTF function: JNIEXPORT jstring JNICALL Java_HelloNative_getGreeting(JNIEnv* env, jclass cl) { jstring jstr; 
+  char greeting[] = "Hello, Native World\n"; 
+  jstr = (*env)->NewStringUTF(env, greeting); 
+  return jstr; 
+  } 
+  NOTE: Unless explicitly mentioned otherwise, all code in this chapter is C code. 
+  All calls to JNI functions use the env pointer that is the first argument of every native method. The env pointer is a pointer to a table of function pointers (see Figure 12.2). Therefore, you must prefix every JNI call with (*env)-> to actually dereference the function pointer. Furthermore, env is the first parameter of every JNI function. 
+  C++ NOTE: It is simpler to access JNI functions in C++. The C++ version of the JNIEnv class has inline member functions that take care of the function pointer lookup for you. For example, you can call the NewStringUTF function as jstr = env->NewStringUTF(greeting); 
+  Note that you omit the JNIEnv pointer from the parameter list of the call. 
+  From the Library of Hristo Dimov Hristov   12.3 String Parameters   951   Figure 12.2 The env pointer The NewStringUTF function lets you construct a new jstring. To read the contents of an existing jstring object, use the GetStringUTFChars function. This function returns a const jbyte* pointer to the “modified UTF-8” characters that describe the character string. Note that a specific virtual machine is free to choose this character encoding for its internal string representation, so you might get a character pointer into the actual Java string. Since Java strings are meant to be immutable, it is very important that you treat the const seriously and do not try to write into this character array. 
+  On the other hand, if the virtual machine uses UTF-16 or UTF-32 characters for its internal string representation, this function call allocates a new memory block that will be filled with the “modified UTF-8” equivalents. 
+  The virtual machine must know when you are finished using the string so that it can garbage-collect it. (The garbage collector runs in a separate thread, and it can interrupt the execution of native methods.) For that reason, you must call the ReleaseStringUTFChars function. 
+  From the Library of Hristo Dimov Hristov   952   Chapter 12   Native Methods   Alternatively, you can supply your own buffer to hold the string characters by calling the GetStringRegion or GetStringUTFRegion methods. 
+  Finally, the GetStringUTFLength function returns the number of characters needed for the “modified UTF-8” encoding of the string. 
+  NOTE: You can find the JNI API at http://docs.oracle.com/javase/7/docs/technotes/ guides/jni. 
+  Accessing Java Strings from C Code   • jstring NewStringUTF(JNIEnv* env, const char bytes[]) returns a new Java string object from a zero byte-terminated “modified UTF-8” byte sequence, or NULL if the string cannot be constructed. 
+  • jsize GetStringUTFLength(JNIEnv* env, jstring string) returns the number of bytes required for the “modified UTF-8” encoding (not counting the zero byte terminator). 
+  • const jbyte* GetStringUTFChars(JNIEnv* env, jstring string, jboolean* isCopy) returns a pointer to the “modified UTF-8” encoding of a string, or NULL if the character array cannot be constructed. The pointer is valid until ReleaseStringUTFChars is called. 
+  isCopy points to a jboolean filled with JNI_TRUE if a copy is made, with JNI_FALSE otherwise. 
+  • void ReleaseStringUTFChars(JNIEnv* env, jstring string, const jbyte bytes[]) informs the virtual machine that the native code no longer needs access to the Java string through bytes (a pointer returned by GetStringUTFChars). 
+  • void GetStringRegion(JNIEnv *env, jstring string, jsize start, jsize length, jchar *buffer) copies a sequence of UTF-16 double bytes from a string to a user-supplied buffer of size at least 2 × length. 
+  • void GetStringUTFRegion(JNIEnv *env, jstring string, jsize start, jsize length, jbyte *buffer) copies a sequence of “modified UTF-8” bytes from a string to a user-supplied buffer. 
+  The buffer must be long enough to hold the bytes. In the worst case, 3 × length bytes are copied. 
+  (Continues)   From the Library of Hristo Dimov Hristov   12.3 String Parameters   953   Accessing Java Strings from C Code (Continued)   • jstring NewString(JNIEnv* env, const jchar chars[], jsize length) returns a new Java string object from a Unicode string, or NULL if the string cannot be constructed. 
+  Parameters:   env   The JNI interface pointer   chars   The null-terminated UTF-16 string   length   The number of characters in the string   • jsize GetStringLength(JNIEnv* env, jstring string) returns the number of characters in the string. 
+  • const jchar* GetStringChars(JNIEnv* env, jstring string, jboolean* isCopy) returns a pointer to the Unicode encoding of a string, or NULL if the character array cannot be constructed. The pointer is valid until ReleaseStringChars is called. isCopy is either NULL or points to a jboolean filled with JNI_TRUE if a copy is made, with JNI_FALSE otherwise. 
+  • void ReleaseStringChars(JNIEnv* env, jstring string, const jchar chars[]) informs the virtual machine that the native code no longer needs access to the Java string through chars (a pointer returned by GetStringChars). 
+  Let us put these functions to work and write a class that calls the C function sprintf. 
+  We would like to call the function as shown in Listing 12.8. 
+  Listing 12.8 1 2 3 4 5 6 7 8 9 10 11   printf2/Printf2Test.java   /** * @version 1.10 1997-07-01 * @author Cay Horstmann */ class Printf2Test { public static void main(String[] args) { double price = 44.95; 
+  double tax = 7.75; 
+  double amountDue = price * (1 + tax / 100); 
+  12   String s = Printf2.sprint("Amount due = %8.2f", amountDue); 
+  System.out.println(s); 
+  13 14   } 
+  15 16   } 
+  From the Library of Hristo Dimov Hristov   954   Chapter 12   Native Methods   Listing 12.9 shows the class with the native sprint method. 
+  Listing 12.9 1 2 3 4 5 6 7   printf2/Printf2.java   /** * @version 1.10 1997-07-01 * @author Cay Horstmann */ class Printf2 { public static native String sprint(String format, double x); 
+  8   static { System.loadLibrary("Printf2"); 
+  } 
+  9 10 11 12 13   } 
+  Therefore, the C function that formats a floating-point number has the prototype JNIEXPORT jstring JNICALL Java_Printf2_sprint(JNIEnv* env, jclass cl, jstring format, jdouble x)   Listing 12.10 shows the code for the C implementation. Note the calls to GetStringUTFChars to read the format argument, NewStringUTF to generate the return value, and ReleaseStringUTFChars to inform the virtual machine that access to the string is no   longer required. 
+  Listing 12.10 1 2 3 4   printf2/Printf2.c   /** @version 1.10 1997-07-01 @author Cay Horstmann */   5 6 7 8 9   #include "Printf2.h" 
+  #include <string.h> #include <stdlib.h> #include <float.h>   10 11 12 13 14 15 16 17 18 19   /** @param format a string containing a printf format specifier (such as "%8.2f"). Substrings "%%" are skipped. 
+  @return a pointer to the format specifier (skipping the '%') or NULL if there wasn't a unique format specifier */ char* find_format(const char format[]) { char* p; 
+  From the Library of Hristo Dimov Hristov   12.3 String Parameters   955   char* q; 
+  20 21   p = strchr(format, '%'); 
+  while (p != NULL && *(p + 1) == '%') /* skip %% */ p = strchr(p + 2, '%'); 
+  if (p == NULL) return NULL; 
+  /* now check that % is unique */ p++; 
+  q = strchr(p, '%'); 
+  while (q != NULL && *(q + 1) == '%') /* skip %% */ q = strchr(q + 2, '%'); 
+  if (q != NULL) return NULL; /* % not unique */ q = p + strspn(p, " -0+#"); /* skip past flags */ q += strspn(q, "0123456789"); /* skip past field width */ if (*q == '.') { q++; q += strspn(q, "0123456789"); } 
+  /* skip past precision */ if (strchr("eEfFgG", *q) == NULL) return NULL; 
+  /* not a floating-point format */ return p; 
+  22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39   } 
+  40 41 42 43 44 45 46   JNIEXPORT jstring JNICALL Java_Printf2_sprint(JNIEnv* env, jclass cl, jstring format, jdouble x) { const char* cformat; 
+  char* fmt; 
+  jstring ret; 
+  47   cformat = (*env)->GetStringUTFChars(env, format, NULL); 
+  fmt = find_format(cformat); 
+  if (fmt == NULL) ret = format; 
+  else { char* cret; 
+  int width = atoi(fmt); 
+  if (width == 0) width = DBL_DIG + 10; 
+  cret = (char*) malloc(strlen(cformat) + width); 
+  sprintf(cret, cformat, x); 
+  ret = (*env)->NewStringUTF(env, cret); 
+  free(cret); 
+  } 
+  (*env)->ReleaseStringUTFChars(env, format, cformat); 
+  return ret; 
+  48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64   } 
+  In this function, we chose to keep error handling simple. If the format code to print a floating-point number is not of the form %w.pc, where c is one of the   From the Library of Hristo Dimov Hristov   956   Chapter 12   Native Methods   characters e, E, f, g, or G, then we simply do not format the number. We’ll show you later how to make a native method throw an exception. 

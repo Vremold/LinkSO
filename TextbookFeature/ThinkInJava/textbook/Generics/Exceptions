@@ -1,0 +1,5 @@
+  Because of erasure, the use of generics with exceptions is extremely limited. A catch clause cannot catch an exception of a generic type, because the exact type of the exception must be known at both compile time and run time. Also, a generic class can’t directly or indirectly inherit from Throwable (this further prevents you from trying to define generic exceptions that can’t be caught). 
+  However, type parameters may be used in the throws clause of a method declaration. This allows you to write generic code that varies with the type of a checked exception: 
+  A Processor performs a process( ) and may throw an exception of type E. The result of the process( ) is stored in the List<T> resultCollector (this is called a collecting parameter). A ProcessRunner has a processAll( ) method that executes every Process object that it holds, and returns the resultCollector. 
+  If you could not parameterize the exceptions that are thrown, you would be unable to write this code generically because of the checked exceptions. 
+  Exercise 36: (2) Add a second parameterized exception to the Processor class and demonstrate that the exceptions can vary independently. 

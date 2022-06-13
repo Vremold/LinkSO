@@ -1,0 +1,6 @@
+  The if-else statement is the most basic way to control program flow. The else is optional, so you can use if in two forms: 
+  if(Boolean-expression) statement  or 
+  if(Boolean-expression) statement else statement  The Boolean-expression must produce a boolean result. The statement is either a simple statement terminated by a semicolon, or a compound statement, which is a group of simple statements enclosed in braces. Whenever the word “statement” is used, it always implies that the statement can be simple or compound. 
+  As an example of if-else, here is a test( ) method that will tell you whether a guess is above, below, or equivalent to a target number: 
+  In the middle of test( ), you’ll also see an “else if,” which is not a new keyword but just an else followed by a new if statement. 
+  Although Java, like C and C++ before it, is a “free-form” language, it is conventional to indent the body of a control flow statement so the reader can easily determine where it begins and ends. 

@@ -1,0 +1,268 @@
+  In the previous section, you saw how to traverse the tree structure of a DOM document. However, if you simply follow that approach, you’ll have to do quite a bit of tedious programming and error checking. Not only will you have to deal with whitespace between elements, but you will also need to check whether the document contains the nodes that you expect. For example, suppose you are reading an element: <font> <name>Helvetica</name> <size>36</size> </font>   You get the first child. Oops . . . it is a text node containing whitespace "\n ". You skip text nodes and find the first element node. Then, you need to check that its tag name is "name" and that it has one child node of type Text. You move on to the next nonwhitespace child and make the same check. What if the author of the document switched the order of the children or added another child element? It is tedious to code all this error checking—but reckless to skip the checks. 
+  From the Library of Hristo Dimov Hristov   3.3 Validating XML Documents   163   Fortunately, one of the major benefits of an XML parser is that it can automatically verify that a document has the correct structure. Then, parsing becomes much simpler. For example, if you know that the font fragment has passed validation, you can simply get the two grandchildren, cast them as Text nodes, and get the text data, without any further checking. 
+  To specify the document structure, you can supply a DTD or an XML Schema definition. A DTD or schema contains rules that explain how a document should be formed, by specifying the legal child elements and attributes for each element. 
+  For example, a DTD might contain a rule: <!ELEMENT font (name,size)>   This rule expresses that a font element must always have two children, which are name and size elements. The XML Schema language expresses the same constraint as <xsd:element name="font"> <xsd:sequence> <xsd:element name="name" type="xsd:string"/> <xsd:element name="size" type="xsd:int"/> </xsd:sequence> </xsd:element>   XML Schema can express more sophisticated validation conditions (such as the fact that the size element must contain an integer) than can DTDs. Unlike the DTD syntax, the XML Schema syntax itself uses XML, which is a benefit if you need to process schema files. 
+  In the next section, we will discuss DTDs in detail, then briefly cover the basics of XML Schema support. Finally, we will present a complete application that demonstrates how validation simplifies XML programming. 
+3.3.1 Document Type Definitions
+  There are several methods for supplying a DTD. You can include a DTD in an XML document like this: <?xml version="1.0"?> <!DOCTYPE configuration [ <!ELEMENT configuration . . .> more rules ... 
+  ]> <configuration> ... 
+  </configuration>   From the Library of Hristo Dimov Hristov   164   Chapter 3   XML   As you can see, the rules are included inside a DOCTYPE declaration, in a block delimited by [. . .]. The document type must match the name of the root element, such as configuration in our example. 
+  Supplying a DTD inside an XML document is somewhat uncommon because DTDs can grow lengthy. It makes more sense to store the DTD externally. The SYSTEM declaration can be used for that purpose. Specify a URL that contains the DTD, for example: <!DOCTYPE configuration SYSTEM "config.dtd">   or <!DOCTYPE configuration SYSTEM "http://myserver.com/config.dtd">   CAUTION: If you use a relative URL for the DTD (such as "config.dtd"), give the parser a File or URL object, not an InputStream. If you must parse from an input stream, supply an entity resolver (see the following note). 
+  Finally, the mechanism for identifying well-known DTDs has its origin in SGML. 
+  Here is an example: <!DOCTYPE web-app PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.2//EN" 
+  "http://java.sun.com/j2ee/dtds/web-app_2_2.dtd">   If an XML processor knows how to locate the DTD with the public identifier, it need not go to the URL. 
+  NOTE: If you use a DOM parser and would like to support a PUBLIC identifier, call the setEntityResolver method of the DocumentBuilder class to install an object of a class that implements the EntityResolver interface. That interface has a single method, resolveEntity. Here is the outline of a typical implementation: class MyEntityResolver implements EntityResolver { public InputSource resolveEntity(String publicID, String systemID) { if (publicID.equals(a known ID)) return new InputSource(DTD data); 
+  else return null; // use default behavior } 
+  } 
+  You can construct the input source from an InputStream, a Reader, or a string. 
+  From the Library of Hristo Dimov Hristov   3.3 Validating XML Documents   165   Now that you have seen how the parser locates the DTD, let us consider the various kinds of rules. 
+  The ELEMENT rule specifies what children an element can have. Use a regular expression, made up of the components shown in Table 3.1. 
+  Table 3.1 Rules for Element Content Rule   Meaning   E*   0 or more occurrences of E   E+   1 or more occurrences of E   E? 
+  0 or 1 occurrences of E   E1|E2|. . .|En   One of E1, E2, . . ., En   E1, E2, . . ., En   E1 followed by E2, . . ., En   #PCDATA   Text   (#PCDATA|E1|E2|. . .|En)*   0 or more occurrences of text and E1, E2, . . ., En in any order (mixed content)   ANY   Any children allowed   EMPTY   No children allowed   Here are several simple but typical examples. The following rule states that a menu element contains 0 or more item elements: <!ELEMENT menu (item)*>   This set of rules states that a font is described by a name followed by a size, each of which contain text: <!ELEMENT font (name,size)> <!ELEMENT name (#PCDATA)> <!ELEMENT size (#PCDATA)>   The abbreviation PCDATA denotes parsed character data. It is “parsed” because the parser interprets the text string, looking for < characters that denote the start of a new tag, or & characters that denote the start of an entity. 
+  An element specification can contain regular expressions that are nested and complex. For example, here is a rule that describes the makeup of a chapter in a book: <!ELEMENT chapter (intro,(heading,(para|image|table|note)+)+)   From the Library of Hristo Dimov Hristov   166   Chapter 3   XML   Each chapter starts with an introduction, which is followed by one or more sections consisting of a heading and one or more paragraphs, images, tables, or notes. 
+  However, in one common case you can’t define the rules to be as flexible as you might like. Whenever an element can contain text, there are only two valid cases. 
+  Either the element contains nothing but text, such as <!ELEMENT name (#PCDATA)>   or the element contains any combination of text and tags in any order, such as <!ELEMENT para (#PCDATA|em|strong|code)*>   It is not legal to specify any other types of rules that contain #PCDATA. For example, the following is illegal: <!ELEMENT captionedImage (image,#PCDATA)>   You have to rewrite such a rule, either by introducing another caption element or by allowing any combination of image elements and text. 
+  This restriction simplifies the job of the XML parser when parsing mixed content (a mixture of tags and text). Since you lose some control by allowing mixed content, it is best to design DTDs so that all elements contain either other elements or nothing but text. 
+  NOTE: Actually, it isn’t quite true that you can specify arbitrary regular expressions of elements in a DTD rule. An XML parser may reject certain complex rule sets that lead to nondeterministic parsing. For example, a regular expression ((x,y)|(x,z)) is nondeterministic. When the parser sees x, it doesn’t know which of the two alternatives to take. This expression can be rewritten in a deterministic form as (x,(y|z)). However, some expressions can’t be reformulated, such as ((x,y)*|x?).The parser in the Java XML library gives no warnings when presented with an ambiguous DTD; it simply picks the first matching alternative when parsing, which causes it to reject some correct inputs. The parser is well within its rights to do so because the XML standard allows a parser to assume that the DTD is unambiguous. 
+  In practice, this isn’t an issue over which you should lose sleep, because most DTDs are so simple that you will never run into ambiguity problems. 
+  From the Library of Hristo Dimov Hristov   3.3 Validating XML Documents   167   You can also specify rules to describe the legal attributes of elements. The general syntax is <!ATTLIST element attribute type default>   Table 3.2 shows the legal attribute types, and Table 3.3 shows the syntax for the defaults. 
+  Table 3.2 Attribute Types Type   Meaning   CDATA   Any character string   (A1|A2| . . . |An)   One of the string attributes A1, A2, . . ., An   NMTOKEN, NMTOKENS   One or more name tokens   ID   A unique ID   IDREF, IDREFS   One or more references to a unique ID   ENTITY, ENTITIES   One or more unparsed entities   Table 3.3 Attribute Defaults Default   Meaning   #REQUIRED   Attribute is required. 
+  #IMPLIED   Attribute is optional. 
+  A   Attribute is optional; the parser reports it to be A if it is not specified. 
+  #FIXED A   The attribute must either be unspecified or A; in either case, the parser reports it to be A. 
+  Here are two typical attribute specifications: <!ATTLIST font style (plain|bold|italic|bold-italic) "plain"> <!ATTLIST size unit CDATA #IMPLIED>   The first specification describes the style attribute of a font element. There are four legal attribute values, and the default value is plain. The second specification expresses that the unit attribute of the size element can contain any character data sequence. 
+  From the Library of Hristo Dimov Hristov   168   Chapter 3   XML   NOTE: We generally recommend the use of elements, not attributes, to describe data. Thus, the font style should be a separate element, such as <font><style>plain</style>. . .</font>. However, attributes have an undeniable advantage for enumerated types because the parser can verify that the values are legal. For example, if the font style is an attribute, the parser checks that it is one of the four allowed values, and supplies a default if no value was given. 
+  The handling of a CDATA attribute value is subtly different from the processing of #PCDATA that you have seen before, and quite unrelated to the <![CDATA[. . .]]> sections. 
+  The attribute value is first normalized—that is, the parser processes character and entity references (such as &#233; or &lt;) and replaces whitespace with spaces. 
+  An NMTOKEN (or name token) is similar to CDATA, but most nonalphanumeric characters and internal whitespace are disallowed, and the parser removes leading and trailing whitespace. NMTOKENS is a whitespace-separated list of name tokens. 
+  The ID construct is quite useful. An ID is a name token that must be unique in the document—the parser checks the uniqueness. You will see an application in the next sample program. An IDREF is a reference to an ID that exists in the same document, which the parser also checks. IDREFS is a whitespace-separated list of ID references. 
+  An ENTITY attribute value refers to an “unparsed external entity.” That is a holdover from SGML that is rarely used in practice. The annotated XML specification at www.xml.com/axml/axml.html has an example. 
+  A DTD can also define entities, or abbreviations that are replaced during parsing. 
+  You can find a good example for the use of entities in the user interface descriptions of the Firefox browser. Those descriptions are formatted in XML and contain entity definitions such as <!ENTITY back.label "Back">   Elsewhere, text can contain an entity reference, for example: <menuitem label="&back.label;"/>   The parser replaces the entity reference with the replacement string. To internationalize the application, only the string in the entity definition needs to be changed. Other uses of entities are more complex and less common; look at the XML specification for details. 
+  This concludes the introduction to DTDs. Now that you have seen how to use DTDs, you can configure your parser to take advantage of them. 
+  From the Library of Hristo Dimov Hristov   3.3 Validating XML Documents   169   First, tell the document builder factory to turn on validation: factory.setValidating(true); 
+  All builders produced by this factory validate their input against a DTD. The most useful benefit of validation is ignoring whitespace in element content. For example, consider the XML fragment <font> <name>Helvetica</name> <size>36</size> </font>   A nonvalidating parser reports the whitespace between the font, name, and size elements because it has no way of knowing if the children of font are (name,size) (#PCDATA,name,size)*   or perhaps ANY   Once the DTD specifies that the children are (name,size), the parser knows that the whitespace between them is not text. Call factory.setIgnoringElementContentWhitespace(true); 
+  and the builder will stop reporting the whitespace in text nodes. That means you can now rely on the fact that a font node has two children. You no longer need to program a tedious loop: for (int i = 0; i < children.getLength(); i++) { Node child = children.item(i); 
+  if (child instanceof Element) { Element childElement = (Element) child; 
+  if (childElement.getTagName().equals("name")) . . . 
+  else if (childElement.getTagName().equals("size")) . . . 
+  } 
+  } 
+  Instead, you can simply access the first and second child: Element nameElement = (Element) children.item(0); 
+  Element sizeElement = (Element) children.item(1); 
+  From the Library of Hristo Dimov Hristov   170   Chapter 3   XML   That is why DTDs are so useful. You don’t overload your program with rulechecking code—the parser has already done that work by the time you get the document. 
+  TIP: Many programmers who start using XML are uncomfortable with validation and end up analyzing the DOM tree on the fly. If you need to convince colleagues of the benefit of using validated documents, show them the two coding alternatives—it should win them over. 
+  When the parser reports an error, your application will want to do something about it—log it, show it to the user, or throw an exception to abandon the parsing. 
+  Therefore, you should install an error handler whenever you use validation. 
+  Supply an object that implements the ErrorHandler interface. That interface has three methods: void warning(SAXParseException exception) void error(SAXParseException exception) void fatalError(SAXParseException exception)   Install the error handler with the setErrorHandler method of the DocumentBuilder class: builder.setErrorHandler(handler); 
+  javax.xml.parsers.DocumentBuilder 1.4   • void setEntityResolver(EntityResolver resolver) sets the resolver to locate entities that are referenced in the XML documents being parsed. 
+  • void setErrorHandler(ErrorHandler handler) sets the handler to report errors and warnings that occur during parsing. 
+  org.xml.sax.EntityResolver 1.4   • public InputSource resolveEntity(String publicID, String systemID) returns an input source that contains the data referenced by the given ID(s), or null to indicate that this resolver doesn’t know how to resolve the particular name. The publicID parameter may be null if no public ID was supplied. 
+  From the Library of Hristo Dimov Hristov   3.3 Validating XML Documents   171   org.xml.sax.InputSource 1.4   • InputSource(InputStream in) • InputSource(Reader in) • InputSource(String systemID) constructs an input source from a stream, reader, or system ID (usually a relative or absolute URL). 
+  org.xml.sax.ErrorHandler 1.4   • void fatalError(SAXParseException exception) • void error(SAXParseException exception) • void warning(SAXParseException exception) Override these methods to provide handlers for fatal errors, nonfatal errors, and warnings. 
+  org.xml.sax.SAXParseException 1.4   • int getLineNumber() • int getColumnNumber() return the line and column numbers of the end of the processed input that caused the exception. 
+  javax.xml.parsers.DocumentBuilderFactory 1.4   • boolean isValidating() • void setValidating(boolean value) gets or sets the validating property of the factory. If set to true, the parsers that this factory generates validate their input. 
+  • boolean isIgnoringElementContentWhitespace() • void setIgnoringElementContentWhitespace(boolean value) gets or sets the ignoringElementContentWhitespace property of the factory. If set to true, the parsers that this factory generates ignore whitespace between element nodes that don’t have mixed content (i.e., a mixture of elements and #PCDATA). 
+  From the Library of Hristo Dimov Hristov   172   Chapter 3   XML 3.3.2 XML Schema
+  XML Schema is quite a bit more complex than the DTD syntax, so we will only cover the basics. For more information, we recommend the tutorial at www.w3.org/TR/xmlschema-0. 
+  To reference a Schema file in a document, add attributes to the root element, for example: <?xml version="1.0"?> <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xsi:noNamespaceSchemaLocation="config.xsd"> ... 
+  </configuration>   This declaration states that the schema file config.xsd should be used to validate the document. If your document uses namespaces, the syntax is a bit more complex—see the XML Schema tutorial for details. (The prefix xsi is a namespace alias; see Section 3.5, “Using Namespaces,” on p. 196 for more information.) A schema defines a type for each element. The type can be a simple type—a string with formatting restrictions—or a complex type. Some simple types are built into XML Schema, including xsd:string xsd:int xsd:boolean   NOTE: We use the prefix xsd: to denote the XML Schema Definition namespace. 
+  Some authors use the prefix xs: instead. 
+  You can define your own simple types. For example, here is an enumerated type: <xsd:simpleType name="StyleType"> <xsd:restriction base="xsd:string"> <xsd:enumeration value="PLAIN" /> <xsd:enumeration value="BOLD" /> <xsd:enumeration value="ITALIC" /> <xsd:enumeration value="BOLD_ITALIC" /> </xsd:restriction> </xsd:simpleType>   When you define an element, you specify its type:   From the Library of Hristo Dimov Hristov   3.3 Validating XML Documents   173   <xsd:element name="name" type="xsd:string"/> <xsd:element name="size" type="xsd:int"/> <xsd:element name="style" type="StyleType"/>   The type constrains the element content. For example, the elements <size>10</size> <style>PLAIN</style>   will validate correctly, but the elements <size>default</size> <style>SLANTED</style>   will be rejected by the parser. 
+  You can compose types into complex types, for example: <xsd:complexType name="FontType"> <xsd:sequence> <xsd:element ref="name"/> <xsd:element ref="size"/> <xsd:element ref="style"/> </xsd:sequence> </xsd:complexType>   A FontType is a sequence of name, size, and style elements. In this type definition, we use the ref attribute and refer to definitions that are located elsewhere in the schema. You can also nest definitions, like this: <xsd:complexType name="FontType"> <xsd:sequence> <xsd:element name="name" type="xsd:string"/> <xsd:element name="size" type="xsd:int"/> <xsd:element name="style" type="StyleType"> <xsd:simpleType> <xsd:restriction base="xsd:string"> <xsd:enumeration value="PLAIN" /> <xsd:enumeration value="BOLD" /> <xsd:enumeration value="ITALIC" /> <xsd:enumeration value="BOLD_ITALIC" /> </xsd:restriction> </xsd:simpleType> </xsd:element> </xsd:sequence> </xsd:complexType>   Note the anonymous type definition of the style element. 
+  The xsd:sequence construct is the equivalent of the concatenation notation in DTDs. The xsd:choice construct is the equivalent of the | operator. For example,   From the Library of Hristo Dimov Hristov   174   Chapter 3   XML   <xsd:complexType name="contactinfo"> <xsd:choice> <xsd:element ref="email"/> <xsd:element ref="phone"/> </xsd:choice> </xsd:complexType>   This is the equivalent of the DTD type email|phone. 
+  To allow repeated elements, use the minoccurs and maxoccurs attributes. For example, the equivalent of the DTD type item* is <xsd:element name="item" type=". . ." minoccurs="0" maxoccurs="unbounded">   To specify attributes, add xsd:attribute elements to complexType definitions: <xsd:element name="size"> <xsd:complexType> ... 
+  <xsd:attribute name="unit" type="xsd:string" use="optional" default="cm"/> </xsd:complexType> </xsd:element>   This is the equivalent of the DTD statement <!ATTLIST size unit CDATA #IMPLIED "cm">   Enclose element and type definitions of your schema inside an xsd:schema element: <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"> ... 
+  </xsd:schema>   Parsing an XML file with a schema is similar to parsing a file with a DTD, but with three differences: 1. 
+  You need to turn on support for namespaces, even if you don’t use them in your XML files. 
+  factory.setNamespaceAware(true); 
+  2. 
+  You need to prepare the factory for handling schemas, with the following magic incantation: final String JAXP_SCHEMA_LANGUAGE = "http://java.sun.com/xml/jaxp/properties/schemaLanguage"; 
+  final String W3C_XML_SCHEMA = "http://www.w3.org/2001/XMLSchema"; 
+  factory.setAttribute(JAXP_SCHEMA_LANGUAGE, W3C_XML_SCHEMA); 
+3.
+   
+  The parser does not discard element content whitespace. This is a definite annoyance, and there is disagreement whether or not it is an actual bug. See the code in Listing 3.4 on p. 185 for a workaround. 
+  From the Library of Hristo Dimov Hristov   3.3 Validating XML Documents   175   3.3.3 A Practical Example In this section, we work through a practical example that shows the use of XML in a realistic setting. Recall from Volume I, Chapter 12 that the GridBagLayout is the most useful layout manager for Swing components. However, it is feared—not just for its complexity but also for the programming tedium. It would be much more convenient to put a layout description into a text file instead of producing large amounts of repetitive code. In this section, you will see how to use XML to describe a grid bag layout and how to parse the layout files. 
+  A grid bag is made up of rows and columns, very similar to an HTML table. 
+  Similar to an HTML table, we describe it as a sequence of rows, each of which contains cells: <gridbag> <row> <cell>. . .</cell> <cell>. . .</cell> ... 
+  </row> <row> <cell>. . .</cell> <cell>. . .</cell> ... 
+  </row> ... 
+  </gridbag>   The gridbag.dtd specifies these rules: <!ELEMENT gridbag (row)*> <!ELEMENT row (cell)*>   Some cells can span multiple rows and columns. In the grid bag layout, that is achieved by setting the gridwidth and gridheight constraints to values larger than 1. 
+  We will use attributes of the same name: <cell gridwidth="2" gridheight="2">   Similarly, we can use attributes for the other grid bag constraints fill, anchor, gridx, gridy, weightx, weighty, ipadx, and ipady. (We don’t handle the insets constraint because its value is not a simple type, but it would be straightforward to support it.) For example, <cell fill="HORIZONTAL" anchor="NORTH">   For most of these attributes, we provide the same defaults as the no-argument constructor of the GridBagConstraints class:   From the Library of Hristo Dimov Hristov   176   Chapter 3   XML   <!ATTLIST cell gridwidth CDATA "1"> <!ATTLIST cell gridheight CDATA "1"> <!ATTLIST cell fill (NONE|BOTH|HORIZONTAL|VERTICAL) "NONE"> <!ATTLIST cell anchor (CENTER|NORTH|NORTHEAST|EAST |SOUTHEAST|SOUTH|SOUTHWEST|WEST|NORTHWEST) "CENTER"> ... 
+  The gridx and gridy values get special treatment because it would be tedious and somewhat error-prone to specify them by hand. Supplying them is optional: <!ATTLIST cell gridx CDATA #IMPLIED> <!ATTLIST cell gridy CDATA #IMPLIED>   If they are not supplied, the program determines them according to the following heuristic: In column 0, the default gridx is 0. Otherwise, it is the preceding gridx plus the preceding gridwidth. The default gridy is always the same as the row number. 
+  Thus, you don’t have to specify gridx and gridy in the most common cases where a component spans multiple rows. However, if a component spans multiple columns, you must specify gridx whenever you skip over that component. 
+  NOTE: Grid bag experts might wonder why we don’t use the RELATIVE and REMAINDER mechanism to let the grid bag layout automatically determine the gridx and gridy positions. We tried, but no amount of fussing would produce the layout of the font dialog example of Figure 3.4. Reading through the GridBagLayout source code, it is apparent that the algorithm just won’t do the heavy lifting required to recover the absolute positions. 
+  The program parses the attributes and sets the grid bag constraints. For example, to read the grid width, the program contains a single statement: constraints.gridwidth = Integer.parseInt(e.getAttribute("gridwidth")); 
+  The program need not worry about a missing attribute because the parser automatically supplies the default value if no other value was specified in the document. 
+  To test whether a gridx or gridy attribute was specified, we call the getAttribute method and check if it returns the empty string: String value = e.getAttribute("gridy"); 
+  if (value.length() == 0) // use default constraints.gridy = r; 
+  else constraints.gridy = Integer.parseInt(value); 
+  We found it convenient to allow arbitrary objects inside cells. That lets us specify noncomponent types such as borders. We only require that the objects belong to   From the Library of Hristo Dimov Hristov   3.3 Validating XML Documents   177   Figure 3.4 A font dialog defined by an XML layout a class that has a no-argument constructor and getter/setter pairs for reading and writing properties. (Such a class is called a JavaBean.) A bean is defined by a class name and zero or more properties: <!ELEMENT bean (class, property*)> <!ELEMENT class (#PCDATA)>   A property contains a name and a value: <!ELEMENT property (name, value)> <!ELEMENT name (#PCDATA)>   The value is an integer, boolean, string, or another bean: <!ELEMENT value (int|string|boolean|bean)> <!ELEMENT int (#PCDATA)> <!ELEMENT string (#PCDATA)> <!ELEMENT boolean (#PCDATA)>   Here is a typical example—a JLabel whose text property is set to the string "Face: ": <bean> <class>javax.swing.JLabel</class> <property>   From the Library of Hristo Dimov Hristov   178   Chapter 3   XML   <name>text</name> <value><string>Face: </string></value> </property> </bean>   It seems like a bother to surround a string with the <string> tag. Why not just use #PCDATA for strings and leave the tags for the other types? Because then we would need to use mixed content and weaken the rule for the value element to <!ELEMENT value (#PCDATA|int|boolean|bean)*>   Such a rule would allow an arbitrary mixture of text and tags. 
+  The program sets a property by using the BeanInfo class. BeanInfo enumerates the property descriptors of the bean. We search for the property with the matching name, and then call its setter method with the supplied value. 
+  When our program reads in a user interface description, it has enough information to construct and arrange the user interface components. But, of course, the interface is not alive—no event listeners have been attached. To add event listeners, we have to locate the components. For that reason, we support an optional attribute of type ID for each bean: <!ATTLIST bean id ID #IMPLIED>   For example, here is a combo box with an ID: <bean id="face"> <class>javax.swing.JComboBox</class> </bean>   Recall that the parser checks that IDs are unique. 
+  A programmer can attach event handlers like this: gridbag = new GridBagPane("fontdialog.xml"); 
+  setContentPane(gridbag); 
+  JComboBox face = (JComboBox) gridbag.get("face"); 
+  face.addListener(listener); 
+  NOTE: In this example, we only use XML to describe the component layout and leave it to programmers to attach the event handlers in the Java code.You could go a step further and add the code to the XML description. The most promising approach is to use a scripting language such as JavaScript for the code. If you want to add that enhancement, check out the Nashorn JavaScript interpreter described in Chapter 8. 
+  From the Library of Hristo Dimov Hristov   3.3 Validating XML Documents   179   The program in Listing 3.2 shows how to use the GridBagPane class to do all the boring work of setting up the grid bag layout. The layout is defined in Listing 3.4; 
+  Figure 3.4 shows the result. The program only initializes the combo boxes (which are too complex for the bean property-setting mechanism that the GridBagPane supports) and attaches event listeners. The GridBagPane class in Listing 3.3 parses the XML file, constructs the components, and lays them out. Listing 3.5 shows the DTD. 
+  The program can also process a schema instead of a DTD if you choose a file that contains the string -schema. 
+  Listing 3.6 contains the schema. 
+  This example is a typical use of XML. The XML format is robust enough to express complex relationships. The XML parser adds value by taking over the routine job of validity checking and supplying defaults. 
+  Listing 3.2 1   read/GridBagTest.java   package read; 
+  2 3 4 5 6   import java.awt.*; 
+  import java.awt.event.*; 
+  import java.io.*; 
+  import javax.swing.*; 
+  7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28   /** * This program shows how to use an XML file to describe a gridbag layout. 
+  * @version 1.12 2016-04-27 * @author Cay Horstmann */ public class GridBagTest { public static void main(String[] args) { EventQueue.invokeLater(() -> { JFileChooser chooser = new JFileChooser("."); 
+  chooser.showOpenDialog(null); 
+  File file = chooser.getSelectedFile(); 
+  JFrame frame = new FontFrame(file); 
+  frame.setTitle("GridBagTest"); 
+  frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
+  frame.setVisible(true); 
+  }); 
+  } 
+  } 
+  (Continues)   From the Library of Hristo Dimov Hristov   180   Chapter 3   XML   Listing 3.2 (Continued) 29 30 31 32 33 34 35 36 37 38 39 40   /** * This frame contains a font selection dialog that is described by an XML file. 
+  * @param filename the file containing the user interface components for the dialog */ class FontFrame extends JFrame { private GridBagPane gridbag; 
+  private JComboBox<String> face; 
+  private JComboBox<String> size; 
+  private JCheckBox bold; 
+  private JCheckBox italic; 
+  41 42 43 44 45 46   @SuppressWarnings("unchecked") public FontFrame(File file) { gridbag = new GridBagPane(file); 
+  add(gridbag); 
+  47   face = (JComboBox<String>) gridbag.get("face"); 
+  size = (JComboBox<String>) gridbag.get("size"); 
+  bold = (JCheckBox) gridbag.get("bold"); 
+  italic = (JCheckBox) gridbag.get("italic"); 
+  48 49 50 51 52   face.setModel(new DefaultComboBoxModel<String>(new String[] { "Serif", "SansSerif", "Monospaced", "Dialog", "DialogInput" })); 
+  53 54 55   size.setModel(new DefaultComboBoxModel<String>(new String[] { "8", "10", "12", "15", "18", "24", "36", "48" })); 
+  56 57 58   ActionListener listener = event -> setSample(); 
+  59 60   face.addActionListener(listener); 
+  size.addActionListener(listener); 
+  bold.addActionListener(listener); 
+  italic.addActionListener(listener); 
+  61 62 63 64 65   setSample(); 
+  pack(); 
+  66 67 68   } 
+  69 70 71 72 73 74   /** * This method sets the text sample to the selected font. 
+  */ public void setSample() {   From the Library of Hristo Dimov Hristov   3.3 Validating XML Documents   181   String fontFace = face.getItemAt(face.getSelectedIndex()); 
+  int fontSize = Integer.parseInt(size.getItemAt(size.getSelectedIndex())); 
+  JTextArea sample = (JTextArea) gridbag.get("sample"); 
+  int fontStyle = (bold.isSelected() ? Font.BOLD : 0) + (italic.isSelected() ? Font.ITALIC : 0); 
+  75 76 77 78 79 80   sample.setFont(new Font(fontFace, fontStyle, fontSize)); 
+  sample.repaint(); 
+  81 82   } 
+  83 84   } 
+  Listing 3.3 1   read/GridBagPane.java   package read; 
+  2 3 4 5 6 7 8 9   import java.awt.*; 
+  import java.beans.*; 
+  import java.io.*; 
+  import java.lang.reflect.*; 
+  import javax.swing.*; 
+  import javax.xml.parsers.*; 
+  import org.w3c.dom.*; 
+  10 11 12 13 14 15 16   /** * This panel uses an XML file to describe its components and their grid bag layout positions. 
+  */ public class GridBagPane extends JPanel { private GridBagConstraints constraints; 
+  17 18 19 20 21 22 23 24 25 26   /** * Constructs a grid bag pane. 
+  * @param filename the name of the XML file that describes the pane's components and their * positions */ public GridBagPane(File file) { setLayout(new GridBagLayout()); 
+  constraints = new GridBagConstraints(); 
+  27 28 29 30 31   try { DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance(); 
+  factory.setValidating(true); 
+  32 33 34   if (file.toString().contains("-schema")) { (Continues)   From the Library of Hristo Dimov Hristov   182   Chapter 3   XML   Listing 3.3 (Continued) factory.setNamespaceAware(true); 
+  final String JAXP_SCHEMA_LANGUAGE = "http://java.sun.com/xml/jaxp/properties/schemaLanguage"; 
+  final String W3C_XML_SCHEMA = "http://www.w3.org/2001/XMLSchema"; 
+  factory.setAttribute(JAXP_SCHEMA_LANGUAGE, W3C_XML_SCHEMA); 
+  35 36 37 38 39   } 
+  40 41   factory.setIgnoringElementContentWhitespace(true); 
+  42 43   DocumentBuilder builder = factory.newDocumentBuilder(); 
+  Document doc = builder.parse(file); 
+  parseGridbag(doc.getDocumentElement()); 
+  44 45 46   } 
+  catch (Exception e) { e.printStackTrace(); 
+  } 
+  47 48 49 50 51 52   } 
+  53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68   /** * Gets a component with a given name. 
+  * @param name a component name * @return the component with the given name, or null if no component in this grid bag pane has * the given name */ public Component get(String name) { Component[] components = getComponents(); 
+  for (int i = 0; i < components.length; i++) { if (components[i].getName().equals(name)) return components[i]; 
+  } 
+  return null; 
+  } 
+  69 70 71 72 73 74 75 76 77 78 79 80   /** * Parses a gridbag element. 
+  * @param e a gridbag element */ private void parseGridbag(Element e) { NodeList rows = e.getChildNodes(); 
+  for (int i = 0; i < rows.getLength(); i++) { Element row = (Element) rows.item(i); 
+  NodeList cells = row.getChildNodes(); 
+  From the Library of Hristo Dimov Hristov   3.3 Validating XML Documents   for (int j = 0; j < cells.getLength(); j++) { Element cell = (Element) cells.item(j); 
+  parseCell(cell, i, j); 
+  } 
+  81 82 83 84 85   } 
+  86 87   183   } 
+  88 89 90 91 92 93 94 95 96 97   /** * Parses a cell element. 
+  * @param e a cell element * @param r the row of the cell * @param c the column of the cell */ private void parseCell(Element e, int r, int c) { // get attributes   98 99 100 101 102 103 104 105   String value = e.getAttribute("gridx"); 
+  if (value.length() == 0) // use default { if (c == 0) constraints.gridx = 0; 
+  else constraints.gridx += constraints.gridwidth; 
+  } 
+  else constraints.gridx = Integer.parseInt(value); 
+  106 107 108 109 110   value = e.getAttribute("gridy"); 
+  if (value.length() == 0) // use default constraints.gridy = r; 
+  else constraints.gridy = Integer.parseInt(value); 
+  111 112 113 114 115 116 117   constraints.gridwidth = Integer.parseInt(e.getAttribute("gridwidth")); 
+  constraints.gridheight = Integer.parseInt(e.getAttribute("gridheight")); 
+  constraints.weightx = Integer.parseInt(e.getAttribute("weightx")); 
+  constraints.weighty = Integer.parseInt(e.getAttribute("weighty")); 
+  constraints.ipadx = Integer.parseInt(e.getAttribute("ipadx")); 
+  constraints.ipady = Integer.parseInt(e.getAttribute("ipady")); 
+  118 119 120   // use reflection to get integer values of static fields Class<GridBagConstraints> cl = GridBagConstraints.class; 
+  121 122 123 124 125 126   try { String name = e.getAttribute("fill"); 
+  Field f = cl.getField(name); 
+  constraints.fill = f.getInt(cl); 
+  127 128 129   name = e.getAttribute("anchor"); 
+  f = cl.getField(name); 
+  (Continues)   From the Library of Hristo Dimov Hristov   184   Chapter 3   XML   Listing 3.3 (Continued) constraints.anchor = f.getInt(cl); 
+  } 
+  catch (Exception ex) // the reflection methods can throw various exceptions { ex.printStackTrace(); 
+  } 
+  130 131 132 133 134 135 136   Component comp = (Component) parseBean((Element) e.getFirstChild()); 
+  add(comp, constraints); 
+  137 138 139   } 
+  140 141 142 143 144 145 146 147 148 149 150 151   /** * Parses a bean element. 
+  * @param e a bean element */ private Object parseBean(Element e) { try { NodeList children = e.getChildNodes(); 
+  Element classElement = (Element) children.item(0); 
+  String className = ((Text) classElement.getFirstChild()).getData(); 
+  152 153   Class<?> cl = Class.forName(className); 
+  154 155   Object obj = cl.newInstance(); 
+  156 157   if (obj instanceof Component) ((Component) obj).setName(e.getAttribute("id")); 
+  158 159 160 161 162 163   for (int i = 1; i < children.getLength(); i++) { Node propertyElement = children.item(i); 
+  Element nameElement = (Element) propertyElement.getFirstChild(); 
+  String propertyName = ((Text) nameElement.getFirstChild()).getData(); 
+  164 165 166 167 168 169 170 171 172 173 174 175 176 177   Element valueElement = (Element) propertyElement.getLastChild(); 
+  Object value = parseValue(valueElement); 
+  BeanInfo beanInfo = Introspector.getBeanInfo(cl); 
+  PropertyDescriptor[] descriptors = beanInfo.getPropertyDescriptors(); 
+  boolean done = false; 
+  for (int j = 0; !done && j < descriptors.length; j++) { if (descriptors[j].getName().equals(propertyName)) { descriptors[j].getWriteMethod().invoke(obj, value); 
+  done = true; 
+  } 
+  } 
+  From the Library of Hristo Dimov Hristov   3.3 Validating XML Documents   185   } 
+  return obj; 
+  178 179   } 
+  catch (Exception ex) // the reflection methods can throw various exceptions { ex.printStackTrace(); 
+  return null; 
+  } 
+  180 181 182 183 184 185   } 
+  186 187   /** * Parses a value element. 
+  * @param e a value element */ private Object parseValue(Element e) { Element child = (Element) e.getFirstChild(); 
+  if (child.getTagName().equals("bean")) return parseBean(child); 
+  String text = ((Text) child.getFirstChild()).getData(); 
+  if (child.getTagName().equals("int")) return new Integer(text); 
+  else if (child.getTagName().equals("boolean")) return new Boolean(text); 
+  else if (child.getTagName().equals("string")) return text; 
+  else return null; 
+  } 
+  188 189 190 191 192 193 194 195 196 197 198 199 200 201 202   } 

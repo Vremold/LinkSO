@@ -1,0 +1,58 @@
+  The original JDK 1.0 had a very simple mechanism for drawing shapes. You selected color and paint mode, and called methods of the Graphics class such as drawRect or fillOval. The Java 2D API supports many more options. 
+  • • • • • •   You can easily produce a wide variety of shapes. 
+  You have control over the stroke—the pen that traces shape boundaries. 
+  You can fill shapes with solid colors, varying hues, and repeating patterns. 
+  You can use transformations to move, scale, rotate, or stretch shapes. 
+  You can clip shapes to restrict them to arbitrary areas. 
+  You can select composition rules to describe how to combine the pixels of a new shape with existing pixels. 
+  • You can give rendering hints to make trade-offs between speed and drawing quality. 
+  To draw a shape, go through the following steps: 1. 
+  Obtain an object of the Graphics2D class. This class is a subclass of the Graphics class. Ever since Java SE 1.2, methods such as paint and paintComponent automatically receive an object of the Graphics2D class. Simply use a cast, as follows: public void paintComponent(Graphics g) { Graphics2D g2 = (Graphics2D) g; 
+  ... 
+  } 
+  2. 
+  Use the setRenderingHints method to set rendering hints—trade-offs between speed and drawing quality. 
+  From the Library of Hristo Dimov Hristov   11.1 The Rendering Pipeline   767   RenderingHints hints = . . .; 
+  g2.setRenderingHints(hints); 
+  3. 
+  Use the setStroke method to set the stroke. The stroke draws the outline of the shape. You can select the thickness and choose among solid and dotted lines. 
+  Stroke stroke = . . .; 
+  g2.setStroke(stroke); 
+  4. 
+  Use the setPaint method to set the paint. The paint fills areas such as the stroke path or the interior of a shape. You can create solid color paint, paint with changing hues, or tiled fill patterns. 
+  Paint paint = . . .; 
+  g2.setPaint(paint); 
+  5. 
+  Use the clip method to set the clipping region. 
+  Shape clip = . . .; 
+  g2.clip(clip); 
+  6. 
+  Use the transform method to set a transformation from user space to device space. Use transformations if it is easier for you to define your shapes in a custom coordinate system than by using pixel coordinates. 
+  AffineTransform transform = . . .; 
+  g2.transform(transform); 
+  7. 
+  Use the setComposite method to set a composition rule that describes how to combine the new pixels with the existing pixels. 
+  Composite composite = . . .; 
+  g2.setComposite(composite); 
+  8. 
+  Create a shape. The Java 2D API supplies many shape objects and methods to combine shapes. 
+  Shape shape = . . .; 
+  9. 
+  Draw or fill the shape. If you draw the shape, its outline is stroked. If you fill the shape, the interior is painted. 
+  g2.draw(shape); 
+  g2.fill(shape); 
+  Of course, in many practical circumstances, you don’t need all these steps. There are reasonable defaults for the settings of the 2D graphics context; change the settings only if you want to deviate from the defaults. 
+  In the following sections, you will see how to describe shapes, strokes, paints, transformations, and composition rules. 
+  From the Library of Hristo Dimov Hristov   768   Chapter 11   Advanced AWT   The various set methods simply set the state of the 2D graphics context. They don’t cause any drawing. Similarly, when you construct Shape objects, no drawing takes place. A shape is only rendered when you call draw or fill. At that time, the new shape is computed in a rendering pipeline (see Figure 11.1). 
+  Figure 11.1 The rendering pipeline In the rendering pipeline, the following steps take place to render a shape: 1. 
+  2. 
+  3. 
+  4. 
+  5. 
+  The path of the shape is stroked. 
+  The shape is transformed. 
+  The shape is clipped. If there is no intersection between the shape and the clipping area, the process stops. 
+  The remainder of the shape after clipping is filled. 
+  The pixels of the filled shape are composed with the existing pixels. (In Figure 11.1, the circle is part of the existing pixels, and the cup shape is superimposed over it.)   In the next section, you will see how to define shapes. Then, we will turn to the 2D graphics context settings. 
+  java.awt.Graphics2D 1.2   • void draw(Shape s) draws the outline of the given shape with the current paint. 
+  • void fill(Shape s) fills the interior of the given shape with the current paint. 

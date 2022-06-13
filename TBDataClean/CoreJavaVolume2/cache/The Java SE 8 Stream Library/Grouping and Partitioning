@@ -1,0 +1,35 @@
+In the preceding section, you saw how to collect all languages in a given country.
+But the process was a bit tedious. You had to generate a singleton set for each
+map value and then specify how to merge the existing and new values. Forming
+groups of values with the same characteristic is very common, and the groupingBy
+method supports it directly.
+Let’s look at the problem of grouping locales by country. First, form this map:
+Map<String, List<Locale>> countryToLocales = locales.collect(
+Collectors.groupingBy(Locale::getCountry));
+
+The function Locale::getCountry is the classifier function of the grouping. You can now
+look up all locales for a given country code, for example
+List<Locale> swissLocales = countryToLocales.get("CH");
+// Yields locales [it_CH, de_CH, fr_CH]
+
+NOTE: A quick refresher on locales: Each locale has a language code (such as
+en for English) and a country code (such as US for the United States). The locale
+en_US describes English in the United States, and en_IE is English in Ireland. Some
+countries have multiple locales. For example, ga_IE is Gaelic in Ireland, and, as
+the preceding example shows, my JVM knows three locales in Switzerland.
+
+When the classifier function is a predicate function (that is, a function returning
+a boolean value), the stream elements are partitioned into two lists: those where
+the function returns true and the complement. In this case, it is more efficient to use
+partitioningBy instead of groupingBy. For example, here we split all locales into those
+that use English and all others:
+Map<Boolean, List<Locale>> englishAndOtherLocales = locales.collect(
+Collectors.partitioningBy(l -> l.getLanguage().equals("en")));
+List<Locale> englishLocales = englishAndOtherLocales.get(true);
+
+NOTE: If you call the groupingByConcurrent method, you get a concurrent map that,
+when used with a parallel stream, is concurrently populated. This is entirely
+analogous to the toConcurrentMap method.
+
+From the Library of Hristo Dimov Hristov
+

@@ -1,0 +1,230 @@
+  257   java.nio.channels.Channels 1.4 (Continued)   • static OutputStream newOutputStream(WritableByteChannel channel) constructs an output stream that writes to the given channel. 
+  4.4 Getting Web Data To access web servers in a Java program, you will want to work at a higher level than socket connections and HTTP requests. In the following sections, we discuss the classes that the Java library provides for this purpose. 
+4.4.1 URLs and URIs
+  The URL and URLConnection classes encapsulate much of the complexity of retrieving information from a remote site. You can construct a URL object from a string: URL url = new URL(urlString); 
+  If you simply want to fetch the contents of the resource, use the openStream method of the URL class. This method yields an InputStream object. Use it in the usual way—for example, to construct a Scanner: InputStream inStream = url.openStream(); 
+  Scanner in = new Scanner(inStream, "UTF-8"); 
+  The java.net package makes a useful distinction between URLs (uniform resource locators) and URIs (uniform resource identifiers). 
+  A URI is a purely syntactical construct that contains the various parts of the string specifying a web resource. A URL is a special kind of URI, namely, one with sufficient information to locate a resource. Other URIs, such as mailto:cay@horstmann.com   are not locators—there is no data to locate from this identifier. Such a URI is called a URN (uniform resource name). 
+  In the Java library, the URI class has no methods for accessing the resource that the identifier specifies—its sole purpose is parsing. In contrast, the URL class can open a stream to the resource. For that reason, the URL class only works with schemes that the Java library knows how to handle, such as http:, https:, ftp:, the local file system (file:), and JAR files (jar:). 
+  To see why parsing is not trivial, consider how complex URIs can be. For example,   From the Library of Hristo Dimov Hristov   258   Chapter 4   Networking   http:/google.com?q=Beach+Chalet ftp://username:password@ftp.yourserver.com/pub/file.txt   The URI specification gives the rules for the makeup of these identifiers. A URI has the syntax [scheme:]schemeSpecificPart[#fragment]   Here, the [. . .] denotes an optional part, and the : and # are included literally in the identifier. 
+  If the scheme: part is present, the URI is called absolute. Otherwise, it is called relative. 
+  An absolute URI is opaque if the schemeSpecificPart does not begin with a / such as mailto:cay@horstmann.com   All absolute nonopaque URIs and all relative URIs are hierarchical. Examples are http://horstmann.com/index.html ../../java/net/Socket.html#Socket()   The schemeSpecificPart of a hierarchical URI has the structure [//authority][path][?query]   where, again, [. . .] denotes optional parts. 
+  For server-based URIs, the authority part has the form [user-info@]host[:port]   The port must be an integer. 
+  RFC 2396, which standardizes URIs, also supports a registry-based mechanism in which the authority has a different format, but this is not in common use. 
+  One of the purposes of the URI class is to parse an identifier and break it up into its components. You can retrieve them with the methods getScheme getSchemeSpecificPart getAuthority getUserInfo getHost getPort getPath getQuery getFragment   The other purpose of the URI class is the handling of absolute and relative identifiers. If you have an absolute URI such as http://docs.mycompany.com/api/java/net/ServerSocket.html   From the Library of Hristo Dimov Hristov   4.4 Getting Web Data   259   and a relative URI such as ../../java/net/Socket.html#Socket()   then you can combine the two into an absolute URI. 
+  http://docs.mycompany.com/api/java/net/Socket.html#Socket()   This process is called resolving a relative URL. 
+  The opposite process is called relativization. For example, suppose you have a base URI http://docs.mycompany.com/api   and a URI http://docs.mycompany.com/api/java/lang/String.html   Then the relativized URI is java/lang/String.html   The URI class supports both of these operations: relative = base.relativize(combined); 
+  combined = base.resolve(relative); 
+4.4.2 Using a URLConnection to Retrieve Information
+  If you want additional information about a web resource, you should use the URLConnection class, which gives you much more control than the basic URL class. 
+  When working with a URLConnection object, you must carefully schedule your steps. 
+  1. 
+  Call the openConnection method of the URL class to obtain the URLConnection object: URLConnection connection = url.openConnection(); 
+  2. 
+  Set any request properties, using the methods setDoInput setDoOutput setIfModifiedSince setUseCaches setAllowUserInteraction setRequestProperty setConnectTimeout setReadTimeout   We discuss these methods later in this section and in the API notes. 
+  3. 
+  Connect to the remote resource by calling the connect method. 
+  From the Library of Hristo Dimov Hristov   260   Chapter 4   Networking   connection.connect(); 
+  Besides making a socket connection to the server, this method also queries the server for header information. 
+4.
+   
+  After connecting to the server, you can query the header information. Two methods, getHeaderFieldKey and getHeaderField, enumerate all fields of the header. 
+  The method getHeaderFields gets a standard Map object containing the header fields. For your convenience, the following methods query standard fields: getContentType getContentLength getContentEncoding getDate getExpiration getLastModified   5. 
+  Finally, you can access the resource data. Use the getInputStream method to obtain an input stream for reading the information. (This is the same input stream that the openStream method of the URL class returns.) The other method, getContent, isn’t very useful in practice. The objects that are returned by standard content types such as text/plain and image/gif require classes in the com.sun hierarchy for processing. You could register your own content handlers, but we do not discuss this technique in our book. 
+  CAUTION: Some programmers form the wrong mental image when using the URLConnection class, thinking that the getInputStream and getOutputStream methods are similar to those of the Socket class. But that isn’t quite true. The URLConnection class does quite a bit of magic behind the scenes—in particular, the handling of request and response headers. For that reason, it is important that you follow the setup steps for the connection. 
+  Let us now look at some of the URLConnection methods in detail. Several methods set properties of the connection before connecting to the server. The most important ones are setDoInput and setDoOutput. By default, the connection yields an input stream for reading from the server but no output stream for writing. If you want an output stream (for example, for posting data to a web server), you need to call connection.setDoOutput(true); 
+  Next, you may want to set some of the request headers. The request headers are sent together with the request command to the server. Here is an example: GET www.server.com/index.html HTTP/1.0 Referer: http://www.somewhere.com/links.html Proxy-Connection: Keep-Alive   From the Library of Hristo Dimov Hristov   4.4 Getting Web Data   261   User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.1.4) Host: www.server.com Accept: text/html, image/gif, image/jpeg, image/png, */* Accept-Language: en Accept-Charset: iso-8859-1,*,utf-8 Cookie: orangemilano=192218887821987   The setIfModifiedSince method tells the connection that you are only interested in data modified since a certain date. 
+  The setUseCaches and setAllowUserInteraction methods should only be called inside applets. 
+  The setUseCaches method directs the browser to first check the browser cache. The setAllowUserInteraction method allows an applet to pop up a dialog box for querying the user name and password for password-protected resources (see Figure 4.7). 
+  Figure 4.7 A network password dialog box Finally, you can use the catch-all setRequestProperty method to set any name/value pair that is meaningful for the particular protocol. For the format of the HTTP request headers, see RFC 2616. Some of these parameters are not well documented   From the Library of Hristo Dimov Hristov   262   Chapter 4   Networking   and are passed around by word of mouth from one programmer to the next. For example, if you want to access a password-protected web page, you must do the following: 1. 
+  Concatenate the user name, a colon, and the password. 
+  String input = username + ":" + password; 
+  2. 
+  Compute the Base64 encoding of the resulting string. (The Base64 encoding encodes a sequence of bytes into a sequence of printable ASCII characters.) Base64.Encoder encoder = Base64.getEncoder(); 
+  String encoding = encoder.encodeToString(input.getBytes(StandardCharsets.UTF_8)); 
+  3. 
+  Call the setRequestProperty method with a name of "Authorization" and the value "Basic " + encoding: connection.setRequestProperty("Authorization", "Basic " + encoding); 
+  TIP: You just saw how to access a password-protected web page. To access a password-protected file by FTP, use an entirely different method: Construct a URL of the form ftp://username:password@ftp.yourserver.com/pub/file.txt   Once you call the connect method, you can query the response header information. 
+  First, let’s see how to enumerate all response header fields. The implementors of this class felt a need to express their individuality by introducing yet another iteration protocol. The call String key = connection.getHeaderFieldKey(n); 
+  gets the nth key from the response header, where n starts from 1! It returns null if n is zero or greater than the total number of header fields. There is no method to return the number of fields; you simply keep calling getHeaderFieldKey until you get null. Similarly, the call String value = connection.getHeaderField(n); 
+  returns the nth value. 
+  The method getHeaderFields returns a Map of response header fields. 
+  Map<String,List<String>> headerFields = connection.getHeaderFields(); 
+  Here is a set of response header fields from a typical HTTP request: Date: Wed, 27 Aug 2008 00:15:48 GMT Server: Apache/2.2.2 (Unix)   From the Library of Hristo Dimov Hristov   4.4 Getting Web Data   263   Last-Modified: Sun, 22 Jun 2008 20:53:38 GMT Accept-Ranges: bytes Content-Length: 4813 Connection: close Content-Type: text/html   As a convenience, six methods query the values of the most common header types and convert them to numeric types when appropriate. Table 4.1 shows these convenience methods. The methods with return type long return the number of seconds since January 1, 1970 GMT. 
+  Table 4.1 Convenience Methods for Response Header Values Key Name   Method Name   Return Type   Date   getDate   long   Expires   getExpiration   long   Last-Modified   getLastModified   long   Content-Length   getContentLength   int   Content-Type   getContentType   String   Content-Encoding   getContentEncoding   String   The program in Listing 4.6 lets you experiment with URL connections. Supply a URL and an optional user name and password on the command line when running the program, for example: java urlConnection.URLConnectionTest http://www.yourserver.com user password   The program prints • All keys and values of the header • The return values of the six convenience methods in Table 4.1 • The first ten lines of the requested resource   Listing 4.6 1   urlConnection/URLConnectionTest.java   package urlConnection; 
+  2 3 4 5 6   import java.io.*; 
+  import java.net.*; 
+  import java.nio.charset.*; 
+  import java.util.*; 
+  7   (Continues)   From the Library of Hristo Dimov Hristov   264   Chapter 4   Networking   Listing 4.6 (Continued) 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25   /** * This program connects to an URL and displays the response header data and the first 10 lines of * the requested data. 
+  * * Supply the URL and an optional username and password (for HTTP basic authentication) on the * command line. 
+  * @version 1.11 2007-06-26 * @author Cay Horstmann */ public class URLConnectionTest { public static void main(String[] args) { try { String urlName; 
+  if (args.length > 0) urlName = args[0]; 
+  else urlName = "http://horstmann.com"; 
+  26 27 28   URL url = new URL(urlName); 
+  URLConnection connection = url.openConnection(); 
+  29 30   // set username, password if specified on command line   31 32 33 34 35 36 37 38 39 40   if (args.length > 2) { String username = args[1]; 
+  String password = args[2]; 
+  String input = username + ":" + password; 
+  Base64.Encoder encoder = Base64.getEncoder(); 
+  String encoding = encoder.encodeToString(input.getBytes(StandardCharsets.UTF_8)); 
+  connection.setRequestProperty("Authorization", "Basic " + encoding); 
+  } 
+  41 42   connection.connect(); 
+  43 44   // print header fields   45 46 47 48 49 50 51 52   Map<String, List<String>> headers = connection.getHeaderFields(); 
+  for (Map.Entry<String, List<String>> entry : headers.entrySet()) { String key = entry.getKey(); 
+  for (String value : entry.getValue()) System.out.println(key + ": " + value); 
+  } 
+  53 54   // print convenience functions   55   From the Library of Hristo Dimov Hristov   4.4 Getting Web Data   265   System.out.println("----------"); 
+  System.out.println("getContentType: " + connection.getContentType()); 
+  System.out.println("getContentLength: " + connection.getContentLength()); 
+  System.out.println("getContentEncoding: " + connection.getContentEncoding()); 
+  System.out.println("getDate: " + connection.getDate()); 
+  System.out.println("getExpiration: " + connection.getExpiration()); 
+  System.out.println("getLastModifed: " + connection.getLastModified()); 
+  System.out.println("----------"); 
+  56 57 58 59 60 61 62 63 64   String encoding = connection.getContentEncoding(); 
+  if (encoding == null) encoding = "UTF-8"; 
+  try (Scanner in = new Scanner(connection.getInputStream(), encoding)) { // print first ten lines of contents   65 66 67 68 69 70   for (int n = 1; in.hasNextLine() && n <= 10; n++) System.out.println(in.nextLine()); 
+  if (in.hasNextLine()) System.out.println(". . ."); 
+  71 72 73   } 
+  } 
+  catch (IOException e) { e.printStackTrace(); 
+  } 
+  74 75 76 77 78 79   } 
+  80 81   } 
+  java.net.URL 1.0   • InputStream openStream() opens an input stream for reading the resource data. 
+  • URLConnection openConnection(); 
+  returns a URLConnection object that manages the connection to the resource. 
+  java.net.URLConnection 1.0   • void setDoInput(boolean doInput) • boolean getDoInput() If doInput is true, the user can receive input from this URLConnection. 
+  • void setDoOutput(boolean doOutput) • boolean getDoOutput() If doOutput is true, the user can send output to this URLConnection. 
+  (Continues)   From the Library of Hristo Dimov Hristov   266   Chapter 4   Networking   java.net.URLConnection 1.0 (Continued)   • void setIfModifiedSince(long time) • long getIfModifiedSince() The ifModifiedSince property configures this URLConnection to fetch only data modified since a given time. The time is given in seconds since midnight, GMT, January 1, 1970. 
+  • void setUseCaches(boolean useCaches) • boolean getUseCaches() If useCaches is true, data can be retrieved from a local cache. Note that the URLConnection itself does not maintain such a cache. The cache must be supplied by an external program such as a browser. 
+  • void setAllowUserInteraction(boolean allowUserInteraction) • boolean getAllowUserInteraction() If allowUserInteraction is true, the user can be queried for passwords. Note that the URLConnection itself has no facilities for executing such a query. The query must be carried out by an external program such as a browser or browser plugin. 
+  • void setConnectTimeout(int timeout) 5.0 • int getConnectTimeout() 5.0 sets or gets the timeout for the connection (in milliseconds). If the timeout has elapsed before a connection was established, the connect method of the associated input stream throws a SocketTimeoutException. 
+  • void setReadTimeout(int timeout) 5.0 • int getReadTimeout() 5.0 sets or gets the timeout for reading data (in milliseconds). If the timeout has elapsed before a read operation was successful, the read method throws a SocketTimeoutException. 
+  • void setRequestProperty(String key, String value) sets a request header field. 
+  • Map<String,List<String>> getRequestProperties() 1.4 returns a map of request properties. All values for the same key are placed in a list. 
+  • void connect() connects to the remote resource and retrieves response header information. 
+  • Map<String,List<String>> getHeaderFields() 1.4 returns a map of response headers. All values for the same key are placed in a list. 
+  (Continues)   From the Library of Hristo Dimov Hristov   4.4 Getting Web Data   267   java.net.URLConnection 1.0 (Continued)   • String getHeaderFieldKey(int n) gets the key for the nth response header field, or null if n is ≤ 0 or greater than the number of response header fields. 
+  • String getHeaderField(int n) gets value of the nth response header field, or null if n is ≤ 0 or greater than the number of response header fields. 
+  • int getContentLength() gets the content length if available, or -1 if unknown. 
+  • String getContentType() gets the content type, such as text/plain or image/gif. 
+  • String getContentEncoding() gets the content encoding, such as gzip. This value is not commonly used, because the default identity encoding is not supposed to be specified with a Content-Encoding header. 
+  • long getDate() • long getExpiration() • long getLastModifed() gets the date of creation, expiration, and last modification of the resource.The dates are specified as seconds since midnight, GMT, January 1, 1970. 
+  • InputStream getInputStream() • OutputStream getOutputStream() returns a stream for reading from the resource or writing to the resource. 
+  • Object getContent() selects the appropriate content handler to read the resource data and convert it into an object. This method is not useful for reading standard types such as text/plain or image/gif unless you install your own content handler. 
+  4.4.3 Posting Form Data In the preceding section, you saw how to read data from a web server. Now we will show you how your programs can send data back to a web server and to programs that the web server invokes. 
+  To send information from a web browser to the web server, a user fills out a form, like the one in Figure 4.8. 
+  From the Library of Hristo Dimov Hristov   268   Chapter 4   Networking   Figure 4.8 An HTML form When the user clicks the Submit button, the text in the text fields and the settings of any checkboxes, radio buttons, and other input elements are sent back to the web server. The web server invokes a program that processes the user input. 
+  Many technologies enable web servers to invoke programs. Among the best known ones are Java servlets, JavaServer Faces, Microsoft Active Server Pages (ASP), and Common Gateway Interface (CGI) scripts. 
+  The server-side program processes the form data and produces another HTML page that the web server sends back to the browser. This sequence is illustrated in Figure 4.9. The response page can contain new information (for example, in   From the Library of Hristo Dimov Hristov   4.4 Getting Web Data   269   Figure 4.9 Data flow during execution of a server-side program an information-search program) or just an acknowledgment. The web browser then displays the response page. 
+  We do not discuss the implementation of server-side programs in this book. 
+  Our interest is merely in writing client programs that interact with existing server-side programs. 
+  When form data are sent to a web server, it does not matter whether the data are interpreted by a servlet, a CGI script, or some other server-side technology. The client sends the data to the web server in a standard format, and the web server takes care of passing it on to the program that generates the response. 
+  Two commands, called GET and POST, are commonly used to send information to a web server. 
+  In the GET command, you simply attach query parameters to the end of the URL. 
+  The URL has the form http://host/path?query   Each parameter has the form name=value . Parameters are separated by & characters. 
+  Parameter values are encoded using the URL encoding scheme, following these rules:   From the Library of Hristo Dimov Hristov   270   Chapter 4   Networking   • Leave the characters A through Z, a through z, 0 through 9, and . - ~ _ unchanged. 
+  • Replace all spaces with + characters. 
+  • Encode all other characters into UTF-8 and encode each byte by a %, followed by a two-digit hexadecimal number. 
+  For example, to transmit San Francisco, CA, you use San+Francisco%2c+CA, as the hexadecimal number 2c is the UTF-8 code of the ',' character. 
+  This encoding keeps any intermediate programs from messing with spaces and interpreting other special characters. 
+  For example, at the time of this writing, the Google Maps site (www.google.com/maps) accepts query parameters with names q and hl whose values are the location query and the human language of the response. To get a map of 1 Market Street in San Francisco, with a response in German, use the following URL: http://www.google.com/maps?q=1+Market+Street+San+Francisco&hl=de   Very long query strings can look unattractive in browsers, and older browsers and proxies have a limit on the number of characters that you can include in a GET request. For that reason, a POST request is often used for forms with a lot of data. In a POST request, you do not attach parameters to a URL. Instead, you get an output stream from the URLConnection and write name/value pairs to the output stream. You still have to URL-encode the values and separate them with & characters. 
+  Let us look at this process in detail. To post data to a server-side program, first establish a URLConnection: URL url = new URL("http://host/path"); 
+  URLConnection connection = url.openConnection(); 
+  Then, call the setDoOutput method to set up the connection for output: connection.setDoOutput(true); 
+  Next, call getOutputStream to get a stream through which you can send data to the server. If you are sending text to the server, it is convenient to wrap that stream into a PrintWriter. 
+  PrintWriter out = new PrintWriter(connection.getOutputStream(), "UTF-8"); 
+  Now you are ready to send data to the server: out.print(name1 + "=" + URLEncoder.encode(value1, "UTF-8") + "&"); 
+  out.print(name2 + "=" + URLEncoder.encode(value2, "UTF-8")); 
+  Close the output stream. 
+  From the Library of Hristo Dimov Hristov   4.4 Getting Web Data   271   out.close(); 
+  Finally, call getInputStream and read the server response. 
+  Let’s run through a practical example. The web site at https://www.usps.com/zip4/ contains a form to find the zip code for a street address (see Figure 4.8 on p. 268). To use this form in a Java program, you need to know the URL and the parameters of the POST request. 
+  You could get that information by looking at the HTML code of the form, but it is usually easier to “spy” on a request with a network monitor. Most browsers have a network monitor as part of their development toolkit. For example, Figure 4.10 shows a screen capture of the Firefox network monitor when submitting data to our example web site. You can find out the submission URL as well as the parameter names and values. 
+  When posting form data, the HTTP header includes the content type and content length: Content-Type: application/x-www-form-urlencoded   You can also post data in other formats. For example, when sending data in JavaScript Object Notation (JSON), set the content type to application/json. 
+  The header for a POST must also include the content length, for example Content-Length: 124   The program in Listing 4.7 sends POST form data to any server-side program. Place the data into a .properties file such as the following: url=https://tools.usps.com/go/ZipLookupAction.action tAddress=1 Market Street tCity=San Francisco sState=CA ... 
+  The program removes the url entry and sends all others to the doPost method. 
+  In the doPost method, we first open the connection, call setDoOutput(true), and open the output stream. We then enumerate all keys and values. For each of them, we send the key, = character, value, and & separator character: out.print(key); 
+  out.print('='); 
+  out.print(URLEncoder.encode(value, "UTF-8")); 
+  if (more pairs) out.print('&'); 
+  When switching from writing to reading any part of the response, the actual interaction with the server happens. The Content-Length header is set to the size of the output. The Content-Type header is set to application/x-www-form-urlencoded unless a different   From the Library of Hristo Dimov Hristov   272   Chapter 4   Networking   Figure 4.10 An HTML form content type was specified. The headers and data are sent to the server. Then the response headers and server response are read and can be queried. In our example program, this switch happens in the call to connection.getContentEncoding(). 
+  From the Library of Hristo Dimov Hristov   4.4 Getting Web Data   273   There is one twist with reading the response. If a server-side error occurs, the call to connection.getInputStream() throws a FileNotFoundException. However, the server still sends an error page back to the browser (such as the ubiquitous “Error 404 — page not found”). To capture this error page, call the getErrorStream method: InputStream err = connection.getErrorStream(); 
+  NOTE: The getErrorStream method, as well as several other methods in this program, belong to the HttpURLConnection subclass of URLConnection. If you make a request to an URL that starts with http:// or https://, you can cast the resulting connection object to HttpURLConnection. 
+  When you send POST data to a server, it can happen that the server-side program responds with a redirect: a different URL that should be called to get the actual information. The server could do that because the information is available elsewhere, or to provide a bookmarkable URL. The HttpURLConnection class can handle redirects in most cases. 
+  NOTE: If cookies need to be sent from one site to another in a redirect, you can configure the global cookie handler like this: CookieHandler.setDefault(new CookieManager(null, CookiePolicy.ACCEPT_ALL)); 
+  Then cookies will be properly included in the redirect. 
+  Even though redirects are usually automatically handled, there are some situations where you need to do them yourself. Automatic redirects between HTTP and HTTPS are not supported for security reasons. Redirects can also fail for more subtle reasons. For example, the zip code service does not work if the User-Agent request parameter contains the string Java, perhaps because the post office doesn’t want to serve programmatic requests. While it is possible to set the user agent to a different string in the initial request, that setting is not used in a automatic redirects. Instead, automatic redirects always send a generic user agent string that contains the word Java. 
+  In such situations, you can manually carry out the redirects. Before connecting the server, turn off automatic redirects: connection.setInstanceFollowRedirects(false); 
+  After making the request, get the response code: int responseCode = connection.getResponseCode(); 
+  Check if it is one of   From the Library of Hristo Dimov Hristov   274   Chapter 4   Networking   HttpURLConnection.HTTP_MOVED_PERM HttpURLConnection.HTTP_MOVED_TEMP HttpURLConnection.HTTP_SEE_OTHER   In that case, get the Location response header to obtain the URL for the redirect. 
+  Then disconnect and make another connection to the new URL: String location = connection.getHeaderField("Location"); 
+  if (location != null) { URL base = connection.getURL(); 
+  connection.disconnect(); 
+  connection = (HttpURLConnection) new URL(base, location).openConnection(); 
+  ... 
+  } 
+  The techniques that this program illustrates can be useful whenever you need to query information from an existing web site. Simply find out the parameters that you need to send, and then strip out the HTML tags and other unnecessary information from the reply. 
+  NOTE: As you can see, it is possible to use the Java library classes to interact with web pages, but it is not particularly convenient. Consider using a library such as Apache HttpClient (http://hc.apache.org/httpcomponents-client-ga) instead. 
+  Listing 4.7 1   post/PostTest.java   package post; 
+  2 3 4 5 6   import java.io.*; 
+  import java.net.*; 
+  import java.nio.file.*; 
+  import java.util.*; 
+  7 8 9 10 11 12 13 14 15 16 17 18 19 20   /** * This program demonstrates how to use the URLConnection class for a POST request. 
+  * @version 1.40 2016-04-24 * @author Cay Horstmann */ public class PostTest { public static void main(String[] args) throws IOException { String propsFilename = args.length > 0 ? args[0] : "post/post.properties"; 
+  Properties props = new Properties(); 
+  try (InputStream in = Files.newInputStream(Paths.get(propsFilename))) {   From the Library of Hristo Dimov Hristov   4.4 Getting Web Data   props.load(in); 
+  } 
+  String urlString = props.remove("url").toString(); 
+  Object userAgent = props.remove("User-Agent"); 
+  Object redirects = props.remove("redirects"); 
+  CookieHandler.setDefault(new CookieManager(null, CookiePolicy.ACCEPT_ALL)); 
+  String result = doPost(new URL(urlString), props, userAgent == null ? null : userAgent.toString(), redirects == null ? -1 : Integer.parseInt(redirects.toString())); 
+  System.out.println(result); 
+  21 22 23 24 25 26 27 28 29 30 31   275   } 
+  32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47   /** * Do an HTTP POST. 
+  * @param url the URL to post to * @param nameValuePairs the query parameters * @param userAgent the user agent to use, or null for the default user agent * @param redirects the number of redirects to follow manually, or -1 for automatic redirects * @return the data returned from the server */ public static String doPost(URL url, Map<Object, Object> nameValuePairs, String userAgent, int redirects) throws IOException { HttpURLConnection connection = (HttpURLConnection) url.openConnection(); 
+  if (userAgent != null) connection.setRequestProperty("User-Agent", userAgent); 
+  48 49 50   if (redirects >= 0) connection.setInstanceFollowRedirects(false); 
+  51 52   connection.setDoOutput(true); 
+  53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69   try (PrintWriter out = new PrintWriter(connection.getOutputStream())) { boolean first = true; 
+  for (Map.Entry<Object, Object> pair : nameValuePairs.entrySet()) { if (first) first = false; 
+  else out.print('&'); 
+  String name = pair.getKey().toString(); 
+  String value = pair.getValue().toString(); 
+  out.print(name); 
+  out.print('='); 
+  out.print(URLEncoder.encode(value, "UTF-8")); 
+  } 
+  } 
+  String encoding = connection.getContentEncoding(); 
+  if (encoding == null) encoding = "UTF-8"; 
+  (Continues)   From the Library of Hristo Dimov Hristov   276   Chapter 4   Networking   Listing 4.7 (Continued) 70   if (redirects > 0) { int responseCode = connection.getResponseCode(); 
+  if (responseCode == HttpURLConnection.HTTP_MOVED_PERM || responseCode == HttpURLConnection.HTTP_MOVED_TEMP || responseCode == HttpURLConnection.HTTP_SEE_OTHER) { String location = connection.getHeaderField("Location"); 
+  if (location != null) { URL base = connection.getURL(); 
+  connection.disconnect(); 
+  return doPost(new URL(base, location), nameValuePairs, userAgent, redirects - 1); 
+  } 
+  71 72 73 74 75 76 77 78 79 80 81 82 83 84 85   } 
+  } 
+  else if (redirects == 0) { throw new IOException("Too many redirects"); 
+  } 
+  86 87 88 89 90 91 92   StringBuilder response = new StringBuilder(); 
+  try (Scanner in = new Scanner(connection.getInputStream(), encoding)) { while (in.hasNextLine()) { response.append(in.nextLine()); 
+  response.append("\n"); 
+  } 
+  } 
+  catch (IOException e) { InputStream err = connection.getErrorStream(); 
+  if (err == null) throw e; 
+  try (Scanner in = new Scanner(err)) { response.append(in.nextLine()); 
+  response.append("\n"); 
+  } 
+  } 
+  93 94 95 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112   return response.toString(); 
+  113   } 
+  114 115   } 

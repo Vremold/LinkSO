@@ -1,0 +1,46 @@
+  Suppose you wrote your program and made it bulletproof by catching and properly handling all exceptions. Then you run it, and it does not work right. 
+  Now what? (If you never have this problem, you can skip the remainder of this chapter.) Of course, it is best if you have a convenient and powerful debugger. 
+  Debuggers are available as a part of professional development environments such as Eclipse, IntelliJ, and NetBeans. In this section, we offer you a number of tips that may be worth trying before you launch the debugger. 
+  1. You can print or log the value of any variable with code like this: System.out.println("x=" + x); 
+  or Logger.getGlobal().info("x=" + x); 
+  If x is a number, it is converted to its string equivalent. If x is an object, Java calls its toString method. To get the state of the implicit parameter object, print the state of the this object. 
+  Logger.getGlobal().info("this=" + this); 
+  Most of the classes in the Java library are very conscientious about overriding the toString method to give you useful information about the class. This is a real boon for debugging. You should make the same effort in your classes. 
+  2. One seemingly little-known but very useful trick is putting a separate main method in each class. Inside it, you can put a unit test stub that lets you test the class in isolation. 
+  public class MyClass { methods and fields . . . 
+  public static void main(String[] args) { test code } 
+  } 
+  Make a few objects, call all methods, and check that each of them does the right thing. You can leave all these main methods in place and launch the Java virtual machine separately on each of the files to run the tests. When you run an applet, none of these main methods are ever called. When you run an application, the Java virtual machine calls only   the main method of the startup class. 
+  3. If you liked the preceding tip, you should check out JUnit from http://junit.org. JUnit is a very popular unit testing framework that makes it easy to organize suites of test cases. Run the tests whenever you make changes to a class, and add another test case whenever you find a bug. 
+  4. A logging proxy is an object of a subclass that intercepts method calls, logs them, and then calls the superclass. For example, if you have trouble with the nextDouble method of the Random class, you can create a proxy object as an instance of an anonymous subclass: var generator = new Random() { public double nextDouble() { double result = super.nextDouble(); 
+  Logger.getGlobal().info("nextDouble: " + result); 
+  return result; 
+  } 
+  }; 
+  Whenever the nextDouble method is called, a log message is generated. 
+  To find out who called the method, generate a stack trace. 
+  5. You can get a stack trace from any exception object with the printStackTrace method in the Throwable class. The following code catches any exception, prints the exception object and the stack trace, and rethrows the exception so it can find its intended handler. 
+  try { . . . 
+  } 
+  catch (Throwable t) { t.printStackTrace(); 
+  throw t; 
+  } 
+  You don’t even need to catch an exception to generate a stack trace. 
+  Simply insert the statement Thread.dumpStack(); 
+  anywhere into your code to get a stack trace. 
+  6. Normally, the stack trace is displayed on System.err. If you want to log or display the stack trace, here is how you can capture it into a string: var out = new StringWriter(); 
+  new Throwable().printStackTrace(new PrintWriter(out)); 
+  String description = out.toString(); 
+  7. It is often handy to trap program errors in a file. However, errors are sent to System.err, not System.out. Therefore, you cannot simply trap them by running java MyProgram > errors.txt   Instead, capture the error stream as java MyProgram 2> errors.txt   To capture both System.err and System.out in the same file, use java MyProgram 1> errors.txt 2>&1   This works in bash and the Windows shell. 
+  8. Having the stack traces of uncaught exceptions show up in System.err is not ideal. These messages are confusing to end users if they happen to see them, and they are not available for diagnostic purposes when you need them. A better approach is to log them to a file. 
+  You can change the handler for uncaught exceptions with the static Thread.setDefaultUncaughtExceptionHandler( new Thread.UncaughtExceptionHandler() {   public void uncaughtException(Thread t, Throwable e) { save information in log file }; 
+  }); 
+  9. To watch class loading, launch the Java virtual machine with the verbose flag. You will get a printout such as the following: [0.012s][info][class,load] opened: /opt/jdk-9.0.1/lib/modules [0.034s][info] [class,load] java.lang.Object source: jrt:/java.base [0.035s][info] [class,load] java.io.Serializable source: jrt:/java.base [0.035s][info] [class,load] java.lang.Comparable source: jrt:/java.base [0.035s][info] [class,load] java.lang.CharSequence source: jrt:/java.base [0.035s][info] [class,load] java.lang.String source: jrt:/java.base [0.036s][info] [class,load] java.lang.reflect.AnnotatedElement source: jrt:/java.base [0.036s][info] [class,load] java.lang.reflect.GenericDeclaration source: jrt:/java.base [0.036s][info] [class,load] java.lang.reflect.Type source: jrt:/java.base [0.036s][info] [class,load] java.lang.Class source: jrt:/java.base [0.036s][info] [class,load] java.lang.Cloneable source: jrt:/java.base [0.037s][info] [class,load] java.lang.ClassLoader source: jrt:/java.base [0.037s][info] [class,load] java.lang.System source: jrt:/java.base [0.037s][info] [class,load] java.lang.Throwable source: jrt:/java.base [0.037s][info] [class,load] java.lang.Error source: jrt:/java.base [0.037s][info] [class,load] java.lang.ThreadDeath source: jrt:/java.base [0.037s][info] [class,load] java.lang.Exception source: jrt:/java.base [0.037s][info] [class,load] java.lang.RuntimeException source: jrt:/java.base [0.038s][info] [class,load] java.lang.SecurityManager source: jrt:/java.base . . . 
+  This can occasionally be helpful to diagnose class path problems. 
+  10. The -Xlint option tells the compiler to spot common code problems. 
+  For example, if you compile with the command javac -Xlint sourceFiles   the compiler will report missing break statements in switch statements. (The term "lint" originally described a tool for locating potential problems in C programs, but is now generically applied to any tools that flag constructs that are questionable but not illegal.) You will get messages such as warning: [fallthrough] possible fall-through into case   The string in square brackets identifies the warning category. You can enable and disable each category. Since most of them are quite useful, it seems best to leave them all in place and disable only those that you don’t care about, like this: javac -Xlint:all,-fallthrough,-serial sourceFiles   You get a list of all warnings from the command javac --help -X   11. The Java VM has support for monitoring and management of Java applications, allowing the installation of agents in the virtual machine that track memory consumption, thread usage, class loading, and so on. 
+  This feature is particularly important for large and long-running Java programs, such as application servers. As a demonstration of these capabilities, the JDK ships with a graphical tool called jconsole that displays statistics about the performance of a virtual machine (see Figure 7.3). Start your program, then start jconsole and pick your program from the list of running Java programs. 
+  Figure 7.3 The jconsole program The console gives you a wealth of information about your running program. See www.oracle.com/technetwork/articles/java/jconsole1564139.html for more information. 
+  12. Java Mission Control is a professional-level profiling and diagnostics tool that is included with the Oracle JDK and is free to use for development purposes. A commercial license is required for use in production. An open source version will be a part of the OpenJDK at some point. Like jconsole, Java Mission Control can attach to a running virtual machine. It can also analyze the output from Java Flight Recorder, a tool that collects diagnostic and profiling data from a running Java application. 
+  See https://docs.oracle.com/javacomponents/index.html   for more information about these tools. 
+  This chapter introduced you to exception handling and logging. You also saw useful hints for testing and debugging. The next two chapters cover generic programming and its most important application: the Java collections framework. 

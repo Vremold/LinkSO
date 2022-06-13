@@ -1,0 +1,187 @@
+Scrollable result sets are powerful, but they have a major drawback. You need to
+keep the database connection open during the entire user interaction. However,
+a user can walk away from the computer for a long time, leaving the connection
+occupied. That is not good—database connections are scarce resources. In this
+
+From the Library of Hristo Dimov Hristov
+
+5.7 Row Sets
+
+329
+
+situation, use a row set. The RowSet interface extends the ResultSet interface, but row
+sets don’t have to be tied to a database connection.
+Row sets are also suitable if you need to move a query result to a different tier of
+a complex application, or to another device such as a cell phone. You would
+never want to move a result set—its data structures can be huge, and it is tethered
+to the database connection.
+
+5.7.1 Constructing Row Sets
+The javax.sql.rowset package provides the following interfaces that extend the RowSet
+interface:
+• A CachedRowSet allows disconnected operation. We will discuss cached row sets
+in the following section.
+• A WebRowSet is a cached row set that can be saved to an XML file. The XML file
+can be moved to another tier of a web application where it is opened by
+another WebRowSet object.
+• The FilteredRowSet and JoinRowSet interfaces support lightweight operations on
+row sets that are equivalent to SQL SELECT and JOIN operations. These operations
+are carried out on the data stored in row sets, without having to make a
+database connection.
+• A JdbcRowSet is a thin wrapper around a ResultSet. It adds useful methods from
+the RowSet interface.
+As of Java SE 7, there is a standard way for obtaining a row set:
+RowSetFactory factory = RowSetProvider.newFactory();
+CachedRowSet crs = factory.createCachedRowSet();
+
+There are similar methods for obtaining the other row set types.
+Before Java SE 7, there were vendor-specific methods for creating row sets. In
+addition, the JDK supplies reference implementations in the package com.sun.rowset.
+The class names end in Impl, for example, CachedRowSetImpl. If you can’t use the
+RowSetProvider, you can instead use those classes:
+CachedRowSet crs = new com.sun.rowset.CachedRowSetImpl();
+
+5.7.2 Cached Row Sets
+A cached row set contains all data from a result set. Since CachedRowSet is a subinterface of the ResultSet interface, you can use a cached row set exactly as you would
+use a result set. Cached row sets confer an important benefit: You can close the
+connection and still use the row set. As you will see in our sample program in
+
+From the Library of Hristo Dimov Hristov
+
+330
+
+Chapter 5
+
+Database Programming
+
+Listing 5.4, this greatly simplifies the implementation of interactive applications.
+Each user command simply opens the database connection, issues a query, puts
+the result in a cached row set, and then closes the database connection.
+It is even possible to modify the data in a cached row set. Of course, the modifications are not immediately reflected in the database; you need to make an explicit
+request to accept the accumulated changes. The CachedRowSet then reconnects to the
+database and issues SQL statements to write the accumulated changes.
+You can populate a CachedRowSet from a result set:
+ResultSet result = . . .;
+RowSetFactory factory = RowSetProvider.newFactory();
+CachedRowSet crs = factory.createCachedRowSet();
+crs.populate(result);
+conn.close(); // now OK to close the database connection
+
+Alternatively, you can let the CachedRowSet object establish a connection automatically.
+Set up the database parameters:
+crs.setURL("jdbc:derby://localhost:1527/COREJAVA");
+crs.setUsername("dbuser");
+crs.setPassword("secret");
+
+Then set the query statement and any parameters.
+crs.setCommand("SELECT * FROM Books WHERE Publisher_ID = ?");
+crs.setString(1, publisherId);
+
+Finally, populate the row set with the query result:
+crs.execute();
+
+This call establishes a database connection, issues the query, populates the row
+set, and disconnects.
+If your query result is very large, you would not want to put it into the row set
+in its entirety. After all, your users will probably only look at a few rows. In that
+case, specify a page size:
+CachedRowSet crs = . . .;
+crs.setCommand(command);
+crs.setPageSize(20);
+...
+crs.execute();
+
+Now you will only get 20 rows. To get the next batch of rows, call
+crs.nextPage();
+
+From the Library of Hristo Dimov Hristov
+
+5.7 Row Sets
+
+331
+
+You can inspect and modify the row set with the same methods you use for result
+sets. If you modified the row set contents, you must write it back to the database
+by calling
+crs.acceptChanges(conn);
+
+or
+crs.acceptChanges();
+
+The second call works only if you configured the row set with the information
+required to connect to a database (such as URL, user name, and password).
+In Section 5.6.2, “Updatable Result Sets,” on p. 324, you saw that not all result
+sets are updatable. Similarly, a row set that contains the result of a complex query
+will not be able to write its changes back to the database. You should be safe if
+your row set contains data from a single table.
+
+CAUTION: If you populated the row set from a result set, the row set does not
+know the name of the table to update. You need to call setTableName to set the
+table name.
+
+Another complexity arises if the data in the database have changed after you
+populated the row set. This is clearly a sign of trouble that could lead to inconsistent data. The reference implementation checks whether the original row set
+values (that is, the values before editing) are identical to the current values in the
+database. If so, they are replaced with the edited values; otherwise, a
+SyncProviderException is thrown and none of the changes are written. Other
+implementations may use other strategies for synchronization.
+javax.sql.RowSet 1.4
+
+• String getURL()
+• void setURL(String url)
+gets or sets the database URL.
+• String getUsername()
+• void setUsername(String username)
+gets or sets the user name for connecting to the database.
+• String getPassword()
+• void setPassword(String password)
+gets or sets the password for connecting to the database.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+332
+
+Chapter 5
+
+Database Programming
+
+javax.sql.RowSet 1.4 (Continued)
+
+• String getCommand()
+• void setCommand(String command)
+gets or sets the command that is executed to populate this row set.
+• void execute()
+populates this row set by issuing the statement set with setCommand. For the driver
+manager to obtain a connection, the URL, user name, and password must be set.
+
+javax.sql.rowset.CachedRowSet 5.0
+
+• void execute(Connection conn)
+populates this row set by issuing the statement set with setCommand.This method uses
+the given connection and closes it.
+• void populate(ResultSet result)
+populates this cached row set with the data from the given result set.
+• String getTableName()
+• void setTableName(String tableName)
+gets or sets the name of the table from which this cached row set was populated.
+• int getPageSize()
+• void setPageSize(int size)
+gets or sets the page size.
+• boolean nextPage()
+• boolean previousPage()
+loads the next or previous page of rows. Returns true if there is a next or previous
+page.
+• void acceptChanges()
+• void acceptChanges(Connection conn)
+reconnects to the database and writes the changes that are the result of editing the
+row set. May throw a SyncProviderException if the data cannot be written back because
+the database data have changed.
+
+javax.sql.rowset.RowSetProvider 7
+
+• static RowSetFactory newFactory()
+creates a row set factory.
+
+From the Library of Hristo Dimov Hristov
+

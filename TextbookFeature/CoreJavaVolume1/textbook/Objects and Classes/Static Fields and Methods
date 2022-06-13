@@ -1,0 +1,68 @@
+  In all sample programs that you have seen, the main method is tagged with the static modifier. We are now ready to discuss the meaning of this modifier. 
+4.4.1 Static Fields
+  If you define a field as static, then there is only one such field per class. In contrast, each object has its own copy of nonstatic instance fields. For example, let’s suppose we want to assign a unique identification number to each employee. We add an instance field id and a static field nextId to the Employee class: class Employee { private static int nextId = 1; 
+  private int id; 
+  . . . 
+  } 
+  Every Employee object now has its own id field, but there is only one nextId field that is shared among all instances of the class. Let’s put it another way. If there are 1,000 objects of the Employee class, then there are 1,000 instance fields id, one for each object. But there is a single static field nextId. Even if there are no Employee objects, the static field nextId is present. It belongs to the class, not to any individual object. 
+  Note In some object-oriented programming languages, static fields are called class fields. The term "static" is a meaningless holdover from C++. 
+  Let’s implement a simple method: public void setId() { id = nextId; 
+  nextId++; 
+  } 
+  Suppose you set the employee identification number for harry: harry.setId(); 
+  Then, the id field of harry is set to the current value of the static field nextId, and the value of the static field is incremented: harry.id = Employee.nextId; 
+  Employee.nextId++; 
+4.4.2 Static Constants
+  Static variables are quite rare. However, static constants are more common. 
+  For example, the Math class defines a static constant: public class Math   { . . . 
+  public static final double PI = 3.14159265358979323846; 
+  . . . 
+  } 
+  You can access this constant in your programs as Math.PI. 
+  If the keyword static had been omitted, then PI would have been an instance field of the Math class. That is, you would need an object of this class to access PI, and every Math object would have its own copy of PI. 
+  Another static constant that you have used many times is System.out. It is declared in the System class as follows: public class System { . . . 
+  public static final PrintStream out = . . .; 
+  . . . 
+  } 
+  As we mentioned several times, it is never a good idea to have public fields, because everyone can modify them. However, public constants (that is, final fields) are fine. Since out has been declared as final, you cannot reassign another print stream to it: System.out = new PrintStream(. . .); // ERROR--out is final   Note If you look at the System class, you will notice a method setOut that sets System.out to a different stream. You may wonder how that method can change the value of a final variable. However, the setOut method is a native method, not implemented in the Java programming language. Native methods can bypass the access control mechanisms of the Java language. This is a very unusual workaround that you should not emulate in your programs. 
+4.4.3 Static Methods
+  Static methods are methods that do not operate on objects. For example, the pow method of the Math class is a static method. The expression Math.pow(x, a)   computes the power xa. It does not use any Math object to carry out its task. 
+  In other words, it has no implicit parameter. 
+  You can think of static methods as methods that don’t have a this parameter. (In a nonstatic method, the this parameter refers to the implicit parameter of the method—see Section 4.3.7, "Implicit and Explicit Parameters," on p. 150.) A static method of the Employee class cannot access the id instance field because it does not operate on an object. However, a static method can access a static field. Here is an example of such a static method: public static int getNextId() { return nextId; // returns static field } 
+  To call this method, you supply the name of the class: int n = Employee.getNextId(); 
+  Could you have omitted the keyword static for this method? Yes, but then you would need to have an object reference of type Employee to invoke the method. 
+  Note It is legal to use an object to call a static method. For example, if harry is an Employee object, then you can call harry.getNextId() instead of Employee.getNextId(). 
+  However, we find that notation confusing. The getNextId method   doesn’t look at harry at all to compute the result. We recommend that you use class names, not objects, to invoke static methods. 
+  Use static methods in two situations: When a method doesn’t need to access the object state because all needed parameters are supplied as explicit parameters (example: Math.pow). 
+  When a method only needs to access static fields of the class (example: Employee.getNextId). 
+  The term "static" has a curious history. At first, the keyword static was introduced in C to denote local variables that don’t go away when a block is exited. In that context, the term "static" makes sense: The variable stays around and is still there when the block is entered again. Then static got a second meaning in C, to denote global variables and functions that cannot be accessed from other files. The keyword static was simply reused to avoid introducing a new keyword. Finally, C++ reused the keyword for a third, unrelated, interpretation—to denote variables and functions that belong to a class but not to any particular object of the class. That is the same meaning the keyword has in Java. 
+4.4.4 Factory Methods
+  Here is another common use for static methods. Classes such as LocalDate and NumberFormat use static factory methods that construct objects. You have already seen the factory methods LocalDate.now and   LocalDate.of. Here is how the NumberFormat class yields formatter objects for various styles: NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(); 
+  NumberFormat percentFormatter = NumberFormat.getPercentInstance(); 
+  double x = 0.1; 
+  System.out.println(currencyFormatter.format(x)); // prints $0.10 System.out.println(percentFormatter.format(x)); // prints 10%   Why doesn’t the NumberFormat class use a constructor instead? There are two reasons: You can’t give names to constructors. The constructor name is always the same as the class name. But we want two different names to get the currency instance and the percent instance. 
+  When you use a constructor, you can’t vary the type of the constructed object. But the factory methods actually return objects of the class DecimalFormat, a subclass that inherits from NumberFormat. 
+  (See Chapter 5 for more on inheritance.) 4.4.5 The main Method
+  Note that you can call static methods without having any objects. For example, you never construct any objects of the Math class to call Math.pow. 
+  For the same reason, the main method is a static method. 
+  public class Application { public static void main(String[] args) { // construct objects here . . . 
+  } 
+  } 
+  The main method does not operate on any objects. In fact, when a program starts, there aren’t any objects yet. The static main method executes, and constructs the objects that the program needs. 
+  Tip Every class can have a main method. That is a handy trick for unit testing of classes. For example, you can add a main method to the Employee class: class Employee { public Employee(String n, double s, int year, int month, int day) { name = n; 
+  salary = s; 
+  hireDay = LocalDate.of(year, month, day); 
+  } 
+  . . . 
+  public static void main(String[] args) // unit test { var e = new Employee("Romeo", 50000, 2003, 3, 31); 
+  e.raiseSalary(10); 
+  System.out.println(e.getName() + " " + e.getSalary()); 
+  } 
+  . . . 
+  } 
+  If you want to test the Employee class in isolation, simply execute java Employee   If the Employee class is a part of a larger application, you start the application with java Application   and the main method of the Employee class is never executed. 
+  The program in Listing 4.3 contains a simple version of the Employee class with a static field nextId and a static method getNextId. We fill an array with three Employee objects and then print the employee information. 
+  Finally, we print the next available identification number, to demonstrate the static method. 
+  Note that the Employee class also has a static main method for unit testing. 
+  Try running both java Employee   and java StaticTest   to execute both main methods. 
+  java.util.Objects 7 static <T> void requireNonNull(T obj) static <T> void requireNonNull(T obj, String message)   static <T> void requireNonNull(T obj, Supplier<String> messageSupplier) 8 If obj is null, these methods throw a NullPointerException with no message or the given message. (Chapter 6 explains how to obtain a value lazily with a supplier. Chapter 8 explains the <T> syntax.) static <T> T requireNonNullElse(T obj, T defaultObj) static <T> T requireNonNullElseGet(T obj, Supplier<T> defaultSupplier) Returns obj if it is not null, or the default object if obj is null. 

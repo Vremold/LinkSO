@@ -1,0 +1,81 @@
+  So far we’ve been using only the border layout, flow layout, and grid layout for the user interface of our sample applications. For more complex tasks, this is not going to be enough. 
+  Since Java 1.0, the AWT includes the grid bag layout that lays out components in rows and columns. The row and column sizes are flexible, and components can span multiple rows and columns. This layout manager is very flexible, but also very complex. The mere mention of the words "grid bag layout" has been known to strike fear in the hearts of Java programmers. 
+  In an unsuccessful attempt to design a layout manager that would free programmers from the tyranny of the grid bag layout, the Swing designers came up with the box layout. According to the JDK documentation of the BoxLayout class: "Nesting multiple panels with different combinations of horizontal and vertical [sic] gives an effect similar to GridBagLayout, without the complexity." However, as each box is laid out independently, you cannot use box layouts to arrange neighboring components both horizontally and vertically. 
+  Java 1.4 saw yet another attempt to design a replacement for the grid bag layout—the spring layout where you use imaginary springs to connect the components in a container. As the container is resized, the springs stretch or shrink, thereby adjusting the positions of the components. This sounds tedious and confusing, and it is. The spring layout quickly sank into obscurity. 
+  The NetBeans IDE combines a layout tool (called "Matisse") and a layout manager. A user interface designer uses the tool to drop components into a container and to indicate which components should line up. The tool translates the designer’s intentions into instructions for the group layout manager. This is much more convenient than writing the layout management code by hand. 
+  In the coming sections, we will cover the grid bag layout because it is commonly used and is still the easiest mechanism for programmatically producing layout code. We will show you a strategy that makes grid bag layouts relatively painless in common situations. 
+  Finally, you will see how to write your own layout manager. 
+11.6.1 The Grid Bag Layout
+  The grid bag layout is the mother of all layout managers. You can think of a grid bag layout as a grid layout without the limitations. In a grid bag layout, the rows and columns can have variable sizes. You can join adjacent cells to make room for larger components. (Many word processors, as well as HTML, provide similar capabilities for tables: You can start out with a grid and then merge adjacent cells as necessary.) The components need not fill the entire cell area, and you can specify their alignment within cells. 
+  Consider the font selector of Figure 11.27. It consists of the following components:   Figure 11.27 A font selector Two combo boxes to specify the font face and size Labels for these two combo boxes Two checkboxes to select bold and italic A text area for the sample string Now, chop up the container into a grid of cells, as shown in Figure 11.28. 
+  (The rows and columns need not have equal size.) Each checkbox spans two columns, and the text area spans four rows. 
+  Figure 11.28 Dialog box grid used in design To describe the layout to the grid bag manager, use the following procedure: 1. Create an object of type GridBagLayout. You don’t need to tell it how many rows and columns the underlying grid has. Instead, the layout manager will try to guess it from the information you give it later. 
+  2. Set this GridBagLayout object to be the layout manager for the component. 
+  3. For each component, create an object of type GridBagConstraints. Set field values of the GridBagConstraints object to specify how the components are laid out within the grid bag. 
+  4. Finally, add each component with its constraints by using the call add(component, constraints); 
+  Here’s an example of the code needed. (We’ll go over the various constraints in more detail in the sections that follow—so don’t worry if you don’t know   what some of the constraints do.) var layout = new GridBagLayout(); 
+  panel.setLayout(layout); 
+  var constraints = new GridBagConstraints(); 
+  constraints.weightx = 100; 
+  constraints.weighty = 100; 
+  constraints.gridx = 0; 
+  constraints.gridy = 2; 
+  constraints.gridwidth = 2; 
+  constraints.gridheight = 1; 
+  panel.add(component, constraints); 
+  The trick is knowing how to set the state of the GridBagConstraints object. We’ll discuss this object in the sections that follow. 
+  11.6.1.1 The gridx, gridy, gridwidth, and gridheight Parameters The gridx, gridy, gridwidth, and gridheight constraints define where the component is located in the grid. The gridx and gridy values specify the column and row positions of the upper left corner of the component to be added. The gridwidth and gridheight values determine how many columns and rows the component occupies. 
+  The grid coordinates start with 0. In particular, gridx = 0 and gridy = 0 denotes the top left corner. The text area in our example has gridx = 2, gridy = 0 because it starts in column 2 (that is, the third column) of row 0. It has gridwidth = 1 and gridheight = 4 because it spans one column and four rows. 
+  11.6.1.2 Weight Fields You always need to set the weight fields (weightx and weighty) for each area in a grid bag layout. If you set the weight to 0, the area never grows or shrinks beyond its initial size in that direction. In the grid bag layout for Figure 11.27, we set the weightx field of the labels to be 0. This allows the labels to keep constant width when you resize the window. On the other hand, if you set the weights for all areas to 0, the container will huddle in the center of its allotted area instead of stretching to fill it. 
+  Conceptually, the problem with the weight parameters is that weights are properties of rows and columns, not individual cells. But you need to specify them for cells because the grid bag layout does not expose the rows and columns. The row and column weights are computed as the maxima of the cell weights in each row or column. Thus, if you want a row or column to stay at a fixed size, you need to set the weights of all components in it to zero. 
+  Note that the weights don’t actually give the relative sizes of the columns. 
+  They tell what proportion of the "slack" space should be allocated to each area if the container exceeds its preferred size. This isn’t particularly intuitive. We recommend that you set all weights at 100. Then, run the program and see how the layout looks. Resize the dialog to see how the rows and columns adjust. If you find that a particular row or column should not grow, set the weights of all components in it to zero. You can tinker with other weight values, but it is usually not worth the effort. 
+  11.6.1.3 The fill and anchor Parameters If you don’t want a component to stretch out and fill the entire area, set the fill constraint. You have four possibilities for this parameter: the valid values are GridBagConstraints.NONE, GridBagConstraints.HORIZONTAL, GridBagConstraints.VERTICAL, and GridBagConstraints.BOTH. 
+  If the component does not fill the entire area, you can specify where in the area you want it by setting the anchor field. The valid values are GridBagConstraints.CENTER (the default), GridBagConstraints.NORTH, GridBagConstraints.NORTHEAST, GridBagConstraints.EAST, and so on. 
+  11.6.1.4 Padding You can surround a component with additional blank space by setting the insets field of GridBagConstraints. Set the left, top, right, and bottom values of the Insets object to the amount of space that you   want to have around the component. This is called the external padding. 
+  The ipadx and ipady values set the internal padding. These values are added to the minimum width and height of the component. This ensures that the component does not shrink down to its minimum size. 
+  11.6.1.5 Alternative Method to Specify the gridx, gridy, gridwidth, and gridheight Parameters The AWT documentation recommends that instead of setting the gridx and gridy values to absolute positions, you set them to the constant GridBagConstraints.RELATIVE. Then, add the components to the grid bag layout in a standardized order, going from left to right in the first row, then moving along the next row, and so on. 
+  You would still specify the number of rows and columns spanned, by giving the appropriate gridheight and gridwidth fields. However, if the component extends to the last row or column, you don’t need to specify the actual number, but the constant GridBagConstraints.REMAINDER. 
+  This tells the layout manager that the component is the last one in its row. 
+  This scheme does seem to work. But it sounds really goofy to hide the actual placement information from the layout manager and hope that it will rediscover it. 
+  11.6.1.6 A Grid Bag Layout Recipe In practice, the following recipe makes grid bag layouts relatively troublefree: 1. Sketch out the component layout on a piece of paper. 
+  2. Find a grid such that the small components are each contained in a cell and the larger components span multiple cells. 
+  3. Label the rows and columns of your grid with 0, 1, 2, 3, . . . You can now read off the gridx, gridy, gridwidth, and gridheight values. 
+  4. For each component, ask yourself whether it needs to fill its cell horizontally or vertically. If not, how do you want it aligned? This tells   you the fill and anchor parameters. 
+  5. Set all weights to 100. However, if you want a particular row or column to always stay at its default size, set the weightx or weighty to 0 in all components that belong to that row or column. 
+  6. Write the code. Carefully double-check your settings for the GridBagConstraints. One wrong constraint can ruin your whole layout. 
+  7. Compile, run, and enjoy. 
+  11.6.1.7 A Helper Class to Tame the Grid Bag Constraints The most tedious aspect of the grid bag layout is writing the code that sets the constraints. Most programmers write helper functions or a small helper class for this purpose. We present such a class after the complete code for the font dialog example. This class has the following features: Its name is short: GBC instead of GridBagConstraints. 
+  It extends GridBagConstraints, so you can use shorter names such as GBC.EAST for the constants. 
+  Use a GBC object when adding a component, such as add(component, new GBC(1, 2)); 
+  There are two constructors to set the most common parameters: gridx and gridy, or gridx, gridy, gridwidth, and gridheight. 
+  add(component, new GBC(1, 2, 1, 4)); 
+  There are convenient setters for the fields that come in x/y pairs: add(component, new GBC(1, 2).setWeight(100, 100)); 
+  The setter methods return this, so you can chain them: add(component, new GBC(1,   2).setAnchor(GBC.EAST).setWeight(100, 100)); 
+  The setInsets methods construct the Insets object for you. To get one-pixel insets, simply call add(component, new GBC(1, 2).setAnchor(GBC.EAST).setInsets(1)); 
+  Listing 11.7 shows the frame class for the font dialog example. The GBC helper class is in Listing 11.8. Here is the code that adds the components to the grid bag:   add(faceLabel, new GBC(0, 0).setAnchor(GBC.EAST)); 
+  add(face, new GBC(1, 0).setFill(GBC.HORIZONTAL).setWeight(100, 0).setInsets(1) add(sizeLabel, new GBC(0, 1).setAnchor(GBC.EAST)); 
+  add(size, new GBC(1, 1).setFill(GBC.HORIZONTAL).setWeight(100, 0).setInsets(1) add(bold, new GBC(0, 2, 2, 1).setAnchor(GBC.CENTER).setWeight(100, 100)); 
+  add(italic, new GBC(0, 3, 2, 1).setAnchor(GBC.CENTER).setWeight(100, 100)); 
+  add(sample, new GBC(2, 0, 1, 4).setFill(GBC.BOTH).setWeight(100, 100)); 
+  Once you understand the grid bag constraints, this kind of code is fairly easy to read and debug. 
+  java.awt.GridBagConstraints 1.0 int gridx, gridy specifies the starting column and row of the cell. The default is 0. 
+  int gridwidth, gridheight specifies the column and row extent of the cell. The default is 1. 
+  double weightx, weighty   specifies the capacity of the cell to grow. The default is 0. 
+  int anchor indicates the alignment of the component inside the cell. You can choose between absolute positions: NORTHWEST NORTH NORTHEAST WEST CENTER EAST SOUTHWEST SOUTH SOUTHEAST or their orientation-independent counterparts: FIRST_LINE_START LINE_START FIRST_LINE_END PAGE_START CENTER PAGE_END LAST_LINE_START LINE_END LAST_LINE_END Use the latter if your application may be localized for right-to-left or top-to-bottom text. The default is CENTER. 
+  int fill specifies the fill behavior of the component inside the cell: one of NONE, BOTH, HORIZONTAL, or VERTICAL. The default is NONE. 
+  int ipadx, ipady specifies the "internal" padding around the component. The default is 0. 
+  Insets insets specifies the "external" padding along the cell boundaries. The default is no padding. 
+  GridBagConstraints(int gridx, int gridy, int gridwidth, int gridheight, double weightx, double weighty, int anchor, int fill, Insets insets, int ipadx, int ipady) 1.2 constructs a GridBagConstraints with all its fields specified in the arguments. This constructor should only be used by automatic code generators because it makes your source code very hard to read. 
+11.6.2 Custom Layout Managers
+  You can design your own LayoutManager class that manages components in a special way. As a fun example, let’s arrange all components in a container to form a circle (see Figure 11.29). 
+  Figure 11.29 Circle layout Your own layout manager must implement the LayoutManager interface. 
+  You need to override the following five methods: void addLayoutComponent(String s, Component c) void removeLayoutComponent(Component c) Dimension preferredLayoutSize(Container parent) Dimension minimumLayoutSize(Container parent) void layoutContainer(Container parent)   The first two methods are called when a component is added or removed. If you don’t keep any additional information about the components, you can make them do nothing. The next two methods compute the space required for the minimum and the preferred layout of the components. These are usually the same quantity. The fifth method does the actual work and invokes setBounds on all components. 
+  Note   The AWT has a second interface, called LayoutManager2, with ten methods to implement rather than five. The main point of the LayoutManager2 interface is to allow you to use the add method with constraints. For example, the BorderLayout and GridBagLayout implement the LayoutManager2 interface. 
+  Listing 11.9 shows the code for the CircleLayout manager which, uselessly enough, lays out the components along a circle inside the parent. 
+  The frame class of the sample program is in Listing 11.10. 
+  java.awt.LayoutManager 1.0 void addLayoutComponent(String name, Component comp) adds a component to the layout. 
+  void removeLayoutComponent(Component comp) removes a component from the layout. 
+  Dimension preferredLayoutSize(Container cont) returns the preferred size dimensions for the container under this layout. 
+  Dimension minimumLayoutSize(Container cont) returns the minimum size dimensions for the container under this layout. 
+  void layoutContainer(Container cont) lays out the components in a container. 

@@ -1,0 +1,7 @@
+  This seminar has evolved from the Objects & Patterns seminar that Bill Venners and I gave for the past several years. That seminar grew too full, so we’ve split it into two seminars: this one, and the Designing Objects & Systems seminar, described earlier in this appendix. 
+  The seminar strongly follows the material and presentation in the Thinking in Patterns book, so the best way to find out what’s in the seminar is to learn about the book from www.MindView.net. 
+  Much of the presentation emphasizes the design evolution process, starting with an initial solution and moving through the logic and process of evolving the solution to more appropriate designs. The last project shown (a trash recycling simulation) has evolved over time, and you can look at that evolution as a prototype for the way your own design can start as an adequate solution to a particular problem and evolve into a flexible approach to a class of problems. 
+  This seminar will help you: 
+  • Dramatically increase the flexibility of your designs. • Build in extensibility and reusability. • Create denser communications about designs using the language of patterns. 
+  Following each lecture there will be a set of patterns exercises for you to solve, where you are guided to write code to apply particular patterns to the solution of programming problems. 
+  Visit www.MindView.net for schedule and location information, testimonials, and details. 

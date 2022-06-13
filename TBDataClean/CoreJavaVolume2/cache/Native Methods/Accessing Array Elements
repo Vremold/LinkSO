@@ -1,0 +1,181 @@
+All array types of the Java programming language have corresponding C types,
+as shown in Table 12.2.
+
+Table 12.2 Correspondence between Java Array Types and C Types
+Java Type
+
+C Type
+
+Java Type
+
+C Type
+
+boolean[]
+
+jbooleanArray
+
+long[]
+
+jlongArray
+
+byte[]
+
+jbyteArray
+
+float[]
+
+jfloatArray
+
+char[]
+
+jcharArray
+
+double[]
+
+jdoubleArray
+
+int[]
+
+jintArray
+
+Object[]
+
+jobjectArray
+
+short[]
+
+jshortArray
+
+From the Library of Hristo Dimov Hristov
+
+12.7 Accessing Array Elements
+
+971
+
+C++ NOTE: In C, all these array types are actually type synonyms of jobject. In
+C++, however, they are arranged in the inheritance hierarchy shown in
+Figure 12.3. The type jarray denotes a generic array.
+
+Figure 12.3 Inheritance hierarchy of array types
+
+From the Library of Hristo Dimov Hristov
+
+972
+
+Chapter 12
+
+Native Methods
+
+The GetArrayLength function returns the length of an array.
+jarray array = . . .;
+jsize length = (*env)->GetArrayLength(env, array);
+
+How you access elements in an array depends on whether the array stores objects
+or values of a primitive type (bool, char, or a numeric type). To access elements in
+an object array, use the GetObjectArrayElement and SetObjectArrayElement methods.
+jobjectArray array = . . .;
+int i, j;
+jobject x = (*env)->GetObjectArrayElement(env, array, i);
+(*env)->SetObjectArrayElement(env, array, j, x);
+
+Although simple, this approach is also clearly inefficient; you want to be able
+to access array elements directly, especially when doing vector and matrix
+computations.
+The GetXxxArrayElements function returns a C pointer to the starting element of an
+array. As with ordinary strings, you must remember to call the corresponding
+ReleaseXxxArrayElements function to tell the virtual machine when you no longer need
+that pointer. Here, the type Xxx must be a primitive type—that is, not Object. You
+can then read and write the array elements directly. However, since the pointer
+might point to a copy, any changes that you make are guaranteed to be reflected
+in the original array only after you call the corresponding ReleaseXxxArrayElements
+function!
+NOTE: You can find out if an array is a copy by passing a pointer to a jboolean
+variable as the third parameter to a GetXxxArrayElements method. The variable is
+filled with JNI_TRUE if the array is a copy. If you aren’t interested in that information,
+just pass a NULL pointer.
+
+Here is an example that multiplies all elements in an array of double values by a
+constant. We obtain a C pointer a into the Java array and then access individual
+elements as a[i].
+jdoubleArray array_a = . . .;
+double scaleFactor = . . .;
+double* a = (*env)->GetDoubleArrayElements(env, array_a, NULL);
+for (i = 0; i < (*env)->GetArrayLength(env, array_a); i++)
+a[i] = a[i] * scaleFactor;
+(*env)->ReleaseDoubleArrayElements(env, array_a, a, 0);
+
+Whether the virtual machine actually copies the array depends on how it allocates
+arrays and does its garbage collection. Some “copying” garbage collectors routinely move objects around and update object references. That strategy is not
+
+From the Library of Hristo Dimov Hristov
+
+12.7 Accessing Array Elements
+
+973
+
+compatible with “pinning” an array to a particular location, because the collector
+cannot update the pointer values in native code.
+NOTE: In the Oracle JVM implementation, boolean arrays are represented as
+packed arrays of 32-bit words. The GetBooleanArrayElements method copies them
+into unpacked arrays of jboolean values.
+
+To access just a few elements of a large array, use the GetXxxArrayRegion and
+SetXxxArrayRegion methods that copy a range of elements from the Java array into a
+C array and back.
+You can create new Java arrays in native methods with the NewXxxArray function.
+To create a new array of objects, specify the length, the type of the array elements,
+and an initial element for all entries (typically, NULL). Here is an example:
+jclass class_Employee = (*env)->FindClass(env, "Employee");
+jobjectArray array_e = (*env)->NewObjectArray(env, 100, class_Employee, NULL);
+
+Arrays of primitive types are simpler: just supply the length of the array.
+jdoubleArray array_d = (*env)->NewDoubleArray(env, 100);
+
+The array is then filled with zeroes.
+
+NOTE: The following methods are used for working with “direct buffers”:
+jobject NewDirectByteBuffer(JNIEnv* env, void* address, jlong capacity)
+void* GetDirectBufferAddress(JNIEnv* env, jobject buf)
+jlong GetDirectBufferCapacity(JNIEnv* env, jobject buf)
+
+Direct buffers are used in the java.nio package to support more efficient input/
+output operations and to minimize the copying of data between native and Java
+arrays.
+
+Manipulating Java Arrays
+
+• jsize GetArrayLength(JNIEnv *env, jarray array)
+returns the number of elements in the array.
+• jobject GetObjectArrayElement(JNIEnv *env, jobjectArray array, jsize index)
+returns the value of an array element.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+974
+
+Chapter 12
+
+Native Methods
+
+Manipulating Java Arrays (Continued)
+
+• void SetObjectArrayElement(JNIEnv *env, jobjectArray array, jsize index, jobject value)
+sets an array element to a new value.
+• Xxx* GetXxxArrayElements(JNIEnv *env, jarray array, jboolean* isCopy)
+yields a C pointer to the elements of a Java array. The field type Xxx is one of
+Boolean, Byte, Char, Short, Int, Long, Float, or Double. The pointer must be passed to
+ReleaseXxxArrayElements when it is no longer needed.isCopy is either NULL or points to
+a jboolean that is filled with JNI_TRUE if a copy is made, with JNI_FALSE otherwise.
+• void ReleaseXxxArrayElements(JNIEnv *env, jarray array, Xxx elems[], jint mode)
+notifies the virtual machine that a pointer obtained by GetXxxArrayElements is no
+longer needed. mode is one of 0 (free the elems buffer after updating the array elements),
+JNI_COMMIT (do not free the elems buffer after updating the array elements), or JNI_ABORT
+(free the elems buffer without updating the array elements).
+• void GetXxxArrayRegion(JNIEnv *env, jarray array, jint start, jint length, Xxx elems[])
+copies elements from a Java array to a C array. The field type Xxx is one of Boolean,
+Byte, Char, Short, Int, Long, Float, or Double.
+• void SetXxxArrayRegion(JNIEnv *env, jarray array, jint start, jint length, Xxx elems[])
+copies elements from a C array to a Java array. The field type Xxx is one of Boolean,
+Byte, Char, Short, Int, Long, Float, or Double.
+

@@ -1,0 +1,28 @@
+  with finally  There’s often some piece of code that you want to execute whether or not an exception is thrown within a try block. This usually pertains to some operation other than memory recovery (since that’s taken care of by the garbage collector). To achieve this effect, you use a finally clause4 at the end of all the exception handlers. The full picture of an exception- handling section is thus: 
+  try { // The guarded region: Dangerous activities // that might throw A, B, or C } catch(A a1) { // Handler for situation A } catch(B b1) { // Handler for situation B } catch(C c1) { // Handler for situation C } finally { // Activities that happen every time } 
+  To demonstrate that the finally clause always runs, try this program: 
+  From the output, you can see that the finally clause is executed whether or not an exception is thrown. 
+  This program also gives a hint for how you can deal with the fact that exceptions in Java do not allow you to resume back to where the exception was thrown, as discussed earlier. If you place your try block in a loop, you can establish a condition that must be met before you continue the program. You can also add a static counter or some other device to allow the loop to try several different approaches before giving up. This way you can build a greater level of robustness into your programs. 
+What’s finally for?
+  5 In a language without garbage collection and without automatic destructor calls, finally is important because it allows the programmer to guarantee the release of memory regardless of what happens in the try block. But Java has garbage collection, so releasing memory is virtually never a problem. Also, it has no destructors to call. So when do you need to use finally in Java? 
+  The finally clause is necessary when you need to set something other than memory back to its original state. This is some kind of cleanup like an open file or network connection, something you’ve drawn on the screen, or even a switch in the outside world, as modeled in the following example: 
+  the destructor gets called. C++ has automatic destructor calls, and C# (which is much more like Java) has a way that automatic destruction can occur. 
+  The goal here is to make sure that the switch is off when main( ) is completed, so sw.off( ) is placed at the end of the try block and at the end of each exception handler. But it’s possible that an exception might be thrown that isn’t caught here, so sw.off( ) would be missed. However, with finally you can place the cleanup code from a try block in just one place: 
+  Here the sw.off( ) has been moved to just one place, where it’s guaranteed to run no matter what happens. 
+  Even in cases in which the exception is not caught in the current set of catch clauses, finally will be executed before the exception-handling mechanism continues its search for a handler at the next higher level: 
+  The finally statement will also be executed in situations in which break and continue statements are involved. Note that, along with the labeled break and labeled continue, finally eliminates the need for a goto statement in Java. 
+  Exercise 13: (2) Modify Exercise 9 by adding a finally clause. Verify that your finally clause is executed, even if a NullPointerException is thrown. 
+  Exercise 14: (2) Show that OnOffSwitch.java can fail by throwing a RuntimeException inside the try block. 
+  Exercise 15: (2) Show that WithFinally.java doesn’t fail by throwing a RuntimeException inside the try block. 
+Using finally during return
+  Because a finally clause is always executed, it’s possible to return from multiple points within a method and still guarantee that important cleanup will be performed: 
+  You can see from the output that it doesn’t matter where you return from inside the finally class. 
+  Exercise 16: (2) Modify reusing/CADSystem.java to demonstrate that returning from the middle of a try-finally will still perform proper cleanup. 
+  Exercise 17: (3) Modify polymorphism/Frog.java so that it uses try-finally to guarantee proper cleanup, and show that this works even if you return from the middle of the try-finally. 
+Pitfall: the lost exception
+  Unfortunately, there’s a flaw in Java’s exception implementation. Although exceptions are an indication of a crisis in your program and should never be ignored, it’s possible for an exception to simply be lost. This happens with a particular configuration using a finally clause: 
+  You can see from the output that there’s no evidence of the VerylmportantException, which is simply replaced by the HoHumException in the finally clause. This is a rather serious pitfall, since it means that an exception can be completely lost, and in a far more subtle and difficult-to-detect fashion than the preceding example. In contrast, C++ treats the situation in which a second exception is thrown before the first one is handled as a dire programming error. Perhaps a future version of Java will repair this problem (on the other hand, you will typically wrap any method that throws an exception, such as dispose( ) in the example above, inside a try-catch clause). 
+  An even simpler way to lose an exception is just to return from inside a finally clause: 
+  If you run this program you’ll see that it produces no output, even though an exception is thrown. 
+  Exercise 18: (3) Add a second level of exception loss to LostMessage.java so that the HoHumException is itself replaced by a third exception. 
+  Exercise 19: (2) Repair the problem in LostMessage.java by guarding the call in the finally clause. 

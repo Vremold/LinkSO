@@ -1,0 +1,153 @@
+  Most operating systems can take advantage of a virtual memory implementation to “map” a file, or a region of a file, into memory. Then the file can be accessed as if it were an in-memory array, which is much faster than the traditional file operations. 
+2.6.1 Memory-Mapped File Performance
+  At the end of this section, you can find a program that computes the CRC32 checksum of a file using traditional file input and a memory-mapped file. On one machine, we got the timing data shown in Table 2.5 when computing the checksum of the 37MB file rt.jar in the jre/lib directory of the JDK. 
+  Table 2.5 Timing Data for File Operations Method   Time   Plain input stream   110 seconds   Buffered input stream   9.9 seconds   Random access file   162 seconds   Memory-mapped file   7.2 seconds   As you can see, on this particular machine, memory mapping is a bit faster than using buffered sequential input and dramatically faster than using a RandomAccessFile. 
+  From the Library of Hristo Dimov Hristov   2.6 Memory-Mapped Files   117   Of course, the exact values will differ greatly from one machine to another, but it is obvious that the performance gain, compared to random access, can be substantial. For sequential reading of files of moderate size, on the other hand, there is no reason to use memory mapping. 
+  The java.nio package makes memory mapping quite simple. Here is what you do. 
+  First, get a channel for the file. A channel is an abstraction for a disk file that lets you access operating system features such as memory mapping, file locking, and fast data transfers between files. 
+  FileChannel channel = FileChannel.open(path, options); 
+  Then, get a ByteBuffer from the channel by calling the map method of the FileChannel class. Specify the area of the file that you want to map and a mapping mode. Three modes are supported: • FileChannel.MapMode.READ_ONLY: The resulting buffer is read-only. Any attempt to write to the buffer results in a ReadOnlyBufferException. 
+  • FileChannel.MapMode.READ_WRITE: The resulting buffer is writable, and the changes will be written back to the file at some time. Note that other programs that have mapped the same file might not see those changes immediately. The exact behavior of simultaneous file mapping by multiple programs depends on the operating system. 
+  • FileChannel.MapMode.PRIVATE: The resulting buffer is writable, but any changes are private to this buffer and not propagated to the file. 
+  Once you have the buffer, you can read and write data using the methods of the ByteBuffer class and the Buffer superclass. 
+  Buffers support both sequential and random data access. A buffer has a position that is advanced by get and put operations. For example, you can sequentially traverse all bytes in the buffer as while (buffer.hasRemaining()) { byte b = buffer.get(); 
+  ... 
+  } 
+  Alternatively, you can use random access: for (int i = 0; i < buffer.limit(); i++) { byte b = buffer.get(i); 
+  ... 
+  } 
+  You can also read and write arrays of bytes with the methods   From the Library of Hristo Dimov Hristov   118   Chapter 2   Input and Output   get(byte[] bytes) get(byte[], int offset, int length)   Finally, there are methods getInt getLong getShort getChar getFloat getDouble   to read primitive type values that are stored as binary values in the file. As we already mentioned, Java uses big-endian ordering for binary data. However, if you need to process a file containing binary numbers in little-endian order, simply call buffer.order(ByteOrder.LITTLE_ENDIAN); 
+  To find out the current byte order of a buffer, call ByteOrder b = buffer.order()   CAUTION: This pair of methods does not use the set/get naming convention. 
+  To write numbers to a buffer, use one of the methods putInt putLong putShort putChar putFloat putDouble   At some point, and certainly when the channel is closed, these changes are written back to the file. 
+  Listing 2.5 computes the 32-bit cyclic redundancy checksum (CRC32) of a file. 
+  That checksum is often used to determine whether a file has been corrupted. 
+  Corruption of a file makes it very likely that the checksum has changed. The java.util.zip package contains a class CRC32 that computes the checksum of a sequence of bytes, using the following loop: CRC32 crc = new CRC32(); 
+  while (more bytes) crc.update(next byte) long checksum = crc.getValue(); 
+  From the Library of Hristo Dimov Hristov   2.6 Memory-Mapped Files   119   NOTE: For a nice explanation of the CRC algorithm, see www.relisoft.com/Science/ CrcMath.html. 
+  The details of the CRC computation are not important. We just use it as an example of a useful file operation. (In practice, you would read and update data in larger blocks, not a byte at a time. Then the speed differences are not as dramatic.) Run the program as java memoryMap.MemoryMapTest filename   Listing 2.5 1   memoryMap/MemoryMapTest.java   package memoryMap; 
+2
+  3 4 5 6 7   import java.io.*; 
+  import java.nio.*; 
+  import java.nio.channels.*; 
+  import java.nio.file.*; 
+  import java.util.zip.*; 
+  8 9 10 11 12 13 14 15 16 17 18 19 20 21   /** * This program computes the CRC checksum of a file in four ways. <br> * Usage: java memoryMap.MemoryMapTest filename * @version 1.01 2012-05-30 * @author Cay Horstmann */ public class MemoryMapTest { public static long checksumInputStream(Path filename) throws IOException { try (InputStream in = Files.newInputStream(filename)) { CRC32 crc = new CRC32(); 
+  22   int c; 
+  while ((c = in.read()) != -1) crc.update(c); 
+  return crc.getValue(); 
+  23 24 25 26   } 
+  27 28   } 
+  29 30 31 32 33   public static long checksumBufferedInputStream(Path filename) throws IOException { try (InputStream in = new BufferedInputStream(Files.newInputStream(filename))) { (Continues)   From the Library of Hristo Dimov Hristov   120   Chapter 2   Input and Output   Listing 2.5 (Continued) CRC32 crc = new CRC32(); 
+  34 35   int c; 
+  while ((c = in.read()) != -1) crc.update(c); 
+  return crc.getValue(); 
+  36 37 38 39   } 
+  40 41   } 
+  42 43 44 45 46 47 48   public static long checksumRandomAccessFile(Path filename) throws IOException { try (RandomAccessFile file = new RandomAccessFile(filename.toFile(), "r")) { long length = file.length(); 
+  CRC32 crc = new CRC32(); 
+  49   for (long p = 0; p < length; p++) { file.seek(p); 
+  int c = file.readByte(); 
+  crc.update(c); 
+  } 
+  return crc.getValue(); 
+  50 51 52 53 54 55 56   } 
+  57 58   } 
+  59 60 61 62 63 64 65 66   public static long checksumMappedFile(Path filename) throws IOException { try (FileChannel channel = FileChannel.open(filename)) { CRC32 crc = new CRC32(); 
+  int length = (int) channel.size(); 
+  MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_ONLY, 0, length); 
+  67   for (int p = 0; p < length; p++) { int c = buffer.get(p); 
+  crc.update(c); 
+  } 
+  return crc.getValue(); 
+  68 69 70 71 72 73   } 
+  74 75   } 
+  76 77 78 79 80   public static void main(String[] args) throws IOException { System.out.println("Input Stream:"); 
+  long start = System.currentTimeMillis(); 
+  From the Library of Hristo Dimov Hristov   2.6 Memory-Mapped Files   121   Path filename = Paths.get(args[0]); 
+  long crcValue = checksumInputStream(filename); 
+  long end = System.currentTimeMillis(); 
+  System.out.println(Long.toHexString(crcValue)); 
+  System.out.println((end - start) + " milliseconds"); 
+  81 82 83 84 85 86   System.out.println("Buffered Input Stream:"); 
+  start = System.currentTimeMillis(); 
+  crcValue = checksumBufferedInputStream(filename); 
+  end = System.currentTimeMillis(); 
+  System.out.println(Long.toHexString(crcValue)); 
+  System.out.println((end - start) + " milliseconds"); 
+  87 88 89 90 91 92 93   System.out.println("Random Access File:"); 
+  start = System.currentTimeMillis(); 
+  crcValue = checksumRandomAccessFile(filename); 
+  end = System.currentTimeMillis(); 
+  System.out.println(Long.toHexString(crcValue)); 
+  System.out.println((end - start) + " milliseconds"); 
+  94 95 96 97 98 99 100   System.out.println("Mapped File:"); 
+  start = System.currentTimeMillis(); 
+  crcValue = checksumMappedFile(filename); 
+  end = System.currentTimeMillis(); 
+  System.out.println(Long.toHexString(crcValue)); 
+  System.out.println((end - start) + " milliseconds"); 
+  101 102 103 104 105 106   } 
+  107 108   } 
+  java.io.FileInputStream 1.0   • FileChannel getChannel() 1.4 returns a channel for accessing this input stream. 
+  java.io.FileOutputStream 1.0   • FileChannel getChannel() 1.4 returns a channel for accessing this output stream. 
+  java.io.RandomAccessFile 1.0   • FileChannel getChannel() 1.4 returns a channel for accessing this file. 
+  From the Library of Hristo Dimov Hristov   122   Chapter 2   Input and Output   java.nio.channels.FileChannel 1.4   • static FileChannel open(Path path, OpenOption... options) 7 opens a file channel for the given path. By default, the channel is opened for reading. 
+  Parameters:   path   The path to the file on which to open the channel   options   Values WRITE, APPEND,TRUNCATE_EXISTING, CREATE in the StandardOpenOption enumeration   • MappedByteBuffer map(FileChannel.MapMode mode, long position, long size) maps a region of the file to memory. 
+  Parameters:   mode   One of the constants READ_ONLY, READ_WRITE, or PRIVATE in the FileChannel.MapMode class   position   The start of the mapped region   size   The size of the mapped region   java.nio.Buffer 1.4   • boolean hasRemaining() returns true if the current buffer position has not yet reached the buffer’s limit position. 
+  • int limit() returns the limit position of the buffer—that is, the first position at which no more values are available. 
+  java.nio.ByteBuffer 1.4   • byte get() gets a byte from the current position and advances the current position to the next byte. 
+  • byte get(int index) gets a byte from the specified index. 
+  • ByteBuffer put(byte b) puts a byte at the current position and advances the current position to the next byte. Returns a reference to this buffer. 
+  • ByteBuffer put(int index, byte b) puts a byte at the specified index. Returns a reference to this buffer. 
+  (Continues)   From the Library of Hristo Dimov Hristov   2.6 Memory-Mapped Files   123   java.nio.ByteBuffer 1.4 (Continued)   • ByteBuffer get(byte[] destination) • ByteBuffer get(byte[] destination, int offset, int length) fills a byte array, or a region of a byte array, with bytes from the buffer, and advances the current position by the number of bytes read. If not enough bytes remain in the buffer, then no bytes are read, and a BufferUnderflowException is thrown. Returns a reference to this buffer. 
+  Parameters:   destination   The byte array to be filled   offset   The offset of the region to be filled   length   The length of the region to be filled   • ByteBuffer put(byte[] source) • ByteBuffer put(byte[] source, int offset, int length) puts all bytes from a byte array, or the bytes from a region of a byte array, into the buffer, and advances the current position by the number of bytes read. If not enough bytes remain in the buffer, then no bytes are written, and a BufferOverflowException is thrown. Returns a reference to this buffer. 
+  Parameters:   • • • •   source   The byte array to be written   offset   The offset of the region to be written   length   The length of the region to be written   Xxx getXxx() Xxx getXxx(int index) ByteBuffer putXxx(Xxx value) ByteBuffer putXxx(int index, Xxx value)   gets or puts a binary number. Xxx is one of Int, Long, Short, Char, Float, or Double. 
+  • ByteBuffer order(ByteOrder order) • ByteOrder order() sets or gets the byte order. The value for order is one of the constants BIG_ENDIAN or LITTLE_ENDIAN of the ByteOrder class. 
+  • static ByteBuffer allocate(int capacity) constructs a buffer with the given capacity. 
+  • static ByteBuffer wrap(byte[] values) constructs a buffer that is backed by the given array. 
+  • CharBuffer asCharBuffer() constructs a character buffer that is backed by this buffer. Changes to the character buffer will show up in this buffer, but the character buffer has its own position, limit, and mark. 
+  From the Library of Hristo Dimov Hristov   124   Chapter 2   Input and Output   java.nio.CharBuffer 1.4   • char get() • CharBuffer get(char[] destination) • CharBuffer get(char[] destination, int offset, int length) gets one char value, or a range of char values, starting at the buffer’s position and moving the position past the characters that were read. The last two methods return this. 
+  • • • • •   CharBuffer put(char c) CharBuffer put(char[] source) CharBuffer put(char[] source, int offset, int length) CharBuffer put(String source) CharBuffer put(CharBuffer source)   puts one char value, or a range of char values, starting at the buffer’s position and advancing the position past the characters that were written. When reading from a CharBuffer, all remaining characters are read. All methods return this. 
+  2.6.2 The Buffer Data Structure When you use memory mapping, you make a single buffer that spans the entire file or the area of the file that you’re interested in. You can also use buffers to read and write more modest chunks of information. 
+  In this section, we briefly describe the basic operations on Buffer objects. A buffer is an array of values of the same type. The Buffer class is an abstract class with concrete subclasses ByteBuffer, CharBuffer, DoubleBuffer, FloatBuffer, IntBuffer, LongBuffer, and ShortBuffer. 
+  NOTE: The StringBuffer class is not related to these buffers. 
+  In practice, you will most commonly use ByteBuffer and CharBuffer. As shown in Figure 2.10, a buffer has • • • •   A capacity that never changes A position at which the next value is read or written A limit beyond which reading and writing is meaningless Optionally, a mark for repeating a read or write operation   From the Library of Hristo Dimov Hristov   2.6 Memory-Mapped Files   125   Figure 2.10 A buffer These values fulfill the condition 0 = mark = position = limit = capacity The principal purpose of a buffer is a “write, then read” cycle. At the outset, the buffer’s position is 0 and the limit is the capacity. Keep calling put to add values to the buffer. When you run out of data or reach the capacity, it is time to switch to reading. 
+  Call flip to set the limit to the current position and the position to 0. Now keep calling get while the remaining method (which returns limit – position) is positive. 
+  When you have read all values in the buffer, call clear to prepare the buffer for the next writing cycle. The clear method resets the position to 0 and the limit to the capacity. 
+  If you want to reread the buffer, use rewind or mark/reset (see the API notes for details). 
+  To get a buffer, call a static method such as ByteBuffer.allocate or ByteBuffer.wrap. 
+  Then, you can fill a buffer from a channel, or write its contents to a channel. For example, ByteBuffer buffer = ByteBuffer.allocate(RECORD_SIZE); 
+  channel.read(buffer); 
+  channel.position(newpos); 
+  buffer.flip(); 
+  channel.write(buffer); 
+  This can be a useful alternative to a random-access file. 
+  From the Library of Hristo Dimov Hristov   126   Chapter 2   Input and Output   java.nio.Buffer 1.4   • Buffer clear() prepares this buffer for writing by setting the position to 0 and the limit to the capacity; returns this. 
+  • Buffer flip() prepares this buffer for reading after writing, by setting the limit to the position and the position to 0; returns this. 
+  • Buffer rewind() prepares this buffer for rereading the same values by setting the position to 0 and leaving the limit unchanged; returns this. 
+  • Buffer mark() sets the mark of this buffer to the position; returns this. 
+  • Buffer reset() sets the position of this buffer to the mark, thus allowing the marked portion to be read or written again; returns this. 
+  • int remaining() returns the remaining number of readable or writable values—that is, the difference between the limit and position. 
+  • int position() • void position(int newValue) gets and sets the position of this buffer. 
+  • int capacity() returns the capacity of this buffer. 
+2.6.3 File Locking
+  When multiple simultaneously executing programs need to modify the same file, they need to communicate in some way, or the file can easily become damaged. 
+  File locks can solve this problem. A file lock controls access to a file or a range of bytes within a file. 
+  Suppose your application saves a configuration file with user preferences. If a user invokes two instances of the application, it could happen that both of them want to write the configuration file at the same time. In that situation, the first instance should lock the file. When the second instance finds the file locked, it can decide to wait until the file is unlocked or simply skip the writing process. 
+  To lock a file, call either the lock or tryLock methods of the FileChannel class. 
+  From the Library of Hristo Dimov Hristov   2.6 Memory-Mapped Files   127   FileChannel = FileChannel.open(path); 
+  FileLock lock = channel.lock(); 
+  or FileLock lock = channel.tryLock(); 
+  The first call blocks until the lock becomes available. The second call returns immediately, either with the lock or with null if the lock is not available. The file remains locked until the channel is closed or the release method is invoked on the lock. 
+  You can also lock a portion of the file with the call FileLock lock(long start, long size, boolean shared)   or FileLock tryLock(long start, long size, boolean shared)   The shared flag is false to lock the file for both reading and writing. It is true for a shared lock, which allows multiple processes to read from the file, while preventing any process from acquiring an exclusive lock. Not all operating systems support shared locks. You may get an exclusive lock even if you just asked for a shared one. Call the isShared method of the FileLock class to find out which kind you have. 
+  NOTE: If you lock the tail portion of a file and the file subsequently grows beyond the locked portion, the additional area is not locked. To lock all bytes, use a size of Long.MAX_VALUE. 
+  Be sure to unlock the lock when you are done. As always, this is best done with a try-with-resources statement: try (FileLock lock = channel.lock()) { access the locked file or segment } 
+  Keep in mind that file locking is system-dependent. Here are some points to watch for: • On some systems, file locking is merely advisory. If an application fails to get a lock, it may still write to a file that another application has currently locked. 
+  • On some systems, you cannot simultaneously lock a file and map it into memory. 
+  • File locks are held by the entire Java virtual machine. If two programs are launched by the same virtual machine (such as an applet or application   From the Library of Hristo Dimov Hristov   128   Chapter 2   Input and Output   launcher), they can’t each acquire a lock on the same file. The lock and tryLock methods will throw an OverlappingFileLockException if the virtual machine already holds another overlapping lock on the same file. 
+  • On some systems, closing a channel releases all locks on the underlying file held by the Java virtual machine. You should therefore avoid multiple channels on the same locked file. 
+  • Locking files on a networked file system is highly system-dependent and should probably be avoided. 
+  java.nio.channels.FileChannel 1.4   • FileLock lock() acquires an exclusive lock on the entire file. This method blocks until the lock is acquired. 
+  • FileLock tryLock() acquires an exclusive lock on the entire file, or returns null if the lock cannot be acquired. 
+  • FileLock lock(long position, long size, boolean shared) • FileLock tryLock(long position, long size, boolean shared) acquires a lock on a region of the file. The first method blocks until the lock is acquired, and the second method returns null if the lock cannot be acquired. 
+  Parameters:   position   The start of the region to be locked   size   The size of the region to be locked   shared   true for a shared lock, false for an exclusive lock   java.nio.channels.FileLock 1.4   • void close() 1.7 releases this lock. 

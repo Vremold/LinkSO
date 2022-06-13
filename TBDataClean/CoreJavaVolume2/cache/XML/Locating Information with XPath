@@ -1,0 +1,493 @@
+If you want to locate a specific piece of information in an XML document, it can
+be a bit of a hassle to navigate the nodes of the DOM tree. The XPath language
+makes it simple to access tree nodes. For example, suppose you have this XML
+document:
+<configuration>
+...
+<database>
+<username>dbuser</username>
+<password>secret</password>
+...
+</database>
+</configuration>
+
+You can get the database user name by evaluating the XPath expression
+/configuration/database/username
+
+That’s a lot simpler than the plain DOM approach:
+1.
+2.
+3.
+
+Get the document node.
+Enumerate its children.
+Locate the database element.
+
+4.
+5.
+6.
+
+Locate the username element among its children.
+Locate a text node among its children.
+Get its data.
+
+An XPath can describe a set of nodes in an XML document. For example, the XPath
+/gridbag/row
+
+describes the set of all row elements that are children of the gridbag root element.
+You can select a particular element with the [] operator:
+/gridbag/row[1]
+
+is the first row. (The index values start at 1.)
+Use the @ operator to get attribute values. The XPath expression
+/gridbag/row[1]/cell[1]/@anchor
+
+describes the anchor attribute of the first cell in the first row. The XPath expression
+/gridbag/row/cell/@anchor
+
+From the Library of Hristo Dimov Hristov
+
+3.4 Locating Information with XPath
+
+191
+
+describes all anchor attribute nodes of cell elements within row elements that are
+children of the gridbag root node.
+There are a number of useful XPath functions. For example,
+count(/gridbag/row)
+
+returns the number of row children of the gridbag root. There are many more elaborate XPath expressions; see the specification at www.w3c.org/TR/xpath or the nifty online
+tutorial at www.zvon.org/xxl/XPathTutorial/General/examples.html.
+Java SE 5.0 added an API to evaluate XPath expressions. First, create an XPath object
+from an XPathFactory:
+XPathFactory xpfactory = XPathFactory.newInstance();
+path = xpfactory.newXPath();
+
+Then, call the evaluate method to evaluate XPath expressions:
+String username = path.evaluate("/configuration/database/username", doc);
+
+You can use the same XPath object to evaluate multiple expressions.
+This form of the evaluate method returns a string result. It is suitable for retrieving
+text, such as the text of the username node in the preceding example. If an XPath
+expression yields a node set, make a call such as the following:
+NodeList nodes = (NodeList) path.evaluate("/gridbag/row", doc, XPathConstants.NODESET);
+
+If the result is a single node, use XPathConstants.NODE instead:
+Node node = (Node) path.evaluate("/gridbag/row[1]", doc, XPathConstants.NODE);
+
+If the result is a number, use XPathConstants.NUMBER:
+int count = ((Number) path.evaluate("count(/gridbag/row)", doc, XPathConstants.NUMBER)).intValue();
+
+You don’t have to start the search at the document root; you can start at any node
+or node list. For example, if you have a node from a previous evaluation, you
+can call
+result = path.evaluate(expression, node);
+
+The program in Listing 3.7 demonstrates evaluation of XPath expressions. Load
+an XML file and type an expression. Select the expression type and click the
+Evaluate button. The result of the expression is displayed at the bottom of
+the frame (see Figure 3.5).
+
+From the Library of Hristo Dimov Hristov
+
+192
+
+Chapter 3
+
+XML
+
+Figure 3.5 Evaluating XPath expressions
+Listing 3.7
+1
+
+xpath/XPathTester.java
+
+package xpath;
+
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
+import javax.swing.*;
+import javax.swing.border.*;
+import javax.xml.namespace.*;
+import javax.xml.parsers.*;
+import javax.xml.xpath.*;
+import org.w3c.dom.*;
+import org.xml.sax.*;
+
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+
+/**
+* This program evaluates XPath expressions.
+* @version 1.02 2016-05-10
+* @author Cay Horstmann
+*/
+public class XPathTester
+{
+public static void main(String[] args)
+{
+EventQueue.invokeLater(() ->
+{
+
+From the Library of Hristo Dimov Hristov
+
+3.4 Locating Information with XPath
+
+JFrame frame = new XPathFrame();
+frame.setTitle("XPathTest");
+frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+frame.setVisible(true);
+});
+
+27
+28
+29
+30
+31
+
+}
+
+32
+33
+
+193
+
+}
+
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+
+/**
+* This frame shows an XML document, a panel to type an XPath expression, and a text field to
+* display the result.
+*/
+class XPathFrame extends JFrame
+{
+private DocumentBuilder builder;
+private Document doc;
+private XPath path;
+private JTextField expression;
+private JTextField result;
+private JTextArea docText;
+private JComboBox<String> typeCombo;
+
+48
+49
+50
+51
+52
+53
+54
+
+public XPathFrame()
+{
+JMenu fileMenu = new JMenu("File");
+JMenuItem openItem = new JMenuItem("Open");
+openItem.addActionListener(event -> openFile());
+fileMenu.add(openItem);
+
+55
+56
+57
+58
+
+JMenuItem exitItem = new JMenuItem("Exit");
+exitItem.addActionListener(event -> System.exit(0));
+fileMenu.add(exitItem);
+
+59
+60
+61
+62
+
+JMenuBar menuBar = new JMenuBar();
+menuBar.add(fileMenu);
+setJMenuBar(menuBar);
+
+63
+64
+65
+66
+67
+68
+
+ActionListener listener = event -> evaluate();
+expression = new JTextField(20);
+expression.addActionListener(listener);
+JButton evaluateButton = new JButton("Evaluate");
+evaluateButton.addActionListener(listener);
+
+69
+70
+71
+72
+
+typeCombo = new JComboBox<String>(new String[] {
+"STRING", "NODE", "NODESET", "NUMBER", "BOOLEAN" });
+typeCombo.setSelectedItem("STRING");
+
+73
+74
+
+JPanel panel = new JPanel();
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+194
+
+Chapter 3
+
+XML
+
+Listing 3.7 (Continued)
+panel.add(expression);
+panel.add(typeCombo);
+panel.add(evaluateButton);
+docText = new JTextArea(10, 40);
+result = new JTextField();
+result.setBorder(new TitledBorder("Result"));
+
+75
+76
+77
+78
+79
+80
+81
+
+add(panel, BorderLayout.NORTH);
+add(new JScrollPane(docText), BorderLayout.CENTER);
+add(result, BorderLayout.SOUTH);
+
+82
+83
+84
+85
+
+try
+{
+DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+builder = factory.newDocumentBuilder();
+}
+catch (ParserConfigurationException e)
+{
+JOptionPane.showMessageDialog(this, e);
+}
+
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+
+XPathFactory xpfactory = XPathFactory.newInstance();
+path = xpfactory.newXPath();
+pack();
+
+96
+97
+98
+99
+
+}
+
+100
+101
+102
+103
+104
+105
+106
+107
+
+/**
+* Open a file and load the document.
+*/
+public void openFile()
+{
+JFileChooser chooser = new JFileChooser();
+chooser.setCurrentDirectory(new File("xpath"));
+
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+
+chooser.setFileFilter(
+new javax.swing.filechooser.FileNameExtensionFilter("XML files", "xml"));
+int r = chooser.showOpenDialog(this);
+if (r != JFileChooser.APPROVE_OPTION) return;
+File file = chooser.getSelectedFile();
+try
+{
+docText.setText(new String(Files.readAllBytes(file.toPath())));
+doc = builder.parse(file);
+}
+
+From the Library of Hristo Dimov Hristov
+
+3.4 Locating Information with XPath
+
+195
+
+catch (IOException e)
+{
+JOptionPane.showMessageDialog(this, e);
+}
+catch (SAXException e)
+{
+JOptionPane.showMessageDialog(this, e);
+}
+
+119
+120
+121
+122
+123
+124
+125
+126
+
+}
+
+127
+128
+
+public void evaluate()
+{
+try
+{
+String typeName = (String) typeCombo.getSelectedItem();
+QName returnType = (QName) XPathConstants.class.getField(typeName).get(null);
+Object evalResult = path.evaluate(expression.getText(), doc, returnType);
+if (typeName.equals("NODESET"))
+{
+NodeList list = (NodeList) evalResult;
+// Can't use String.join since NodeList isn't Iterable
+StringJoiner joiner = new StringJoiner(",", "{", "}");
+for (int i = 0; i < list.getLength(); i++)
+joiner.add("" + list.item(i));
+result.setText("" + joiner);
+}
+else result.setText("" + evalResult);
+}
+catch (XPathExpressionException e)
+{
+result.setText("" + e);
+}
+catch (Exception e) // reflection exception
+{
+e.printStackTrace();
+}
+}
+
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+
+}
+
+javax.xml.xpath.XPathFactory 5.0
+
+• static XPathFactory newInstance()
+returns an XPathFactory instance for creating XPath objects.
+• XPath newXpath()
+constructs an XPath object for evaluating XPath expressions.
+
+From the Library of Hristo Dimov Hristov
+
+196
+
+Chapter 3
+
+XML
+
+javax.xml.xpath.XPath 5.0
+
+• String evaluate(String expression, Object startingPoint)
+evaluates an expression, beginning at the given starting point. The starting point
+can be a node or node list. If the result is a node or node set, the returned string
+consists of the data of all text node children.
+• Object evaluate(String expression, Object startingPoint, QName resultType)
+evaluates an expression, beginning at the given starting point. The starting point
+can be a node or node list. The resultType is one of the constants STRING, NODE, NODESET,
+NUMBER, or BOOLEAN in the XPathConstants class. The return value is a String, Node, NodeList,
+Number, or Boolean.
+

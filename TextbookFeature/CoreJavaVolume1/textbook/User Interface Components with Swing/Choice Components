@@ -1,0 +1,143 @@
+  You now know how to collect text input from users, but there are many occasions where you would rather give users a finite set of choices than have them enter the data in a text component. Using a set of buttons or a list of items tells your users what choices they have. (It also saves you the trouble of error checking.) In this section, you will learn how to program checkboxes, radio buttons, lists of choices, and sliders. 
+11.4.1 Checkboxes
+  If you want to collect just a "yes" or "no" input, use a checkbox component. 
+  Checkboxes automatically come with labels that identify them. The user can check the box by clicking inside it and turn off the checkmark by clicking inside the box again. Pressing the space bar when the focus is in the checkbox also toggles the checkmark. 
+  Figure 11.12 shows a simple program with two checkboxes, one for turning the italic attribute of a font on or off, and the other for boldface. Note that the second checkbox has focus, as indicated by the rectangle around the label. 
+  Each time the user clicks one of the checkboxes, the screen is refreshed, using the new font attributes. 
+  Figure 11.12 Checkboxes Checkboxes need a label next to them to identify their purpose. Give the label text in the constructor: bold = new JCheckBox("Bold"); 
+  Use the setSelected method to turn a checkbox on or off. For example: bold.setSelected(true); 
+  The isSelected method then retrieves the current state of each checkbox. 
+  It is false if unchecked, true if checked. 
+  When the user clicks on a checkbox, this triggers an action event. As always, you attach an action listener to the checkbox. In our program, the two checkboxes share the same action listener. 
+  ActionListener listener = . . .; 
+  bold.addActionListener(listener); 
+  italic.addActionListener(listener); 
+  The listener queries the state of the bold and italic checkboxes and sets the font of the panel to plain, bold, italic, or both bold and italic. 
+  ActionListener listener = event -> { int mode = 0; 
+  if (bold.isSelected()) mode += Font.BOLD; 
+  if (italic.isSelected()) mode += Font.ITALIC; 
+  label.setFont(new Font(Font.SERIF, mode, FONTSIZE)); 
+  }; 
+  Listing 11.2 is the program listing for the checkbox example. 
+  javax.swing.JCheckBox 1.2 JCheckBox(String label) JCheckBox(String label, Icon icon) constructs a checkbox that is initially unselected. 
+  JCheckBox(String label, boolean state) constructs a checkbox with the given label and initial state. 
+  boolean isSelected() void setSelected(boolean state) gets or sets the selection state of the checkbox. 
+11.4.2 Radio Buttons
+  In the previous example, the user could check either, both, or neither of the two checkboxes. In many cases, we want the user to check only one of several boxes. When another box is checked, the previous box is automatically unchecked. Such a group of boxes is often called a radio button group because the buttons work like the station selector buttons on a radio. 
+  When you push in one button, the previously depressed button pops out. 
+  Figure 11.13 shows a typical example. We allow the user to select a font size from among the choices—Small, Medium, Large, or Extra large—but, of course, we will allow selecting only one size at a time. 
+  Figure 11.13 A radio button group Implementing radio button groups is easy in Swing. You construct one object of type ButtonGroup for every group of buttons. Then, you add objects of type JRadioButton to the button group. The button group object is responsible for turning off the previously set button when a new button is clicked. 
+  var group = new ButtonGroup(); 
+  var smallButton = new JRadioButton("Small", false); 
+  group.add(smallButton); 
+  var mediumButton = new JRadioButton("Medium", true); 
+  group.add(mediumButton); 
+  . . . 
+  The second argument of the constructor is true for the button that should be checked initially and false for all others. Note that the button group controls only the behavior of the buttons; if you want to group the buttons for layout purposes, you also need to add them to a container such as a JPanel. 
+  If you look again at Figures 11.12 and 11.13, you will note that the appearance of the radio buttons is different from that of checkboxes. 
+  Checkboxes are square and contain a checkmark when selected. Radio buttons are round and contain a dot when selected. 
+  The event notification mechanism for radio buttons is the same as for any   other buttons. When the user checks a radio button, the button generates an action event. In our example program, we define an action listener that sets the font size to a particular value: ActionListener listener = event -> label.setFont(new Font("Serif", Font.PLAIN, size)); 
+  Compare this listener setup to that of the checkbox example. Each radio button gets a different listener object. Each listener object knows exactly what it needs to do—set the font size to a particular value. With checkboxes, we used a different approach: Both checkboxes have the same action listener that calls a method looking at the current state of both checkboxes. 
+  Could we follow the same approach here? We could have a single listener that computes the size as follows: if (smallButton.isSelected()) size = 8; 
+  else if (mediumButton.isSelected()) size = 12; 
+  . . . 
+  However, we prefer to use separate action listener objects because they tie the size values more closely to the buttons. 
+  Note If you have a group of radio buttons, you know that only one of them is selected. It would be nice to be able to quickly find out which, without having to query all the buttons in the group. The ButtonGroup object controls all buttons, so it would be convenient if this object could give us a reference to the selected button. Indeed, the ButtonGroup class has a getSelection method, but that method doesn’t return the radio button that is selected. Instead, it returns a ButtonModel reference to the model attached to the button. Unfortunately, none of the ButtonModel methods are very helpful. The ButtonModel interface inherits a method getSelectedObjects from the ItemSelectable interface that, rather uselessly, returns null. The   getActionCommand method looks promising because the "action command" of a radio button is its text label. But the action command of its model is null. Only if you explicitly set the action commands of all radio buttons with the setActionCommand method do the action command values of the models also get set. Then you can retrieve the action command of the currently selected button with buttonGroup.getSelection().getActionCommand(). 
+  Listing 11.3 is the complete program for font size selection that puts a set of radio buttons to work. 
+  javax.swing.JRadioButton 1.2 JRadioButton(String label, Icon icon) constructs a radio button that is initially unselected. 
+  JRadioButton(String label, boolean state) constructs a radio button with the given label and initial state. 
+  javax.swing.ButtonGroup 1.2 void add(AbstractButton b) adds the button to the group. 
+  ButtonModel getSelection()   returns the button model of the selected button. 
+  javax.swing.ButtonModel 1.2 String getActionCommand() returns the action command for this button model. 
+  javax.swing.AbstractButton 1.2 void setActionCommand(String s) sets the action command for this button and its model. 
+11.4.3 Borders
+  If you have multiple groups of radio buttons in a window, you will want to visually indicate which buttons are grouped. Swing provides a set of useful borders for this purpose. You can apply a border to any component that extends JComponent. The most common usage is to place a border around a panel and fill that panel with other user interface elements, such as radio buttons. 
+  You can choose from quite a few borders, but you need to follow the same steps for all of them. 
+  1. Call a static method of the BorderFactory to create a border. You can choose among the following styles (see Figure 11.14):   Figure 11.14 Testing border types Lowered bevel Raised bevel Etched Line Matte Empty (just to create some blank space around the component) 2. If you like, add a title to your border by passing your border to BorderFactory.createTitledBorder. 
+  3. If you really want to go all out, combine several borders with a call to BorderFactory.createCompoundBorder. 
+  4. Add the resulting border to your component by calling the setBorder method of the JComponent class. 
+  For example, here is how you add an etched border with a title to a panel: Border etched = BorderFactory.createEtchedBorder(); 
+  Border titled = BorderFactory.createTitledBorder(etched, "A Title"); 
+  panel.setBorder(titled); 
+  Different borders have different options for setting border widths and colors; 
+  see the API notes for details. True border enthusiasts will appreciate that there is also a SoftBevelBorder class for beveled borders with softened corners and that a LineBorder can have rounded corners as well. You can construct these borders only by using one of the class constructors—there is no BorderFactory method for them. 
+  javax.swing.BorderFactory 1.2 static Border createLineBorder(Color color) static Border createLineBorder(Color color, int thickness)   creates a simple line border. 
+  static MatteBorder createMatteBorder(int top, int left, int bottom, int right, Color color) static MatteBorder createMatteBorder(int top, int left, int bottom, int right, Icon tileIcon) creates a thick border that is filled with a color or a repeating icon. 
+  static Border createEmptyBorder() static Border createEmptyBorder(int top, int left, int bottom, int right) creates an empty border. 
+  static Border createEtchedBorder() static Border createEtchedBorder(Color highlight, Color shadow) static Border createEtchedBorder(int type) static Border createEtchedBorder(int type, Color highlight, Color shadow) creates a line border with a 3D effect. The type parameter is one of EtchedBorder.RAISED, EtchedBorder.LOWERED. 
+  static Border createBevelBorder(int type) static Border createBevelBorder(int type, Color highlight, Color shadow) static Border createLoweredBevelBorder() static Border createRaisedBevelBorder() creates a border that gives the effect of a lowered or raised surface. The type parameter is one of BevelBorder.RAISED, BevelBorder.LOWERED. 
+  static TitledBorder createTitledBorder(String title)   static TitledBorder createTitledBorder(Border border) static TitledBorder createTitledBorder(Border border, String title) static TitledBorder createTitledBorder(Border border, String title, int justification, int position) static TitledBorder createTitledBorder(Border border, String title, int justification, int position, Font font) static TitledBorder createTitledBorder(Border border, String title, int justification, int position, Font font, Color color) creates a titled border with the specified properties. The justification parameter is one of the TitledBorder constants LEFT, CENTER, RIGHT, LEADING, TRAILING, or DEFAULT_JUSTIFICATION (left), and position is one of ABOVE_TOP, TOP, BELOW_TOP, ABOVE_BOTTOM, BOTTOM, BELOW_BOTTOM, or DEFAULT_POSITION (top). 
+  static CompoundBorder createCompoundBorder(Border outsideBorder, Border insideBorder) combines two borders to a new border. 
+  javax.swing.border.SoftBevelBorder 1.2 SoftBevelBorder(int type) SoftBevelBorder(int type, Color highlight, Color shadow) creates a bevel border with softened corners. The type parameter is one of SoftBevelBorder.RAISED, SoftBevelBorder.LOWERED. 
+  javax.swing.border.LineBorder 1.2 public LineBorder(Color color, int thickness, boolean roundedCorners) creates a line border with the given color and thickness. If roundedCorners is true, the border has rounded corners. 
+  javax.swing.JComponent 1.2 void setBorder(Border border) sets the border of this component. 
+11.4.4 Combo Boxes
+  If you have more than a handful of alternatives, radio buttons are not a good choice because they take up too much screen space. Instead, you can use a combo box. When the user clicks on this component, a list of choices drops down, and the user can then select one of them (see Figure 11.15). 
+  Figure 11.15 A combo box If the drop-down list box is set to be editable, you can edit the current selection as if it were a text field. For that reason, this component is called a combo box—it combines the flexibility of a text field with a set of predefined choices. The JComboBox class provides a combo box component. 
+  As of Java 7, the JComboBox class is a generic class. For example, a JComboBox<String> holds objects of type String, and a JComboBox<Integer> holds integers. 
+  Call the setEditable method to make the combo box editable. Note that editing affects only the selected item. It does not change the list of choices in any way. 
+  You can obtain the current selection, which may have been edited if the combo box is editable, by calling the getSelectedItem method. 
+  However, for an editable combo box, that item may have any type, depending on the editor that takes the user edits and turns the result into an object. (See Volume II, Chapter 6 for a discussion of editors.) If your combo box isn’t editable, you are better off calling combo.getItemAt(combo.getSelectedIndex())   which gives you the selected item with the correct type. 
+  In the example program, the user can choose a font style from a list of styles (Serif, SansSerif, Monospaced, etc.). The user can also type in another font. 
+  Add the choice items with the addItem method. In our program, addItem is called only in the constructor, but you can call it any time. 
+  var faceCombo = new JComboBox<String>(); 
+  faceCombo.addItem("Serif"); 
+  faceCombo.addItem("SansSerif"); 
+  . . . 
+  This method adds the string to the end of the list. You can add new items anywhere in the list with the insertItemAt method:   faceCombo.insertItemAt("Monospaced", 0); // add at the beginning   You can add items of any type—the combo box invokes each item’s toString method to display it. 
+  If you need to remove items at runtime, use the removeItem or removeItemAt method, depending on whether you supply the item to be removed or its position. 
+  faceCombo.removeItem("Monospaced"); 
+  faceCombo.removeItemAt(0); // remove first item   The removeAllItems method removes all items at once. 
+  Tip If you need to add a large number of items to a combo box, the addItem method will perform poorly. Instead, construct a DefaultComboBoxModel, populate it by calling addElement, and then call the setModel method of the JComboBox class. 
+  When the user selects an item from a combo box, the combo box generates an action event. To find out which item was selected, call getSource on the event parameter to get a reference to the combo box that sent the event. 
+  Then call the getSelectedItem method to retrieve the currently selected item. You will need to cast the returned value to the appropriate type, usually String. 
+  ActionListener listener = event -> label.setFont(new Font( faceCombo.getItemAt(faceCombo.getSelectedIndex()), Font.PLAIN, DEFAULT_SIZE)); 
+  javax.swing.JComboBox 1.2 boolean isEditable() void setEditable(boolean b) gets or sets the editable property of this combo box. 
+  void addItem(Object item) adds an item to the item list. 
+  void insertItemAt(Object item, int index) inserts an item into the item list at a given index. 
+  void removeItem(Object item) removes an item from the item list. 
+  void removeItemAt(int index) removes the item at an index. 
+  void removeAllItems() removes all items from the item list. 
+  Object getSelectedItem() returns the currently selected item. 
+11.4.5 Sliders
+  Combo boxes let users choose from a discrete set of values. Sliders offer a choice from a continuum of values—for example, any number between 1 and 100. 
+  The most common way of constructing a slider is as follows:   var slider = new JSlider(min, max, initialValue); 
+  If you omit the minimum, maximum, and initial values, they are initialized with 0, 100, and 50, respectively. 
+  Or if you want the slider to be vertical, use the following constructor call: var slider = new JSlider(SwingConstants.VERTICAL, min, max, initialValue); 
+  These constructors create a plain slider, such as the top slider in Figure 11.16. 
+  You will see presently how to add decorations to a slider. 
+  Figure 11.16 Sliders As the user slides the slider bar, the value of the slider moves between the minimum and the maximum values. When the value changes, a ChangeEvent is sent to all change listeners. To be notified of the change,   call the addChangeListener method and install an object that implements the functional ChangeListener interface. In the callback, retrieve the slider value: ChangeListener listener = event -> { JSlider slider = (JSlider) event.getSource(); 
+  int value = slider.getValue(); 
+  . . . 
+  }; 
+  You can embellish the slider by showing ticks. For example, in the sample program, the second slider uses the following settings: slider.setMajorTickSpacing(20); 
+  slider.setMinorTickSpacing(5); 
+  The slider is decorated with large tick marks every 20 units and small tick marks every 5 units. The units refer to slider values, not pixels. 
+  These instructions only set the units for the tick marks. To actually have the tick marks appear, call slider.setPaintTicks(true); 
+  The major and minor tick marks are independent. For example, you can set major tick marks every 20 units and minor tick marks every 7 units, but that will give you a very messy scale. 
+  You can force the slider to snap to ticks. Whenever the user has finished dragging a slider in snap mode, it is immediately moved to the closest tick. 
+  You activate this mode with the call slider.setSnapToTicks(true); 
+  Caution The "snap to ticks" behavior doesn’t work as well as you might imagine. Until the slider has actually snapped, the change listener still reports slider values that don’t correspond to ticks. And if you click next to the slider—an action that normally advances the slider a   bit in the direction of the click—a slider with "snap to ticks" does not move to the next tick. 
+  You can display tick mark labels for the major tick marks by calling slider.setPaintLabels(true); 
+  For example, with a slider ranging from 0 to 100 and major tick spacing of 20, the ticks are labeled 0, 20, 40, 60, 80, and 100. 
+  You can also supply other tick mark labels, such as strings or icons (see Figure 11.16). The process is a bit convoluted. You need to fill a hash table with keys of type Integer and values of type Component. You then call the setLabelTable method. The components are placed under the tick marks. Usually, JLabel objects are used. Here is how you can label ticks as A, B, C, D, E, and F: var labelTable = new Hashtable<Integer, Component>(); 
+  labelTable.put(0, new JLabel("A")); 
+  labelTable.put(20, new JLabel("B")); 
+  . . . 
+  labelTable.put(100, new JLabel("F")); 
+  slider.setLabelTable(labelTable); 
+  Listing 11.5 also shows a slider with icons as tick labels. 
+  Tip If your tick marks or labels don’t show, double-check that you called setPaintTicks(true) and setPaintLabels(true). 
+  The fourth slider in Figure 11.16 has no track. To suppress the "track" in which the slider moves, call slider.setPaintTrack(false); 
+  The fifth slider has its direction reversed by a call to slider.setInverted(true); 
+  The example program in Listing 11.5 shows all these visual effects with a collection of sliders. Each slider has a change event listener installed that places the current slider value into the text field at the bottom of the frame. 
+  gbc.anchor = GridBagConstraints.WEST; 
+  sliderPanel.add(panel, gbc); 
+  } 
+  javax.swing.JSlider 1.2 JSlider() JSlider(int direction) JSlider(int min, int max) JSlider(int min, int max, int initialValue) JSlider(int direction, int min, int max, int initialValue) constructs a horizontal slider with the given direction and minimum, maximum, and initial values. The direction parameter is one of SwingConstants.HORIZONTAL or SwingConstants.VERTICAL. The default is horizontal. Defaults for the minimum, initial, and maximum are 0, 50, and 100. 
+  void setPaintTicks(boolean b) displays ticks if b is true. 
+  void setMajorTickSpacing(int units) void setMinorTickSpacing(int units) sets major or minor ticks at multiples of the given slider units. 
+  void setPaintLabels(boolean b) displays tick labels if b is true. 
+  void setLabelTable(Dictionary table) sets the components to use for the tick labels. Each key/value pair in the table has the form new Integer(value)/component. 
+  void setSnapToTicks(boolean b)   if b is true, then the slider snaps to the closest tick after each adjustment. 
+  void setPaintTrack(boolean b) if b is true, a track is displayed in which the slider runs. 

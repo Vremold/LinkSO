@@ -1,0 +1,10 @@
+  You will often need to execute other operating system programs from inside Java, and to control the input and output from such programs. The Java library provides classes to perform such operations. 
+  A common task is to run a program and send the resulting output to the console. This section contains a utility to simplify this task. 
+  Two types of errors can occur with this utility: the normal errors that result in exceptions— for these we will just rethrow a runtime exception—and errors from the execution of the process itself. We want to report these errors with a separate exception: 
+  To run a program, you pass OSExecute.command( ) a command string, which is the same command that you would type to run the program on the console. This command is passed to the java.lang.ProcessBuilder constructor (which requires it as a sequence of String objects), and the resulting ProcessBuilder object is started: 
+  To capture the standard output stream from the program as it executes, you call getInputStream( ). This is because an InputStream is something we can read from. 
+  The results from the program arrive a line at a time, so they are read using readLine( ). Here the lines are simply printed, but you may also want to capture and return them from command( ). 
+  The program’s errors are sent to the standard error stream, and are captured by calling getErrorStream( ). If there are any errors, they are printed and an OSExecuteException is thrown so the calling program will handle the problem. 
+  Here’s an example that shows how to use OSExecute: 
+  This uses the javap decompiler (that comes with the JDK) to decompile the program. 
+  Exercise 22: (5) Modify OSExecute.java so that, instead of printing the standard output stream, it returns the results of executing the program as a List of Strings. Demonstrate the use of this new version of the utility. 

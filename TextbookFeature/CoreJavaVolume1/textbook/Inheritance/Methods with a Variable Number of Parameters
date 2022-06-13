@@ -1,0 +1,16 @@
+  It is possible to provide methods that can be called with a variable number of parameters. (These are sometimes called "varargs" methods.) You have already seen such a method: printf. For example, the calls System.out.printf("%d", n); 
+  and System.out.printf("%d %s", n, "widgets"); 
+  both call the same method, even though one call has two parameters and the other has three. 
+  The printf method is defined like this: public class PrintStream   { public PrintStream printf(String fmt, Object... args) { return format(fmt, } 
+  Here, the ellipsis ... is part of the Java code. It denotes that the method can receive an arbitrary number of objects (in addition to the fmt parameter). 
+  The printf method actually receives two parameters: the format string and an Object[] array that holds all other parameters. (If the caller supplies integers or other primitive type values, autoboxing turns them into objects.) It now faces the unenviable task of scanning the fmt string and matching up the ith format specifier with the value args[i]. 
+  In other words, for the implementor of printf, the Object... parameter type is exactly the same as Object[]. 
+  The compiler needs to transform each call to printf, bundling the parameters into an array and autoboxing as necessary: System.out.printf("%d %s", new Object[] { new Integer(n), "widgets" } ); 
+  You can define your own methods with variable parameters, and you can specify any type for the parameters, even a primitive type. Here is a simple example: a function that computes the maximum of a variable number of values. 
+  public static double max(double... values) { double largest = Double.NEGATIVE_INFINITY; 
+  for (double v : values) if (v > largest) largest = v; 
+  return largest; 
+  } 
+  Simply call the function like this: double m = max(3.1, 40.4, -5); 
+  The compiler passes a new double[] { 3.1, 40.4, -5 } to the max function. 
+  Note It is legal to pass an array as the last parameter of a method with variable parameters. For example: System.out.printf("%d %s", new Object[] { new Integer(1), "widgets" } ); 

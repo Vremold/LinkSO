@@ -1,0 +1,896 @@
+
+public void loadFile(String filename)
+{
+fileText.setText("");
+try
+{
+fileText.append(new String(Files.readAllBytes(Paths.get(filename))));
+}
+catch (IOException ex)
+{
+fileText.append(ex + "\n");
+}
+catch (SecurityException ex)
+{
+fileText.append("I am sorry, but I cannot do that.\n");
+fileText.append(ex + "\n");
+ex.printStackTrace();
+}
+}
+
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+
+567
+
+}
+
+9.5 Encryption
+So far, we have discussed one important cryptographic technique implemented
+in the Java security API—namely, authentication through digital signatures. A
+second important aspect of security is encryption. Even when authenticated, the
+information itself is plainly visible. The digital signature merely verifies that the
+information has not been changed. In contrast, when information is encrypted,
+it is not visible. It can only be decrypted with a matching key.
+Authentication is sufficient for code signing—there is no need to hide the code.
+However, encryption is necessary when applets or applications transfer
+confidential information, such as credit card numbers and other personal data.
+In the past, patents and export controls prevented many companies from offering
+strong encryption. Fortunately, export controls are now much less stringent, and
+the patents for important algorithms have expired. Nowadays, Java SE has
+excellent encryption support as a part of the standard library.
+
+9.5.1 Symmetric Ciphers
+The Java cryptographic extensions contain a class Cipher that is the superclass of
+all encryption algorithms. To get a cipher object, call the getInstance method:
+Cipher cipher = Cipher.getInstance(algorithName);
+
+or
+
+From the Library of Hristo Dimov Hristov
+
+568
+
+Chapter 9
+
+Security
+
+Cipher cipher = Cipher.getInstance(algorithName, providerName);
+
+The JDK comes with ciphers by the provider named "SunJCE". It is the default
+provider used if you don’t specify another provider name. You might want another provider if you need specialized algorithms that Oracle does not support.
+The algorithm name is a string such as "AES" or "DES/CBC/PKCS5Padding".
+The Data Encryption Standard (DES) is a venerable block cipher with a key length
+of 56 bits. Nowadays, the DES algorithm is considered obsolete because it can be
+cracked with brute force (see, for example, http://w2.eff.org/Privacy/Crypto/Crypto_misc/
+DESCracker). A far better alternative is its successor, the Advanced Encryption
+Standard (AES). See www.csrc.nist.gov/publications/fips/fips197/fips-197.pdf for a detailed
+description of the AES algorithm. We use AES for our example.
+Once you have a cipher object, initialize it by setting the mode and the key:
+int mode = . . .;
+Key key = . . .;
+cipher.init(mode, key);
+
+The mode is one of
+Cipher.ENCRYPT_MODE
+Cipher.DECRYPT_MODE
+Cipher.WRAP_MODE
+Cipher.UNWRAP_MODE
+
+The wrap and unwrap modes encrypt one key with another—see the next section
+for an example.
+Now you can repeatedly call the update method to encrypt blocks of data:
+int blockSize = cipher.getBlockSize();
+byte[] inBytes = new byte[blockSize];
+. . . // read inBytes
+int outputSize= cipher.getOutputSize(blockSize);
+byte[] outBytes = new byte[outputSize];
+int outLength = cipher.update(inBytes, 0, outputSize, outBytes);
+. . . // write outBytes
+
+When you are done, you must call the doFinal method once. If a final block of input
+data is available (with fewer than blockSize bytes), call
+outBytes = cipher.doFinal(inBytes, 0, inLength);
+
+If all input data have been encrypted, instead call
+outBytes = cipher.doFinal();
+
+The call to doFinal is necessary to carry out padding of the final block. Consider the
+DES cipher. It has a block size of eight bytes. Suppose the last block of the input
+
+From the Library of Hristo Dimov Hristov
+
+9.5 Encryption
+
+569
+
+data has fewer than eight bytes. Of course, we can fill the remaining bytes with
+0, to obtain one final block of eight bytes, and encrypt it. But when the blocks are
+decrypted, the result will have several trailing 0 bytes appended to it, and therefore
+will be slightly different from the original input file. To avoid this problem, we
+need a padding scheme. A commonly used padding scheme is the one described
+in the Public Key Cryptography Standard (PKCS) #5 by RSA Security, Inc.
+(https://tools.ietf.org/html/rfc2898).
+In this scheme, the last block is not padded with a pad value of zero, but with a
+pad value that equals the number of pad bytes. In other words, if L is the last
+(incomplete) block, it is padded as follows:
+L 01
+L 02 02
+L 03 03 03
+...
+L 07 07 07 07 07 07 07
+
+if length(L) = 7
+if length(L) = 6
+if length(L) = 5
+if length(L) = 1
+
+Finally, if the length of the input is actually divisible by 8, then one block
+08 08 08 08 08 08 08 08
+
+is appended to the input and encrypted. After decryption, the very last byte of
+the plaintext is a count of the padding characters to discard.
+
+9.5.2 Key Generation
+To encrypt, you need to generate a key. Each cipher has a different format for
+keys, and you need to make sure that the key generation is random. Follow these
+steps:
+1.
+2.
+3.
+
+Get a KeyGenerator for your algorithm.
+Initialize the generator with a source for randomness. If the block length of
+the cipher is variable, also specify the desired block length.
+Call the generateKey method.
+
+For example, here is how you generate an AES key:
+KeyGenerator keygen = KeyGenerator.getInstance("AES");
+SecureRandom random = new SecureRandom(); // see below
+keygen.init(random);
+Key key = keygen.generateKey();
+
+Alternatively, you can produce a key from a fixed set of raw data (perhaps derived
+from a password or the timing of keystrokes). Construct a SecretKeySpec (which
+implements the SecretKey interface) like this:
+
+From the Library of Hristo Dimov Hristov
+
+570
+
+Chapter 9
+
+Security
+
+byte[] keyData = . . .; // 16 bytes for AES
+SecretKey key = new SecretKeySpec(keyData, "AES");
+
+When generating keys, make sure you use truly random numbers. For example,
+the regular random number generator in the Random class, seeded by the current
+date and time, is not random enough. Suppose the computer clock is accurate to
+1/10 of a second. Then there are at most 864,000 seeds per day. If an attacker
+knows the day a key was issued (which can often be deduced from a message
+date or certificate expiration date), it is an easy matter to generate all possible
+seeds for that day.
+The SecureRandom class generates random numbers that are far more secure than
+those produced by the Random class. You still need to provide a seed to start the
+number sequence at a random spot. The best method for doing this is to obtain
+random input from a hardware device such as a white-noise generator. Another
+reasonable source for random input is to ask the user to type away aimlessly on
+the keyboard, with each keystroke contributing only one or two bits to the random
+seed. Once you gather such random bits in an array of bytes, pass it to the setSeed
+method:
+SecureRandom secrand = new SecureRandom();
+byte[] b = new byte[20];
+// fill with truly random bits
+secrand.setSeed(b);
+
+If you don’t seed the random number generator, it will compute its own 20-byte
+seed by launching threads, putting them to sleep, and measuring the exact time
+when they are awakened.
+
+NOTE: This algorithm is not known to be safe. In the past, algorithms that relied
+on the timing of some components of the computer, such as hard disk access
+time, were shown not to be completely random.
+
+The sample program at the end of this section puts the AES cipher to work (see
+Listing 9.18). The crypt utility method in Listing 9.19 will be reused in other
+examples. To use the program, you first need to generate a secret key. Run
+java aes.AESTest -genkey secret.key
+
+The secret key is saved in the file secret.key.
+Now you can encrypt with the command
+java aes.AESTest -encrypt plaintextFile encryptedFile secret.key
+
+Decrypt with the command
+
+From the Library of Hristo Dimov Hristov
+
+9.5 Encryption
+
+571
+
+java aes.AESTest -decrypt encryptedFile decryptedFile secret.key
+
+The program is straightforward. The -genkey option produces a new secret key and
+serializes it in the given file. That operation takes a long time because the initialization of the secure random generator is time-consuming. The -encrypt and -decrypt
+options both call into the same crypt method that calls the update and doFinal methods
+of the cipher. Note how the update method is called as long as the input blocks
+have the full length, and the doFinal method is either called with a partial input
+block (which is then padded) or with no additional data (to generate one
+pad block).
+
+Listing 9.18
+1
+
+aes/AESTest.java
+
+package aes;
+
+2
+3
+4
+5
+
+import java.io.*;
+import java.security.*;
+import javax.crypto.*;
+
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+
+/**
+* This program tests the AES cipher. Usage:<br>
+* java aes.AESTest -genkey keyfile<br>
+* java aes.AESTest -encrypt plaintext encrypted keyfile<br>
+* java aes.AESTest -decrypt encrypted decrypted keyfile<br>
+* @author Cay Horstmann
+* @version 1.01 2012-06-10
+*/
+public class AESTest
+{
+public static void main(String[] args)
+throws IOException, GeneralSecurityException, ClassNotFoundException
+{
+if (args[0].equals("-genkey"))
+{
+KeyGenerator keygen = KeyGenerator.getInstance("AES");
+SecureRandom random = new SecureRandom();
+keygen.init(random);
+SecretKey key = keygen.generateKey();
+try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(args[1])))
+{
+out.writeObject(key);
+}
+}
+else
+{
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+572
+
+Chapter 9
+
+Security
+
+Listing 9.18 (Continued)
+int mode;
+if (args[0].equals("-encrypt")) mode = Cipher.ENCRYPT_MODE;
+else mode = Cipher.DECRYPT_MODE;
+
+33
+34
+35
+36
+
+try (ObjectInputStream keyIn = new ObjectInputStream(new FileInputStream(args[3]));
+InputStream in = new FileInputStream(args[1]);
+OutputStream out = new FileOutputStream(args[2]))
+{
+Key key = (Key) keyIn.readObject();
+Cipher cipher = Cipher.getInstance("AES");
+cipher.init(mode, key);
+Util.crypt(in, out, cipher);
+}
+
+37
+38
+39
+40
+41
+42
+43
+44
+45
+
+}
+
+46
+
+}
+
+47
+48
+
+}
+
+Listing 9.19
+1
+
+aes/Util.java
+
+package aes;
+
+2
+3
+4
+5
+
+import java.io.*;
+import java.security.*;
+import javax.crypto.*;
+
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+
+public class Util
+{
+/**
+* Uses a cipher to transform the bytes in an input stream and sends the transformed bytes to
+* an output stream.
+* @param in the input stream
+* @param out the output stream
+* @param cipher the cipher that transforms the bytes
+*/
+public static void crypt(InputStream in, OutputStream out, Cipher cipher)
+throws IOException, GeneralSecurityException
+{
+int blockSize = cipher.getBlockSize();
+int outputSize = cipher.getOutputSize(blockSize);
+byte[] inBytes = new byte[blockSize];
+byte[] outBytes = new byte[outputSize];
+
+23
+24
+25
+26
+27
+
+int inLength = 0;
+boolean more = true;
+while (more)
+{
+
+From the Library of Hristo Dimov Hristov
+
+9.5 Encryption
+
+inLength = in.read(inBytes);
+if (inLength == blockSize)
+{
+int outLength = cipher.update(inBytes, 0, blockSize, outBytes);
+out.write(outBytes, 0, outLength);
+}
+else more = false;
+
+28
+29
+30
+31
+32
+33
+34
+
+}
+if (inLength > 0) outBytes = cipher.doFinal(inBytes, 0, inLength);
+else outBytes = cipher.doFinal();
+out.write(outBytes);
+
+35
+36
+37
+38
+
+}
+
+39
+40
+
+573
+
+}
+
+javax.crypto.Cipher 1.4
+
+• static Cipher getInstance(String algorithmName)
+• static Cipher getInstance(String algorithmName, String providerName)
+returns a Cipher object that implements the specified algorithm. Throws a
+NoSuchAlgorithmException if the algorithm is not provided.
+• int getBlockSize()
+returns the size (in bytes) of a cipher block, or 0 if the cipher is not a block cipher.
+• int getOutputSize(int inputLength)
+returns the size of an output buffer that is needed if the next input has the given
+number of bytes. This method takes into account any buffered bytes in the cipher
+object.
+• void init(int mode, Key key)
+initializes the cipher algorithm object. The mode is one of ENCRYPT_MODE, DECRYPT_MODE,
+WRAP_MODE, or UNWRAP_MODE.
+• byte[] update(byte[] in)
+• byte[] update(byte[] in, int offset, int length)
+• int update(byte[] in, int offset, int length, byte[] out)
+transforms one block of input data. The first two methods return the output. The
+third method returns the number of bytes placed into out.
+•
+•
+•
+•
+
+byte[] doFinal()
+byte[] doFinal(byte[] in)
+byte[] doFinal(byte[] in, int offset, int length)
+int doFinal(byte[] in, int offset, int length, byte[] out)
+
+transforms the last block of input data and flushes the buffer of this algorithm object.
+The first three methods return the output. The fourth method returns the number
+of bytes placed into out.
+
+From the Library of Hristo Dimov Hristov
+
+574
+
+Chapter 9
+
+Security
+
+javax.crypto.KeyGenerator 1.4
+
+• static KeyGenerator getInstance(String algorithmName)
+returns a KeyGenerator object that implements the specified algorithm. Throws a
+NoSuchAlgorithmException if the algorithm is not provided.
+• void init(SecureRandom random)
+• void init(int keySize, SecureRandom random)
+initializes the key generator.
+• SecretKey generateKey()
+generates a new key.
+
+javax.crypto.spec.SecretKeySpec 1.4
+
+• SecretKeySpec(byte[] key, String algorithmName)
+constructs a key specification.
+
+9.5.3 Cipher Streams
+The JCE library provides a convenient set of stream classes that automatically
+encrypt or decrypt stream data. For example, here is how you can encrypt data
+to a file:
+Cipher cipher = . . .;
+cipher.init(Cipher.ENCRYPT_MODE, key);
+CipherOutputStream out = new CipherOutputStream(new FileOutputStream(outputFileName), cipher);
+byte[] bytes = new byte[BLOCKSIZE];
+int inLength = getData(bytes); // get data from data source
+while (inLength != -1)
+{
+out.write(bytes, 0, inLength);
+inLength = getData(bytes); // get more data from data source
+}
+out.flush();
+
+Similarly, you can use a CipherInputStream to read and decrypt data from a file:
+Cipher cipher = . . .;
+cipher.init(Cipher.DECRYPT_MODE, key);
+CipherInputStream in = new CipherInputStream(new FileInputStream(inputFileName), cipher);
+byte[] bytes = new byte[BLOCKSIZE];
+int inLength = in.read(bytes);
+while (inLength != -1)
+{
+
+From the Library of Hristo Dimov Hristov
+
+9.5 Encryption
+
+575
+
+putData(bytes, inLength); // put data to destination
+inLength = in.read(bytes);
+}
+
+The cipher stream classes transparently handle the calls to update and doFinal, which
+is clearly a convenience.
+javax.crypto.CipherInputStream 1.4
+
+• CipherInputStream(InputStream in, Cipher cipher)
+constructs an input stream that reads data from in and decrypts or encrypts them
+by using the given cipher.
+• int read()
+• int read(byte[] b, int off, int len)
+reads data from the input stream, which is automatically decrypted or encrypted.
+
+javax.crypto.CipherOutputStream 1.4
+
+• CipherOutputStream(OutputStream out, Cipher cipher)
+constructs an output stream that writes data to out and encrypts or decrypts them
+using the given cipher.
+• void write(int ch)
+• void write(byte[] b, int off, int len)
+writes data to the output stream, which is automatically encrypted or decrypted.
+• void flush()
+flushes the cipher buffer and carries out padding if necessary.
+
+9.5.4 Public Key Ciphers
+The AES cipher that you have seen in the preceding section is a symmetric
+cipher. The same key is used for both encryption and decryption. The Achilles
+heel of symmetric ciphers is key distribution. If Alice sends Bob an encrypted
+method, Bob needs the same key that Alice used. If Alice changes the key, she
+needs to send Bob both the message and, through a secure channel, the new key.
+But perhaps she has no secure channel to Bob—which is why she encrypts her
+messages to him in the first place.
+Public key cryptography solves that problem. In a public key cipher, Bob has a
+key pair consisting of a public key and a matching private key. Bob can publish
+
+From the Library of Hristo Dimov Hristov
+
+576
+
+Chapter 9
+
+Security
+
+the public key anywhere, but he must closely guard the private key. Alice simply
+uses the public key to encrypt her messages to Bob.
+Actually, it’s not quite that simple. All known public key algorithms are much
+slower than symmetric key algorithms such as DES or AES. It would not be
+practical to use a public key algorithm to encrypt large amounts of information.
+However, that problem can easily be overcome by combining a public key cipher
+with a fast symmetric cipher, like this:
+1.
+2.
+3.
+4.
+5.
+
+Alice generates a random symmetric encryption key. She uses it to encrypt
+her plaintext.
+Alice encrypts the symmetric key with Bob’s public key.
+Alice sends Bob both the encrypted symmetric key and the encrypted
+plaintext.
+Bob uses his private key to decrypt the symmetric key.
+Bob uses the decrypted symmetric key to decrypt the message.
+
+Nobody but Bob can decrypt the symmetric key because only Bob has the private
+key for decryption. Thus, the expensive public key encryption is only applied to
+a small amount of key data.
+The most commonly used public key algorithm is the RSA algorithm invented
+by Rivest, Shamir, and Adleman. Until October 2000, the algorithm was
+protected by a patent assigned to RSA Security, Inc. Licenses were not
+cheap—typically a 3% royalty, with a minimum payment of $50,000 per year.
+Now the algorithm is in the public domain.
+To use the RSA algorithm, you need a public/private key pair. Use a KeyPairGenerator
+like this:
+KeyPairGenerator pairgen = KeyPairGenerator.getInstance("RSA");
+SecureRandom random = new SecureRandom();
+pairgen.initialize(KEYSIZE, random);
+KeyPair keyPair = pairgen.generateKeyPair();
+Key publicKey = keyPair.getPublic();
+Key privateKey = keyPair.getPrivate();
+
+The program in Listing 9.20 has three options. The -genkey option produces a key
+pair. The -encrypt option generates an AES key and wraps it with the public key.
+Key key = . . .; // an AES key
+Key publicKey = . . .; // a public RSA key
+Cipher cipher = Cipher.getInstance("RSA");
+cipher.init(Cipher.WRAP_MODE, publicKey);
+byte[] wrappedKey = cipher.wrap(key);
+
+From the Library of Hristo Dimov Hristov
+
+9.5 Encryption
+
+577
+
+It then produces a file that contains
+• The length of the wrapped key
+• The wrapped key bytes
+• The plaintext encrypted with the AES key
+The -decrypt option decrypts such a file. To try the program, first generate the
+RSA keys:
+java rsa.RSATest -genkey public.key private.key
+
+Then encrypt a file:
+java rsa.RSATest -encrypt plaintextFile encryptedFile public.key
+
+Finally, decrypt it and verify that the decrypted file matches the plaintext:
+java rsa.RSATest -decrypt encryptedFile decryptedFile private.key
+
+Listing 9.20
+1
+
+rsa/RSATest.java
+
+package rsa;
+
+2
+3
+4
+5
+
+import java.io.*;
+import java.security.*;
+import javax.crypto.*;
+
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+
+/**
+* This program tests the RSA cipher. Usage:<br>
+* java rsa.RSATest -genkey public private<br>
+* java rsa.RSATest -encrypt plaintext encrypted public<br>
+* java rsa.RSATest -decrypt encrypted decrypted private<br>
+* @author Cay Horstmann
+* @version 1.01 2012-06-10
+*/
+public class RSATest
+{
+private static final int KEYSIZE = 512;
+
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+
+public static void main(String[] args)
+throws IOException, GeneralSecurityException, ClassNotFoundException
+{
+if (args[0].equals("-genkey"))
+{
+KeyPairGenerator pairgen = KeyPairGenerator.getInstance("RSA");
+SecureRandom random = new SecureRandom();
+pairgen.initialize(KEYSIZE, random);
+KeyPair keyPair = pairgen.generateKeyPair();
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+578
+
+Chapter 9
+
+Security
+
+Listing 9.20 (Continued)
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+
+try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(args[1])))
+{
+out.writeObject(keyPair.getPublic());
+}
+try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(args[2])))
+{
+out.writeObject(keyPair.getPrivate());
+}
+}
+else if (args[0].equals("-encrypt"))
+{
+KeyGenerator keygen = KeyGenerator.getInstance("AES");
+SecureRandom random = new SecureRandom();
+keygen.init(random);
+SecretKey key = keygen.generateKey();
+
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+
+// wrap with RSA public key
+try (ObjectInputStream keyIn = new ObjectInputStream(new FileInputStream(args[3]));
+DataOutputStream out = new DataOutputStream(new FileOutputStream(args[2]));
+InputStream in = new FileInputStream(args[1]) )
+{
+Key publicKey = (Key) keyIn.readObject();
+Cipher cipher = Cipher.getInstance("RSA");
+cipher.init(Cipher.WRAP_MODE, publicKey);
+byte[] wrappedKey = cipher.wrap(key);
+out.writeInt(wrappedKey.length);
+out.write(wrappedKey);
+
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+
+cipher = Cipher.getInstance("AES");
+cipher.init(Cipher.ENCRYPT_MODE, key);
+Util.crypt(in, out, cipher);
+}
+}
+else
+{
+try (DataInputStream in = new DataInputStream(new FileInputStream(args[1]));
+ObjectInputStream keyIn = new ObjectInputStream(new FileInputStream(args[3]));
+OutputStream out = new FileOutputStream(args[2]))
+{
+int length = in.readInt();
+byte[] wrappedKey = new byte[length];
+in.read(wrappedKey, 0, length);
+
+70
+71
+72
+
+// unwrap with RSA private key
+Key privateKey = (Key) keyIn.readObject();
+
+73
+74
+
+Cipher cipher = Cipher.getInstance("RSA");
+
+From the Library of Hristo Dimov Hristov
+
+9.5 Encryption
+
+579
+
+cipher.init(Cipher.UNWRAP_MODE, privateKey);
+Key key = cipher.unwrap(wrappedKey, "AES", Cipher.SECRET_KEY);
+
+75
+76
+77
+
+cipher = Cipher.getInstance("AES");
+cipher.init(Cipher.DECRYPT_MODE, key);
+
+78
+79
+80
+
+Util.crypt(in, out, cipher);
+
+81
+
+}
+
+82
+
+}
+
+83
+
+}
+
+84
+85
+
+}
+
+You have now seen how the Java security model allows controlled execution of
+code, which is a unique and increasingly important aspect of the Java platform.
+You have also seen the services for authentication and encryption that the Java
+library provides. We did not cover a number of advanced and specialized issues,
+among them:
+• The GSS-API for “generic security services” that provides support for the
+Kerberos protocol (and, in principle, other protocols for secure message
+exchange). There is a tutorial at http://docs.oracle.com/javase/7/docs/technotes/guides/
+security/jgss/tutorials.
+• Support for the Simple Authentication and Security Layer (SASL), used by
+the Lightweight Directory Access Protocol (LDAP) and Internet Message
+Access Protocol (IMAP). If you need to implement SASL in your application,
+look at http://docs.oracle.com/javase/7/docs/technotes/guides/security/sasl/sasl-refguide.html.
+• Support for SSL. Using SSL over HTTP is transparent to application programmers; simply use URLs that start with https. If you want to add SSL to your
+application, see the Java Secure Socket Extension (JSSE) reference at
+http://java.sun.com/javase/6/docs/technotes/guides/security/jsse/JSSERefGuide.html.
+In the next chapter, we will delve into advanced Swing programming.
+
+From the Library of Hristo Dimov Hristov
+
+This page intentionally left blank
+
+From the Library of Hristo Dimov Hristov
+

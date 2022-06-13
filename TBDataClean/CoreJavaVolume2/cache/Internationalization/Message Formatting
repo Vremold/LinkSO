@@ -1,0 +1,216 @@
+The Java library has a MessageFormat class that formats text with variable parts. It is
+similar to formatting with the printf method, but it supports locales and formats
+for numbers and dates. We will examine that mechanism in the following sections.
+
+7.6.1 Formatting Numbers and Dates
+Here is a typical message format string:
+"On {2}, a {0} destroyed {1} houses and caused {3} of damage."
+
+The numbers in braces are placeholders for actual names and values. The static
+method MessageFormat.format lets you substitute values for the variables. It is a
+“varargs” method, so you can simply supply the parameters as follows:
+String msg = MessageFormat.format("On {2}, a {0} destroyed {1} houses and caused {3} of damage.",
+"hurricane", 99, new GregorianCalendar(1999, 0, 1).getTime(), 10.0E8);
+
+In this example, the placeholder {0} is replaced with "hurricane", {1} is replaced with
+99, and so on.
+The result of our example is the string
+On 1/1/99 12:00 AM, a hurricane destroyed 99 houses and caused 100,000,000 of damage.
+
+That is a start, but it is not perfect. We don’t want to display the time “12:00 AM,”
+and we want the damage amount printed as a currency value. The way we do
+this is by supplying an optional format for some of the placeholders:
+"On {2,date,long}, a {0} destroyed {1} houses and caused {3,number,currency} of damage."
+
+This example code prints:
+
+From the Library of Hristo Dimov Hristov
+
+7.6 Message Formatting
+
+401
+
+On January 1, 1999, a hurricane destroyed 99 houses and caused $100,000,000 of damage.
+
+In general, the placeholder index can be followed by a type and a style. Separate
+the index, type, and style by commas. The type can be any of
+number
+time
+date
+choice
+
+If the type is number, then the style can be
+integer
+currency
+percent
+
+or it can be a number format pattern such as $,##0. (See the documentation of the
+DecimalFormat class for more information about the possible formats.)
+If the type is either time or date, then the style can be
+short
+medium
+long
+full
+
+or a date format pattern such as yyyy-MM-dd. (See the documentation of the
+SimpleDateFormat class for more information about the possible formats.)
+CAUTION: The static MessageFormat.format method uses the current locale to format
+the values. To format with an arbitrary locale, you have to work a bit harder because there is no “varargs” method that you can use. You need to place the
+values to be formatted into an Object[] array, like this:
+MessageFormat mf = new MessageFormat(pattern, loc);
+String msg = mf.format(new Object[] { values });
+
+java.text.MessageFormat 1.1
+
+• MessageFormat(String pattern)
+• MessageFormat(String pattern, Locale loc)
+constructs a message format object with the specified pattern and locale.
+• void applyPattern(String pattern)
+sets the pattern of a message format object to the specified pattern.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+402
+
+Chapter 7
+
+Internationalization
+
+java.text.MessageFormat 1.1 (Continued)
+
+• void setLocale(Locale loc)
+• Locale getLocale()
+sets or gets the locale to be used for the placeholders in the message. The locale is
+only used for subsequent patterns that you set by calling the applyPattern method.
+• static String format(String pattern, Object... args)
+formats the pattern string by using args[i] as input for placeholder {i}.
+• StringBuffer format(Object args, StringBuffer result, FieldPosition pos)
+formats the pattern of this MessageFormat. The args parameter must be an array of objects. The formatted string is appended to result, and result is returned. If pos equals
+new FieldPosition(MessageFormat.Field.ARGUMENT), its beginIndex and endIndex properties are
+set to the location of the text that replaces the {1} placeholder. Supply null if you
+are not interested in position information.
+
+java.text.Format 1.1
+
+• String format(Object obj)
+formats the given object, according to the rules of this formatter. This method calls
+format(obj, new StringBuffer(), new FieldPosition(1)).toString().
+
+7.6.2 Choice Formats
+Let’s look closer at the pattern of the preceding section:
+"On {2}, a {0} destroyed {1} houses and caused {3} of damage."
+
+If we replace the disaster placeholder {0} with "earthquake", the sentence is not
+grammatically correct in English:
+On January 1, 1999, a earthquake destroyed . . .
+
+What we really want to do is integrate the article “a” into the placeholder:
+"On {2}, {0} destroyed {1} houses and caused {3} of damage."
+
+The {0} would then be replaced with "a hurricane" or "an earthquake". That is especially
+appropriate if this message needs to be translated into a language where the
+gender of a word affects the article. For example, in German, the pattern would be
+"{0} zerstörte am {2} {1} Häuser und richtete einen Schaden von {3} an."
+
+From the Library of Hristo Dimov Hristov
+
+7.6 Message Formatting
+
+403
+
+The placeholder would then be replaced with the grammatically correct
+combination of article and noun, such as "Ein Wirbelsturm" or "Eine Naturkatastrophe".
+Now let us turn to the {1} parameter. If the disaster wasn’t all that catastrophic,
+{1} might be replaced with the number 1, and the message would read:
+On January 1, 1999, a mudslide destroyed 1 houses and . . .
+
+Ideally, we would like the message to vary according to the placeholder value,
+so it would read
+no houses
+one house
+2 houses
+...
+
+depending on the placeholder value. The choice formatting option was designed
+for this purpose.
+A choice format is a sequence of pairs, each containing
+• A lower limit
+• A format string
+The lower limit and format string are separated by a # character, and the pairs
+are separated by | characters.
+For example,
+{1,choice,0#no houses|1#one house|2#{1} houses}
+
+Table 7.8 shows the effect of this format string for various values of {1}.
+
+Table 7.8 String Formatted by Choice Format
+{1}
+
+Result
+
+{1}
+
+Result
+
+0
+
+"no houses"
+
+3
+
+"3 houses"
+
+1
+
+"one house"
+
+-1
+
+"no houses"
+
+Why do we use {1} twice in the format string? When the message format applies
+the choice format to the {1} placeholder and the value is 2, the choice format returns
+"{1} houses". That string is then formatted again by the message format, and the
+answer is spliced into the result.
+
+From the Library of Hristo Dimov Hristov
+
+404
+
+Chapter 7
+
+Internationalization
+
+NOTE: This example shows that the designer of the choice format was a bit
+muddleheaded. If you have three format strings, you need two limits to separate
+them. In general, you need one fewer limit than you have format strings. As you
+saw in Table 7.8, the MessageFormat class ignores the first limit.
+The syntax would have been a lot clearer if the designer of this class realized
+that the limits belong between the choices, such as
+no houses|1|one house|2|{1} houses // not the actual format
+
+You can use the < symbol to denote that a choice should be selected if the lower
+bound is strictly less than the value.
+You can also use the ≤ symbol (expressed as the Unicode character code \u2264)
+as a synonym for #. If you like, you can even specify a lower bound of –∞ as -\u221E
+for the first value.
+For example,
+-∞<no houses|0<one house|2≤{1} houses
+
+or, using Unicode escapes,
+-\u221E<no houses|0<one house|2\u2264{1} houses
+
+Let’s finish our natural disaster scenario. If we put the choice string inside the
+original message string, we get the following format instruction:
+String pattern = "On {2,date,long}, {0} destroyed {1,choice,0#no houses|1#one house|2#{1}
+houses}" + "and caused {3,number,currency} of damage.";
+
+Or, in German,
+String pattern = "{0} zerstörte am {2,date,long} {1,choice,0#kein Haus|1#ein Haus|2#{1} Häuser}"
++ "und richtete einen Schaden von {3,number,currency} an.";
+
+Note that the ordering of the words is different in German, but the array of objects
+you pass to the format method is the same. The order of the placeholders in the
+format string takes care of the changes in the word ordering.
+

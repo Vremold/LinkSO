@@ -1,0 +1,61 @@
+  Reflection lets you analyze arbitrary objects at runtime. If the objects are instances of generic classes, you don’t get much information about the generic type parameters because they have been erased. In the following sections, you will learn what you can nevertheless find out about generic classes with reflection. 
+8.9.1 The Generic Class Class
+  The Class class is now generic. For example, String.class is actually an object (in fact, the sole object) of the class Class<String>. 
+  The type parameter is useful because it allows the methods of Class<T> to be more specific about their return types. The following methods of Class<T> take advantage of the type parameter: T newInstance() T cast(Object obj) T[] getEnumConstants() Class<? super T> getSuperclass() Constructor<T> getConstructor(Class... parameterTypes) Constructor<T> getDeclaredConstructor(Class... parameterTypes)   The newInstance method returns an instance of the class, obtained from the no-argument constructor. Its return type can now be declared to be T, the same type as the class that is being described by Class<T>. That saves a cast. 
+  The cast method returns the given object, now declared as type T if its type is indeed a subtype of T. Otherwise, it throws a BadCastException. 
+  The getEnumConstants method returns null if this class is not an enum class or an array of the enumeration values which are known to be of type T. 
+  Finally, the getConstructor and getDeclaredConstructor methods return a Constructor<T> object. The Constructor class has also been made generic so that its newInstance method has the correct return type. 
+  java.lang.Class<T> 1.0 T newInstance() returns a new instance constructed with the no-argument constructor. 
+  T cast(Object obj) returns obj if it is null or can be converted to the type T, or throws a BadCastException otherwise. 
+  T[] getEnumConstants() 5 returns an array of all values if T is an enumerated type, null otherwise. 
+  Class<? super T> getSuperclass() returns the superclass of this class, or null if T is not a class or the class Object. 
+  Constructor<T> getConstructor(Class... 
+  parameterTypes) 1.1 Constructor<T> getDeclaredConstructor(Class... 
+  parameterTypes) 1.1 gets the public constructor, or the constructor with the given parameter types. 
+  java.lang.reflect.Constructor<T> 1.1 T newInstance(Object... parameters) returns a new instance constructed with the given parameters. 
+8.9.2 Using Class<T> Parameters for Type Matching
+  It is sometimes useful to match the type variable of a Class<T> parameter in a generic method. Here is the canonical example: public static <T> Pair<T> makePair(Class<T> c) throws InstantiationException, IllegalAccessException { return new Pair<>(c.newInstance(), c.newInstance()); 
+  } 
+  If you call makePair(Employee.class)   then Employee.class is an object of type Class<Employee>. The type parameter T of the makePair method matches Employee, and the compiler can infer that the method returns a Pair<Employee>. 
+8.9.3 Generic Type Information in the Virtual Machine
+  One of the notable features of Java generics is the erasure of generic types in the virtual machine. Perhaps surprisingly, the erased classes still retain some faint memory of their generic origin. For example, the raw Pair class knows that it originated from the generic class Pair<T>, even though an object of type Pair can’t tell whether it was constructed as a Pair<String> or Pair<Employee>. 
+  Similarly, consider a method public static Comparable min(Comparable[] a)   that is the erasure of a generic method   public static <T extends Comparable<? super T>> T min(T[] a)   You can use the reflection API to determine that The generic method has a type parameter called T; 
+  The type parameter has a subtype bound that is itself a generic type; 
+  The bounding type has a wildcard parameter; 
+  The wildcard parameter has a supertype bound; and The generic method has a generic array parameter. 
+  In other words, you can reconstruct everything about generic classes and methods that their implementors declared. However, you won’t know how the type parameters were resolved for specific objects or method calls. 
+  In order to express generic type declarations, use the interface Type in the java.lang.reflect package. The interface has the following subtypes: The Class class, describing concrete types The TypeVariable interface, describing type variables (such as T extends Comparable<? super T>) The WildcardType interface, describing wildcards (such as ? 
+  super T) The ParameterizedType interface, describing generic class or interface types (such as Comparable<? super T>) The GenericArrayType interface, describing generic arrays (such as T[]) Figure 8.5 shows the inheritance hierarchy. Note that the last four subtypes are interfaces—the virtual machine instantiates suitable classes that implement these interfaces. 
+  Figure 8.5 The Type interface and its descendants Listing 8.4 uses the generic reflection API to print out what it discovers about a given class. If you run it with the Pair class, you get this report: class Pair<T> extends java.lang.Object public T getFirst() public T getSecond() public void setFirst(T) public void setSecond(T)   If you run it with ArrayAlg in the PairTest2 directory, the report displays the following method: public static <T extends java.lang.Comparable> Pair<T> minmax(T[]) 8.9.4 Type Literals
+  Sometimes, you want to drive program behavior by the type of a value. For example, in a persistence mechanism, you may want the user to specify a way of saving an object of a particular class. This is typically implemented by associating the Class object with an action. 
+  However, with generic classes, erasure poses a problem. How can you have different actions for, say, ArrayList<Integer> and ArrayList<String> when both erase to the same raw ArrayList type? 
+  There is a trick that can offer relief in some situations. You can capture an instance of the Type interface that you encountered in the preceding section. 
+  Construct an anonymous subclass like this: var type = new TypeLiteral<ArrayList<Integer>>(){} // note the {} 
+  The TypeLiteral constructor captures the generic supertype: class TypeLiteral { public TypeLiteral()   { Type parentType = getClass().getGenericSuperclass(); 
+  if (parentType instanceof ParameterizedType) { type = ((ParameterizedType) parentType).getActualTypeArguments() [0]; 
+  } 
+  else throw new UnsupportedOperationException( "Construct as new TypeLiteral<. . .>(){}"); 
+  } 
+  . . . 
+  } 
+  If we have a generic type available at runtime, we can match it against the TypeLiteral. We can’t get a generic type from an object—it is erased. 
+  But, as you have seen in the preceding section, generic types of fields and method parameters survive in the virtual machine. 
+  Injection frameworks such as CDI and Guice use type literals to control injection of generic types. The example program in the book’s companion code shows a simpler example. Given an object, we enumerate its fields, whose generic types are available, and look up associated formatting actions. 
+  We format an ArrayList<Integer> by separating the values with spaces, an ArrayList<Character> by joining the characters to a string. 
+  Any other array lists are formatted by ArrayList.toString. 
+  java.lang.Class<T> 1.0   TypeVariable[] getTypeParameters() 5 gets the generic type variables if this type was declared as a generic type, or an array of length 0 otherwise. 
+  Type getGenericSuperclass() 5 gets the generic type of the superclass that was declared for this type, or null if this type is Object or not a class type. 
+  Type[] getGenericInterfaces() 5 gets the generic types of the interfaces that were declared for this type, in declaration order, or an array of length 0 if this type doesn’t implement interfaces. 
+  java.lang.reflect.Method 1.1 TypeVariable[] getTypeParameters() 5 gets the generic type variables if this method was declared as a generic method, or an array of length 0 otherwise. 
+  Type getGenericReturnType() 5 gets the generic return type with which this method was declared. 
+  Type[] getGenericParameterTypes() 5 gets the generic parameter types with which this method was declared. 
+  If the method has no parameters, an array of length 0 is returned. 
+  java.lang.reflect.TypeVariable 5 String getName() gets the name of this type variable. 
+  Type[] getBounds() gets the subclass bounds of this type variable, or an array of length 0 if   the variable is unbounded. 
+  java.lang.reflect.WildcardType 5 Type[] getUpperBounds() gets the subclass (extends) bounds of this type variable, or an array of length 0 if the variable has no subclass bounds. 
+  Type[] getLowerBounds() gets the superclass (super) bounds of this type variable, or an array of length 0 if the variable has no superclass bounds. 
+  java.lang.reflect.ParameterizedType 5 Type getRawType() gets the raw type of this parameterized type. 
+  Type[] getActualTypeArguments() gets the type parameters with which this parameterized type was declared. 
+  Type getOwnerType() gets the outer class type if this is an inner type, or null if this is a toplevel type. 
+  java.lang.reflect.GenericArrayType 5 Type getGenericComponentType() gets the generic component type with which this array type was declared. 
+  You now know how to use generic classes and how to program your own generic classes and methods if the need arises. Just as importantly, you know   how to decipher the generic type declarations that you may encounter in the API documentation and in error messages. For an exhaustive discussion of everything there is to know about Java generics, turn to Angelika Langer’s excellent list of frequently (and not so frequently) asked questions at http://angelikalanger.com/GenericsFAQ/JavaGenericsFAQ.html In the next chapter, you will see how the Java collections framework puts generics to work. 

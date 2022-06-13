@@ -1,0 +1,52 @@
+  Assertions are a commonly used idiom of defensive programming. In the following sections, you will learn how to use them effectively. 
+7.4.1 The Assertion Concept
+  Suppose you are convinced that a particular property is fulfilled, and you rely on that property in your code. For example, you may be computing double y = Math.sqrt(x); 
+  You are certain that x is not negative. Perhaps it is the result of another computation that can’t have a negative result, or it is a parameter of a method that requires its callers to supply only positive inputs. Still, you want to double-check rather than allow confusing "not a number" floating-point values creep into your computation. You could, of course, throw an exception: if (x < 0) throw new IllegalArgumentException("x < 0"); 
+  But this code stays in the program, even after testing is complete. If you have lots of checks of this kind, the program may run quite a bit slower than it should. 
+  The assertion mechanism allows you to put in checks during testing and to have them automatically removed in the production code. 
+  The Java language has a keyword assert. There are two forms: assert condition; 
+  and assert condition : expression; 
+  Both statements evaluate the condition and throw an AssertionError if it is false. In the second statement, the expression is passed to the constructor of the AssertionError object and turned into a message string. 
+  Note The sole purpose of the expression part is to produce a message string. The AssertionError object does not store the actual expression value, so you can’t query it later. As the JDK documentation states, doing so "would encourage programmers to attempt to recover from assertion failure, which defeats the purpose of the facility." 
+  To assert that x is non-negative, you can simply use the statement assert x >= 0; 
+  Or you can pass the actual value of x into the AssertionError object, so that it gets displayed later. 
+  assert x >= 0 : x; 
+7.4.2 Assertion Enabling and Disabling
+  By default, assertions are disabled. Enable them by running the program with the -enableassertions or -ea option: java -enableassertions MyApp   Note that you do not have to recompile your program to enable or disable   assertions. Enabling or disabling assertions is a function of the class loader. 
+  When assertions are disabled, the class loader strips out the assertion code so that it won’t slow execution. 
+  You can even turn on assertions in specific classes or in entire packages. For example: java -ea:MyClass -ea:com.mycompany.mylib MyApp   This command turns on assertions for the class MyClass and all classes in the com.mycompany.mylib package and its subpackages. The option ea... turns on assertions in all classes of the unnamed package. 
+  You can also disable assertions in certain classes and packages with the disableassertions or -da option: java -ea:... -da:MyClass MyApp   Some classes are not loaded by a class loader but directly by the virtual machine. You can use these switches to selectively enable or disable assertions in those classes. 
+  However, the -ea and -da switches that enable or disable all assertions do not apply to the "system classes" without class loaders. Use the enablesystemassertions/ -esa switch to enable assertions in system classes. 
+  It is also possible to programmatically control the assertion status of class loaders. See the API notes at the end of this section. 
+7.4.3 Using Assertions for Parameter Checking
+  The Java language gives you three mechanisms to deal with system failures: Throwing an exception Logging Using assertions When should you choose assertions? Keep these points in mind:   Assertion failures are intended to be fatal, unrecoverable errors. 
+  Assertion checks are turned on only during development and testing. 
+  (This is sometimes jokingly described as "wearing a life jacket when you are close to shore, and throwing it overboard once you are in the middle of the ocean.") Therefore, you would not use assertions for signaling recoverable conditions to another part of the program or for communicating problems to the program user. Assertions should only be used to locate internal program errors during testing. 
+  Let’s look at a common scenario—the checking of method parameters. 
+  Should you use assertions to check for illegal index values or null references? To answer that question, you have to look at the documentation of the method. Suppose you implement a sorting method. 
+  /**   Sorts the specified range of the specified array in ascending numerical ord The range to be sorted extends from fromIndex, inclusive, to toIndex, exclu @param a the array to be sorted. 
+  @param fromIndex the index of the first element (inclusive) to be sorted. 
+  @param toIndex the index of the last element (exclusive) to be sorted. 
+  @throws IllegalArgumentException if fromIndex > toIndex @throws ArrayIndexOutOfBoundsException if fromIndex < 0 or toIndex > a.leng */ static void sort(int[] a, int fromIndex, int toIndex)   The documentation states that the method throws an exception if the index values are incorrect. That behavior is part of the contract that the method makes with its callers. If you implement the method, you have to respect that contract and throw the indicated exceptions. It would not be appropriate to use assertions instead. 
+  Should you assert that a is not null? That is not appropriate either. The method documentation is silent on the behavior of the method when a is null. The callers have the right to assume that the method will return successfully in that case and not throw an assertion error. 
+  However, suppose the method contract had been slightly different:   @param a the array to be sorted (must not be null). 
+  Now the callers of the method have been put on notice that it is illegal to call the method with a null array. Then the method may start with the assertion assert a != null; 
+  Computer scientists call this kind of contract a precondition. The original method had no preconditions on its parameters—it promised a well-defined behavior in all cases. The revised method has a single precondition: that a is not null. If the caller fails to fulfill the precondition, then all bets are off and the method can do anything it wants. In fact, with the assertion in place, the method has a rather unpredictable behavior when it is called illegally. It sometimes throws an assertion error, and sometimes a null pointer exception, depending on how its class loader is configured. 
+7.4.4 Using Assertions for Documenting Assumptions
+     Many programmers use comments to document their underlying assumptions. 
+  Consider this example from http://docs.oracle.com/javase/8/docs/technotes/guides/languag if (i % 3 == 0) . . . 
+  else if (i % 3 == 1) . . . 
+  else // (i % 3 == 2) . . . 
+  In this case, it makes a lot of sense to use an assertion instead. 
+  if (i % 3 == 0) . . . 
+  else if (i % 3 == 1) . . . 
+  else { assert i % 3 == 2; 
+  . . . 
+  } 
+  Of course, it would make even more sense to think through the issue thoroughly. What are the possible values of i % 3? If i is positive, the   remainders must be 0, 1, or 2. If i is negative, then the remainders can be -1 or -2. Thus, the real assumption is that i is not negative. A better assertion would be assert i >= 0; 
+  before the if statement. 
+  At any rate, this example shows a good use of assertions as a self-check for the programmer. As you can see, assertions are a tactical tool for testing and debugging. In contrast, logging is a strategic tool for the entire lifecycle of a program. We will examine logging in the next section. 
+  java.lang.ClassLoader 1.0 void setDefaultAssertionStatus(boolean b) 1.4 enables or disables assertions for all classes loaded by this class loader that don’t have an explicit class or package assertion status. 
+  void setClassAssertionStatus(String className, boolean b) 1.4 enables or disables assertions for the given class and its inner classes. 
+  void setPackageAssertionStatus(String packageName, boolean b) 1.4 enables or disables assertions for all classes in the given package and its subpackages. 
+  void clearAssertionStatus() 1.4 removes all explicit class and package assertion status settings and disables assertions for all classes loaded by this class loader. 

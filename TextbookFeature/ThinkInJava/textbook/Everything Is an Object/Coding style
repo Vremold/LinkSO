@@ -1,0 +1,6 @@
+  The style described in the Code Conventions for the Java Programming Language7 is to capitalize the first letter of a class name. If the class name consists of several words, they are run together (that is, you don’t use underscores to separate the names), and the first letter of each embedded word is capitalized, such as: 
+  class AllTheColorsOfTheRainbow { // ... 
+  This is sometimes called “camel-casing.” For almost everything else—methods, fields (member variables), and object reference names—the accepted style is just as it is for classes except that the first letter of the identifier is lowercase. For example: 
+  class AllTheColorsOfTheRainbow { int anIntegerRepresentingColors; void changeTheHueOfTheColor(int newHue) { // ... } // ... } 
+  The user must also type all these long names, so be merciful. 
+  The Java code you will see in the Sun libraries also follows the placement of open-and-close curly braces that you see used in this book. 

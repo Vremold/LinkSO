@@ -1,0 +1,22 @@
+  You saw in Chapter 3 how to define enumerated types. Here is a typical example: public enum Size { SMALL, MEDIUM, LARGE, EXTRA_LARGE } 
+  The type defined by this declaration is actually a class. The class has exactly four instances—it is not possible to construct new objects. 
+  Therefore, you never need to use equals for values of enumerated types. 
+  Simply use == to compare them. 
+  You can, if you like, add constructors, methods, and fields to an enumerated type. Of course, the constructors are only invoked when the enumerated constants are constructed. Here is an example: public enum Size { SMALL("S"), MEDIUM("M"), LARGE("L"), EXTRA_LARGE("XL"); 
+  private String abbreviation; 
+  private Size(String abbreviation) { this.abbreviation = abbreviation; } 
+  public String getAbbreviation() { return abbreviation; } 
+  } 
+  The constructor of an enumeration is always private. You can omit the private modifier, as in the preceding example. It is a syntax error to declare an enum constructor as public or protected. 
+  All enumerated types are subclasses of the class Enum. They inherit a number of methods from that class. The most useful one is toString, which returns the name of the enumerated constant. For example, Size.SMALL.toString() returns the string "SMALL". 
+  The converse of toString is the static valueOf method. For example, the statement Size s = Enum.valueOf(Size.class, "SMALL"); 
+  sets s to Size.SMALL. 
+  Each enumerated type has a static values method that returns an array of all values of the enumeration. For example, the call Size[] values = Size.values(); 
+  returns the array with elements Size.SMALL, Size.MEDIUM, Size.LARGE, and Size.EXTRA_LARGE. 
+  The ordinal method yields the position of an enumerated constant in the enum declaration, counting from zero. For example, Size.MEDIUM.ordinal() returns 1. 
+  The short program in Listing 5.12 demonstrates how to work with enumerated types. 
+  Note   The Enum class has a type parameter that we have ignored for simplicity. For example, the enumerated type Size actually extends Enum<Size>. The type parameter is used in the compareTo method. (We discuss the compareTo method in Chapter 6 and type parameters in Chapter 8.)   java.lang.Enum<E> 5 static Enum valueOf(Class enumClass, String name) returns the enumerated constant of the given class with the given name. 
+  String toString() returns the name of this enumerated constant. 
+  int ordinal() returns the zero-based position of this enumerated constant in the enum declaration. 
+  int compareTo(E other) returns a negative integer if this enumerated constant comes before other, zero if this == other, and a positive integer otherwise. 
+  The ordering of the constants is given by the enum declaration. 

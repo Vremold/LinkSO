@@ -1,0 +1,632 @@
+When you connect to a socket, the current thread blocks until the connection has
+been established or a timeout has elapsed. Similarly, when you read or write data
+through a socket, the current thread blocks until the operation is successful or
+has timed out.
+In interactive applications, you would like to give users an option to simply
+cancel a socket connection that does not appear to produce results. However, if
+a thread blocks on an unresponsive socket, you cannot unblock it by calling
+interrupt.
+To interrupt a socket operation, use a SocketChannel, a feature of the java.nio package.
+Open the SocketChannel like this:
+SocketChannel channel = SocketChannel.open(new InetSocketAddress(host, port));
+
+A channel does not have associated streams. Instead, it has read and write methods
+that make use of Buffer objects. (See Chapter 2 for more information about NIO
+buffers.) These methods are declared in the interfaces ReadableByteChannel and
+WritableByteChannel.
+If you don’t want to deal with buffers, you can use the Scanner class to read from
+a SocketChannel because Scanner has a constructor with a ReadableByteChannel parameter:
+Scanner in = new Scanner(channel, "UTF-8");
+
+To turn a channel into an output stream, use the static Channels.newOutputStream method.
+OutputStream outStream = Channels.newOutputStream(channel);
+
+That’s all you need to do. Whenever a thread is interrupted during an open, read,
+or write operation, the operation does not block, but is terminated with an
+exception.
+The program in Listing 4.5 contrasts interruptible and blocking sockets. A server
+sends numbers and pretends to be stuck after the tenth number. Click on either
+button, and a thread is started that connects to the server and prints the output.
+The first thread uses an interruptible socket; the second thread uses a blocking
+socket. If you click the Cancel button within the first ten numbers, you can
+interrupt either thread.
+However, after the first ten numbers, you can only interrupt the first thread. The
+second thread keeps blocking until the server finally closes the connection (see
+Figure 4.6).
+
+From the Library of Hristo Dimov Hristov
+
+4.3 Interruptible Sockets
+
+251
+
+Figure 4.6 Interrupting a socket
+Listing 4.5
+1
+
+interruptible/InterruptibleSocketTest.java
+
+package interruptible;
+
+2
+3
+4
+5
+6
+7
+8
+9
+
+import java.awt.*;
+import java.awt.event.*;
+import java.util.*;
+import java.net.*;
+import java.io.*;
+import java.nio.channels.*;
+import javax.swing.*;
+
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+
+/**
+* This program shows how to interrupt a socket channel.
+* @author Cay Horstmann
+* @version 1.04 2016-04-27
+*/
+public class InterruptibleSocketTest
+{
+public static void main(String[] args)
+{
+EventQueue.invokeLater(() ->
+{
+JFrame frame = new InterruptibleSocketFrame();
+frame.setTitle("InterruptibleSocketTest");
+frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+frame.setVisible(true);
+});
+}
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+252
+
+Chapter 4
+
+Networking
+
+Listing 4.5 (Continued)
+28
+
+}
+
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+
+class InterruptibleSocketFrame extends JFrame
+{
+private Scanner in;
+private JButton interruptibleButton;
+private JButton blockingButton;
+private JButton cancelButton;
+private JTextArea messages;
+private TestServer server;
+private Thread connectThread;
+
+39
+40
+41
+42
+43
+
+public InterruptibleSocketFrame()
+{
+JPanel northPanel = new JPanel();
+add(northPanel, BorderLayout.NORTH);
+
+44
+45
+46
+47
+48
+
+final int TEXT_ROWS = 20;
+final int TEXT_COLUMNS = 60;
+messages = new JTextArea(TEXT_ROWS, TEXT_COLUMNS);
+add(new JScrollPane(messages));
+
+49
+50
+51
+
+interruptibleButton = new JButton("Interruptible");
+blockingButton = new JButton("Blocking");
+
+52
+53
+54
+
+northPanel.add(interruptibleButton);
+northPanel.add(blockingButton);
+
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+
+interruptibleButton.addActionListener(event ->
+{
+interruptibleButton.setEnabled(false);
+blockingButton.setEnabled(false);
+cancelButton.setEnabled(true);
+connectThread = new Thread(() ->
+{
+try
+{
+connectInterruptibly();
+}
+catch (IOException e)
+{
+messages.append("\nInterruptibleSocketTest.connectInterruptibly: " + e);
+}
+});
+connectThread.start();
+});
+
+74
+
+From the Library of Hristo Dimov Hristov
+
+4.3 Interruptible Sockets
+
+253
+
+blockingButton.addActionListener(event ->
+{
+interruptibleButton.setEnabled(false);
+blockingButton.setEnabled(false);
+cancelButton.setEnabled(true);
+connectThread = new Thread(() ->
+{
+try
+{
+connectBlocking();
+}
+catch (IOException e)
+{
+messages.append("\nInterruptibleSocketTest.connectBlocking: " + e);
+}
+});
+connectThread.start();
+});
+
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+
+cancelButton = new JButton("Cancel");
+cancelButton.setEnabled(false);
+northPanel.add(cancelButton);
+cancelButton.addActionListener(event ->
+{
+connectThread.interrupt();
+cancelButton.setEnabled(false);
+});
+server = new TestServer();
+new Thread(server).start();
+pack();
+
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+
+}
+
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+
+/**
+* Connects to the test server, using interruptible I/O.
+*/
+public void connectInterruptibly() throws IOException
+{
+messages.append("Interruptible:\n");
+try (SocketChannel channel = SocketChannel.open(new InetSocketAddress("localhost", 8189)))
+{
+in = new Scanner(channel, "UTF-8");
+while (!Thread.currentThread().isInterrupted())
+{
+messages.append("Reading ");
+if (in.hasNextLine())
+{
+String line = in.nextLine();
+messages.append(line);
+messages.append("\n");
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+254
+
+Chapter 4
+
+Networking
+
+Listing 4.5 (Continued)
+}
+
+124
+
+}
+
+125
+
+}
+finally
+{
+EventQueue.invokeLater(() ->
+{
+messages.append("Channel closed\n");
+interruptibleButton.setEnabled(true);
+blockingButton.setEnabled(true);
+});
+}
+
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+
+}
+
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+
+/**
+* Connects to the test server, using blocking I/O.
+*/
+public void connectBlocking() throws IOException
+{
+messages.append("Blocking:\n");
+try (Socket sock = new Socket("localhost", 8189))
+{
+in = new Scanner(sock.getInputStream(), "UTF-8");
+while (!Thread.currentThread().isInterrupted())
+{
+messages.append("Reading ");
+if (in.hasNextLine())
+{
+String line = in.nextLine();
+messages.append(line);
+messages.append("\n");
+}
+}
+}
+finally
+{
+EventQueue.invokeLater(() ->
+{
+messages.append("Socket closed\n");
+interruptibleButton.setEnabled(true);
+blockingButton.setEnabled(true);
+});
+}
+}
+
+168
+169
+170
+171
+
+/**
+* A multithreaded server that listens to port 8189 and sends numbers to the client, simulating
+* a hanging server after 10 numbers.
+
+From the Library of Hristo Dimov Hristov
+
+4.3 Interruptible Sockets
+
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+
+255
+
+*/
+class TestServer implements Runnable
+{
+public void run()
+{
+try (ServerSocket s = new ServerSocket(8189))
+{
+while (true)
+{
+Socket incoming = s.accept();
+Runnable r = new TestServerHandler(incoming);
+Thread t = new Thread(r);
+t.start();
+}
+}
+catch (IOException e)
+{
+messages.append("\nTestServer.run: " + e);
+}
+}
+}
+
+193
+194
+195
+196
+197
+198
+199
+200
+
+/**
+* This class handles the client input for one server socket connection.
+*/
+class TestServerHandler implements Runnable
+{
+private Socket incoming;
+private int counter;
+
+201
+202
+203
+204
+205
+206
+207
+208
+209
+
+/**
+* Constructs a handler.
+* @param i the incoming socket
+*/
+public TestServerHandler(Socket i)
+{
+incoming = i;
+}
+
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+
+public void run()
+{
+try
+{
+try
+{
+OutputStream outStream = incoming.getOutputStream();
+PrintWriter out = new PrintWriter(
+new OutputStreamWriter(outStream, "UTF-8"),
+true /* autoFlush */);
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+256
+
+Chapter 4
+
+Networking
+
+Listing 4.5 (Continued)
+while (counter < 100)
+{
+counter++;
+if (counter <= 10) out.println(counter);
+Thread.sleep(100);
+}
+
+221
+222
+223
+224
+225
+226
+
+}
+finally
+{
+incoming.close();
+messages.append("Closing server\n");
+}
+
+227
+228
+229
+230
+231
+232
+
+}
+catch (Exception e)
+{
+messages.append("\nTestServerHandler.run: " + e);
+}
+
+233
+234
+235
+236
+237
+
+}
+
+238
+
+}
+
+239
+240
+
+}
+
+java.net.InetSocketAddress 1.4
+
+• InetSocketAddress(String hostname, int port)
+constructs an address object with the given host and port, resolving the host name
+during construction. If the host name cannot be resolved, the address object’s
+unresolved property is set to true.
+• boolean isUnresolved()
+returns true if this address object could not be resolved.
+
+java.nio.channels.SocketChannel 1.4
+
+• static SocketChannel open(SocketAddress address)
+opens a socket channel and connects it to a remote address.
+
+java.nio.channels.Channels 1.4
+
+• static InputStream newInputStream(ReadableByteChannel channel)
+constructs an input stream that reads from the given channel.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+

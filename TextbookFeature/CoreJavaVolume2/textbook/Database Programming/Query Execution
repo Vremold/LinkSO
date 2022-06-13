@@ -1,0 +1,200 @@
+  309   for (int i = 1; i <= columnCount; i++) { if (i > 1) System.out.print(", "); 
+  System.out.print(metaData.getColumnLabel(i)); 
+  } 
+  System.out.println(); 
+  99 100 101 102 103 104 105   while (result.next()) { for (int i = 1; i <= columnCount; i++) { if (i > 1) System.out.print(", "); 
+  System.out.print(result.getString(i)); 
+  } 
+  System.out.println(); 
+  } 
+  106 107 108 109 110 111 112 113 114   } 
+  115 116   } 
+  5.5 Query Execution In this section, we write a program that executes queries against the COREJAVA database. For this program to work, you must have populated the COREJAVA database with tables, as described in the preceding section. 
+  When querying the database, you can select the author and the publisher or leave either of them as Any. 
+  You can also change the data in the database. Select a publisher and type an amount. All prices of that publisher are adjusted by the amount you entered, and the program displays how many rows were changed. After a price change, you might want to run a query to verify the new prices. 
+5.5.1 Prepared Statements
+  In this program, we use one new feature, prepared statements. Consider the query for all books by a particular publisher, independent of the author. The SQL query is SELECT Books.Price, Books.Title FROM Books, Publishers WHERE Books.Publisher_Id = Publishers.Publisher_Id AND Publishers.Name = the name from the list box   Instead of building a separate query statement every time the user launches such a query, we can prepare a query with a host variable and use it many times, each time filling in a different string for the variable. That technique benefits performance. Whenever the database executes a query, it first computes a strategy   From the Library of Hristo Dimov Hristov   310   Chapter 5   Database Programming   of how to do it efficiently. By preparing the query and reusing it, you ensure that the planning step is done only once. 
+  Each host variable in a prepared query is indicated with a ?. If there is more than one variable, you must keep track of the positions of the ? when setting the values. 
+  For example, our prepared query becomes String publisherQuery = "SELECT Books.Price, Books.Title" + " FROM Books, Publishers" + " WHERE Books.Publisher_Id = Publishers.Publisher_Id AND Publishers.Name = ?"; 
+  PreparedStatement stat = conn.prepareStatement(publisherQuery); 
+  Before executing the prepared statement, you must bind the host variables to actual values with a set method. As with the get methods of the ResultSet interface, there are different set methods for the various types. Here, we want to set a string to a publisher name. 
+  stat.setString(1, publisher); 
+  The first argument is the position number of the host variable that we want to set. The position 1 denotes the first ?. The second argument is the value that we want to assign to the host variable. 
+  If you reuse a prepared query that you have already executed, all host variables stay bound unless you change them with a set method or call the clearParameters method. That means you only need to call a setXxx method on those host variables that change from one query to the next. 
+  Once all variables have been bound to values, you can execute the prepared statement: ResultSet rs = stat.executeQuery(); 
+  TIP: Building a query manually, by concatenating strings, is tedious and potentially dangerous. You have to worry about special characters such as quotes, and, if your query involves user input, you have to guard against injection attacks. 
+  Therefore, you should use prepared statements whenever your query involves variables. 
+  The price update feature is implemented as an UPDATE statement. Note that we call executeUpdate, not executeQuery, because the UPDATE statement does not return a result set. The return value of executeUpdate is the count of changed rows. 
+  int r = stat.executeUpdate(); 
+  System.out.println(r + " rows updated"); 
+  From the Library of Hristo Dimov Hristov   5.5 Query Execution   311   NOTE: A PreparedStatement object becomes invalid after the associated Connection object is closed. However, many databases automatically cache prepared statements. If the same query is prepared twice, the database simply reuses the query strategy. Therefore, don’t worry about the overhead of calling prepareStatement. 
+  The following list briefly describes the structure of the example program. 
+  • The author and publisher array lists are populated by running two queries that return all author and publisher names in the database. 
+  • The queries involving authors are complex. A book can have multiple authors, so the BooksAuthors table stores the correspondence between authors and books. 
+  For example, the book with ISBN 0-201-96426-0 has two authors with codes DATE and DARW. The BooksAuthors table has the rows 0-201-96426-0, DATE, 1 0-201-96426-0, DARW, 2   to indicate this fact. The third column lists the order of the authors. (We can’t just use the position of the rows in the table. There is no fixed row ordering in a relational table.) Thus, the query has to join the Books, BooksAuthors, and Authors tables to compare the author name with the one selected by the user. 
+  SELECT Books.Price, Books.Title FROM Books, BooksAuthors, Authors, Publishers WHERE Authors.Author_Id = BooksAuthors.Author_Id AND BooksAuthors.ISBN = Books.ISBN AND Books.Publisher_Id = Publishers.Publisher_Id AND Authors.Name = ? AND Publishers.Name = ? 
+  TIP: Some Java programmers avoid complex SQL statements such as this one. 
+  A surprisingly common, but very inefficient, workaround is to write lots of Java code that iterates through multiple result sets. But the database is a lot better at executing query code than a Java program can be—that’s the core competency of a database. A rule of thumb: If you can do it in SQL, don’t do it in Java. 
+  • The changePrices method executes an UPDATE statement. Note that the WHERE clause of the UPDATE statement needs the publisher code and we know only the publisher name. This problem is solved with a nested subquery: UPDATE Books SET Price = Price + ? 
+  WHERE Books.Publisher_Id = (SELECT Publisher_Id FROM Publishers WHERE Name = ?)   Listing 5.3 is the complete program code. 
+  From the Library of Hristo Dimov Hristov   312   Chapter 5   Listing 5.3 1   Database Programming   query/QueryTest.java   package query; 
+  2 3 4 5 6   import java.io.*; 
+  import java.nio.file.*; 
+  import java.sql.*; 
+  import java.util.*; 
+  7 8 9 10 11 12 13 14 15   /** * This program demonstrates several complex database queries. 
+  * @version 1.30 2012-06-05 * @author Cay Horstmann */ public class QueryTest { private static final String allQuery = "SELECT Books.Price, Books.Title FROM Books"; 
+  16 17 18 19 20 21   private static final String authorPublisherQuery = "SELECT Books.Price, Books.Title" 
+  + " FROM Books, BooksAuthors, Authors, Publishers" 
+  + " WHERE Authors.Author_Id = BooksAuthors.Author_Id AND BooksAuthors.ISBN = Books.ISBN" 
+  + " AND Books.Publisher_Id = Publishers.Publisher_Id AND Authors.Name = ?" 
+  + " AND Publishers.Name = ?"; 
+  22 23 24 25 26   private static final String authorQuery = "SELECT Books.Price, Books.Title FROM Books, BooksAuthors, Authors" 
+  + " WHERE Authors.Author_Id = BooksAuthors.Author_Id AND BooksAuthors.ISBN = Books.ISBN" 
+  + " AND Authors.Name = ?"; 
+  27 28 29 30   private static final String publisherQuery = "SELECT Books.Price, Books.Title FROM Books, Publishers" 
+  + " WHERE Books.Publisher_Id = Publishers.Publisher_Id AND Publishers.Name = ?"; 
+  31 32 33 34   private static final String priceUpdate = "UPDATE Books " + "SET Price = Price + ? " 
+  + " WHERE Books.Publisher_Id = (SELECT Publisher_Id FROM Publishers WHERE Name = ?)"; 
+  35 36 37 38   private static Scanner in; 
+  private static ArrayList<String> authors = new ArrayList<>(); 
+  private static ArrayList<String> publishers = new ArrayList<>(); 
+  39 40 41 42 43 44 45   public static void main(String[] args) throws IOException { try (Connection conn = getConnection()) { in = new Scanner(System.in); 
+  authors.add("Any"); 
+  From the Library of Hristo Dimov Hristov   5.5 Query Execution   313   publishers.add("Any"); 
+  try (Statement stat = conn.createStatement()) { // Fill the authors array list String query = "SELECT Name FROM Authors"; 
+  try (ResultSet rs = stat.executeQuery(query)) { while (rs.next()) authors.add(rs.getString(1)); 
+  } 
+  46 47 48 49 50 51 52 53 54 55 56   // Fill the publishers array list query = "SELECT Name FROM Publishers"; 
+  try (ResultSet rs = stat.executeQuery(query)) { while (rs.next()) publishers.add(rs.getString(1)); 
+  } 
+  57 58 59 60 61 62 63   } 
+  boolean done = false; 
+  while (!done) { System.out.print("Q)uery C)hange prices E)xit: "); 
+  String input = in.next().toUpperCase(); 
+  if (input.equals("Q")) executeQuery(conn); 
+  else if (input.equals("C")) changePrices(conn); 
+  else done = true; 
+  } 
+  64 65 66 67 68 69 70 71 72 73 74 75 76   } 
+  catch (SQLException e) { for (Throwable t : e) System.out.println(t.getMessage()); 
+  } 
+  77 78 79 80 81 82 83   } 
+  84 85 86 87 88 89 90 91 92   /** * Executes the selected query. 
+  * @param conn the database connection */ private static void executeQuery(Connection conn) throws SQLException { String author = select("Authors:", authors); 
+  String publisher = select("Publishers:", publishers); 
+  (Continues)   From the Library of Hristo Dimov Hristov   314   Chapter 5   Database Programming   Listing 5.3 (Continued) PreparedStatement stat; 
+  if (!author.equals("Any") && !publisher.equals("Any")) { stat = conn.prepareStatement(authorPublisherQuery); 
+  stat.setString(1, author); 
+  stat.setString(2, publisher); 
+  } 
+  else if (!author.equals("Any") && publisher.equals("Any")) { stat = conn.prepareStatement(authorQuery); 
+  stat.setString(1, author); 
+  } 
+  else if (author.equals("Any") && !publisher.equals("Any")) { stat = conn.prepareStatement(publisherQuery); 
+  stat.setString(1, publisher); 
+  } 
+  else stat = conn.prepareStatement(allQuery); 
+  93 94 95 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112   try (ResultSet rs = stat.executeQuery()) { while (rs.next()) System.out.println(rs.getString(1) + ", " + rs.getString(2)); 
+  } 
+  113 114 115 116 117 118   } 
+  119 120 121 122 123 124 125 126 127 128 129 130 131 132 133 134   /** * Executes an update statement to change prices. 
+  * @param conn the database connection */ public static void changePrices(Connection conn) throws SQLException { String publisher = select("Publishers:", publishers.subList(1, publishers.size())); 
+  System.out.print("Change prices by: "); 
+  double priceChange = in.nextDouble(); 
+  PreparedStatement stat = conn.prepareStatement(priceUpdate); 
+  stat.setDouble(1, priceChange); 
+  stat.setString(2, publisher); 
+  int r = stat.executeUpdate(); 
+  System.out.println(r + " records updated."); 
+  } 
+  135 136 137   /** * Asks the user to select a string. 
+  From the Library of Hristo Dimov Hristov   5.5 Query Execution   315   * @param prompt the prompt to display * @param options the options from which the user can choose * @return the option that the user chose */ public static String select(String prompt, List<String> options) { while (true) { System.out.println(prompt); 
+  for (int i = 0; i < options.size(); i++) System.out.printf("%2d) %s%n", i + 1, options.get(i)); 
+  int sel = in.nextInt(); 
+  if (sel > 0 && sel <= options.size()) return options.get(sel - 1); 
+  } 
+  } 
+  138 139 140 141 142 143 144 145 146 147 148 149 150 151 152 153 154   /** * Gets a connection from the properties specified in the file database.properties. 
+  * @return the database connection */ public static Connection getConnection() throws SQLException, IOException { Properties props = new Properties(); 
+  try (InputStream in = Files.newInputStream(Paths.get("database.properties"))) { props.load(in); 
+  } 
+  155 156 157 158 159 160 161 162 163 164 165 166   String drivers = props.getProperty("jdbc.drivers"); 
+  if (drivers != null) System.setProperty("jdbc.drivers", drivers); 
+  String url = props.getProperty("jdbc.url"); 
+  String username = props.getProperty("jdbc.username"); 
+  String password = props.getProperty("jdbc.password"); 
+  167 168 169 170 171 172   return DriverManager.getConnection(url, username, password); 
+  173   } 
+  174 175   } 
+  java.sql.Connection 1.1   • PreparedStatement prepareStatement(String sql) returns a PreparedStatement object containing the precompiled statement. The string sql contains a SQL statement with one or more parameter placeholders denoted by ? characters. 
+  From the Library of Hristo Dimov Hristov   316   Chapter 5   Database Programming   java.sql.PreparedStatement 1.1   • void setXxx(int n, Xxx x) (Xxx is a type such as int, double, String, Date, etc.) sets the value of the nth parameter to x. 
+  • void clearParameters() clears all current parameters in the prepared statement. 
+  • ResultSet executeQuery() executes a prepared SQL query and returns a ResultSet object. 
+  • int executeUpdate() executes the prepared SQL INSERT, UPDATE, or DELETE statement represented by the PreparedStatement object. Returns the number of rows affected, or 0 for DDL statements such as CREATE TABLE. 
+5.5.2 Reading and Writing LOBs
+  In addition to numbers, strings, and dates, many databases can store large objects (LOBs) such as images or other data. In SQL, binary large objects are called BLOBs, and character large objects are called CLOBs. 
+  To read a LOB, execute a SELECT statement and call the getBlob or getClob method on the ResultSet. You will get an object of type Blob or Clob. To get the binary data from a Blob, call the getBytes or getBinaryStream. For example, if you have a table with book cover images, you can retrieve an image like this: PreparedStatement stat = conn.prepareStatement("SELECT Cover FROM BookCovers WHERE ISBN=?"); 
+  ... 
+  stat.set(1, isbn); 
+  try (ResultSet result = stat.executeQuery()) { if (result.next()) { Blob coverBlob = result.getBlob(1); 
+  Image coverImage = ImageIO.read(coverBlob.getBinaryStream()); 
+  } 
+  } 
+  Similarly, if you retrieve a Clob object, you can get character data by calling the getSubString or getCharacterStream method. 
+  To place a LOB into a database, call createBlob or createClob on your Connection object, get an output stream or writer to the LOB, write the data, and store the object in the database. For example, here is how you store an image:   From the Library of Hristo Dimov Hristov   5.5 Query Execution   317   Blob coverBlob = connection.createBlob(); 
+  int offset = 0; 
+  OutputStream out = coverBlob.setBinaryStream(offset); 
+  ImageIO.write(coverImage, "PNG", out); 
+  PreparedStatement stat = conn.prepareStatement("INSERT INTO Cover VALUES (?, ?)"); 
+  stat.set(1, isbn); 
+  stat.set(2, coverBlob); 
+  stat.executeUpdate(); 
+  java.sql.ResultSet 1.1   • • • •   Blob getBlob(int columnIndex) 1.2 Blob getBlob(String columnLabel) 1.2 Clob getClob(int columnIndex) 1.2 Clob getClob(String columnLabel) 1.2   gets the BLOB or CLOB at the given column. 
+  java.sql.Blob 1.2   • long length() gets the length of this BLOB. 
+  • byte[] getBytes(long startPosition, long length) gets the data in the given range from this BLOB. 
+  • InputStream getBinaryStream() • InputStream getBinaryStream(long startPosition, long length) returns a stream to read the data from this BLOB or from the given range. 
+  • OutputStream setBinaryStream(long startPosition) 1.4 returns an output stream for writing into this BLOB, starting at the given position. 
+  java.sql.Clob 1.4   • long length() gets the number of characters of this CLOB. 
+  • String getSubString(long startPosition, long length) gets the characters in the given range from this CLOB. 
+  (Continues)   From the Library of Hristo Dimov Hristov   318   Chapter 5   Database Programming   java.sql.Clob 1.4 (Continued)   • Reader getCharacterStream() • Reader getCharacterStream(long startPosition, long length) returns a reader (not a stream) to read the characters from this CLOB or from the given range. 
+  • Writer setCharacterStream(long startPosition) 1.4 returns a writer (not a stream) for writing into this CLOB, starting at the given position. 
+  java.sql.Connection 1.1   • Blob createBlob() 6 • Clob createClob() 6 creates an empty BLOB or CLOB. 
+5.5.3 SQL Escapes
+  The “escape” syntax features are commonly supported by databases but use database-specific syntax variations. It is the job of the JDBC driver to translate the escape syntax to the syntax of a particular database. 
+  Escapes are provided for the following features: • • • • •   Date and time literals Calling scalar functions Calling stored procedures Outer joins The escape character in LIKE clauses   Date and time literals vary widely among databases. To embed a date or time literal, specify the value in ISO 8601 format (www.cl.cam.ac.uk/~mgk25/iso-time.html). The driver will then translate it into the native format. Use d, t, ts for DATE, TIME, or TIMESTAMP values: {d '2008-01-24'} 
+  {t '23:59:59'} 
+  {ts '2008-01-24 23:59:59.999'} 
+  From the Library of Hristo Dimov Hristov   5.5 Query Execution   319   A scalar function is a function that returns a single value. Many functions are widely available in databases, but with varying names. The JDBC specification provides standard names and translates them into the database-specific names. 
+  To call a function, embed the standard function name and arguments like this: {fn left(?, 20)} 
+  {fn user()} 
+  You can find a complete list of supported function names in the JDBC specification. 
+  A stored procedure is a procedure that executes in the database, written in a database-specific language. To call a stored procedure, use the call escape. You need not supply parentheses if the procedure has no parameters. Use = to capture a return value: {call PROC1(?, ?)} 
+  {call PROC2} 
+  {call ? = PROC3(?)} 
+  An outer join of two tables does not require that the rows of each table match according to the join condition. For example, the query SELECT * FROM {oj Books LEFT OUTER JOIN Publishers ON Books.Publisher_Id = Publisher.Publisher_Id} 
+  contains books for which Publisher_Id has no match in the Publishers table, with NULL values to indicate that no match exists. You would need a RIGHT OUTER JOIN to include publishers without matching books, or a FULL OUTER JOIN to return both. The escape syntax is needed because not all databases use a standard notation for these joins. 
+  Finally, the _ and % characters have special meanings in a LIKE clause—to match a single character or a sequence of characters. There is no standard way to use them literally. If you want to match all strings containing a _, use this construct: ... WHERE ? LIKE %!_% {escape '!'} 
+  Here we define ! as the escape character. The combination !_ denotes a literal underscore. 
+5.5.4 Multiple Results
+  It is possible for a query to return multiple results. This can happen when executing a stored procedure, or with databases that also allow submission of multiple SELECT statements in a single query. Here is how you retrieve all result sets: 1. 
+  2. 
+  Use the execute method to execute the SQL statement. 
+  Retrieve the first result or update count. 
+  From the Library of Hristo Dimov Hristov   320   Chapter 5   3. 
+  4. 
+  Database Programming   Repeatedly call the getMoreResults method to move on to the next result set. 
+  Finish when there are no more result sets or update counts. 
+  The execute and getMoreResults methods return true if the next item in the chain is a result set. The getUpdateCount method returns -1 if the next item in the chain is not an update count. 
+  The following loop traverses all results: boolean isResult = stat.execute(command); 
+  boolean done = false; 
+  while (!done) { if (isResult) { ResultSet result = stat.getResultSet(); 
+  do something with result } 
+  else { int updateCount = stat.getUpdateCount(); 
+  if (updateCount >= 0) do something with updateCount else done = true; 
+  } 
+  if (!done) isResult = stat.getMoreResults(); 
+  } 
+  java.sql.Statement 1.1   • boolean getMoreResults() • boolean getMoreResults(int current) 6 gets the next result for this statement. The current parameter is one of CLOSE_CURRENT_RESULT (default), KEEP_CURRENT_RESULT, or CLOSE_ALL_RESULTS. Returns true if the next result exists and is a result set. 
+5.5.5 Retrieving Autogenerated Keys
+  Most databases support some mechanism for autonumbering rows in a database. 

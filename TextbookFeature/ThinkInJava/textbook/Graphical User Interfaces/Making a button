@@ -1,0 +1,6 @@
+  Making a button is quite simple: You just call the JButton constructor with the label you want on the button. You’ll see later that you can do fancier things, like putting graphic images on buttons. 
+  Usually, you’ll want to create a field for the button inside your class so that you can refer to it later. 
+  The JButton is a component—its own little window—that will automatically get repainted as part of an update. This means that you don’t explicitly paint a button or any other kind of control; you simply place them on the form and let them automatically take care of painting themselves. You’ll usually place a button on a form inside the constructor: 
+  Something new has been added here: Before any elements are placed on the JFrame, it is given a "layout manager," of type FlowLayout. The layout manager is the way that the pane implicitly decides where to place controls on a form. The normal behavior of a JFrame is to use the BorderLayout, but that won’t work here because (as you will learn later in this chapter) it defaults to covering each control entirely with every new one that is added. 
+  However, FlowLayout causes the controls to flow evenly onto the form, left to right and top to bottom. 
+  Exercise 4: (1) Verify that without the setLayout( ) call in Buttoni.java, only one button will appear in the resulting program. 

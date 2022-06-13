@@ -1,0 +1,1182 @@
+The Java API provides a framework, called the Java Authentication and Authorization Service (JAAS), that integrates platform-provided authentication with
+permission management. We’ll discuss the JAAS framework in the following
+sections.
+
+From the Library of Hristo Dimov Hristov
+
+9.3 User Authentication
+
+531
+
+9.3.1 The JAAS Framework
+As you can tell from its name, the JAAS framework has two components. The
+“authentication” part is concerned with ascertaining the identity of a program
+user. The “authorization” part maps users to permissions.
+JAAS is a “pluggable” API that isolates Java applications from the particular
+technology used to implement authentication. It supports, among others, UNIX
+logins, NT logins, Kerberos authentication, and certificate-based authentication.
+Once a user has been authenticated, you can attach a set of permissions. For example, here we grant Harry a particular set of permissions that other users do
+not have:
+grant principal com.sun.security.auth.UnixPrincipal "harry"
+{
+permission java.util.PropertyPermission "user.*", "read";
+...
+};
+
+The com.sun.security.auth.UnixPrincipal class checks the name of the UNIX user who is
+running this program. Its getName method returns the UNIX login name, and we
+check whether that name equals "harry".
+Use a LoginContext to allow the security manager to check such a grant statement.
+Here is the basic outline of the login code:
+try
+{
+System.setSecurityManager(new SecurityManager());
+LoginContext context = new LoginContext("Login1"); // defined in JAAS configuration file
+context.login();
+// get the authenticated Subject
+Subject subject = context.getSubject();
+...
+context.logout();
+}
+catch (LoginException exception) // thrown if login was not successful
+{
+exception.printStackTrace();
+}
+
+Now the subject denotes the individual who has been authenticated.
+The string parameter "Login1" in the LoginContext constructor refers to an entry with
+the same name in the JAAS configuration file. Here is a sample configuration file:
+
+From the Library of Hristo Dimov Hristov
+
+532
+
+Chapter 9
+
+Security
+
+Login1
+{
+com.sun.security.auth.module.UnixLoginModule required;
+com.whizzbang.auth.module.RetinaScanModule sufficient;
+};
+Login2
+{
+...
+};
+
+Of course, the JDK contains no biometric login modules. The following modules
+are supplied in the com.sun.security.auth.module package:
+UnixLoginModule
+NTLoginModule
+Krb5LoginModule
+JndiLoginModule
+KeyStoreLoginModule
+
+A login policy consists of a sequence of login modules, each of which is labeled
+required, sufficient, requisite, or optional. The meaning of these keywords is given by
+the following algorithm.
+A login authenticates a subject, which can have multiple principals. A principal
+describes some property of the subject, such as the user name, group ID,
+or role. As you saw in the grant statement, principals govern permissions.
+The com.sun.security.auth.UnixPrincipal describes the UNIX login name, and the
+UnixNumericGroupPrincipal can test for membership in a UNIX group.
+A grant clause can test for a principal, with the syntax
+grant principalClass "principalName"
+
+For example:
+grant com.sun.security.auth.UnixPrincipal "harry"
+
+When a user has logged in, you then run, in a separate access control context, the
+code that requires checking of principals. Use the static doAs or doAsPrivileged method
+to start a new PrivilegedAction whose run method executes the code.
+Both of those methods execute an action by calling the run method of an object
+that implements the PrivilegedAction interface, using the permissions of the subject’s
+principals:
+PrivilegedAction<T> action = () ->
+{
+// run with permissions of subject principals
+...
+
+From the Library of Hristo Dimov Hristov
+
+9.3 User Authentication
+
+533
+
+};
+T result = Subject.doAs(subject, action); // or Subject.doAsPrivileged(subject, action, null)
+
+If the actions can throw checked exceptions, you need to implement the
+PrivilegedExceptionAction interface instead.
+The difference between the doAs and doAsPrivileged methods is subtle. The doAs method
+starts out with the current access control context, whereas the doAsPrivileged
+method starts out with a new context. The latter method allows you to separate
+the permissions for the login code and the “business logic.” In our example
+application, the login code has permissions
+permission javax.security.auth.AuthPermission "createLoginContext.Login1";
+permission javax.security.auth.AuthPermission "doAsPrivileged";
+
+The authenticated user has a permission
+permission java.util.PropertyPermission "user.*", "read";
+
+If we had used doAs instead of doAsPrivileged, then the login code would have also
+needed that permission!
+The program in Listings 9.6 and 9.7 demonstrates how to restrict permissions to
+certain users. The AuthTest program authenticates a user and runs a simple action
+that retrieves a system property.
+To make this example work, package the code for the login and the action into
+two separate JAR files:
+javac auth/*.java
+jar cvf login.jar auth/AuthTest.class
+jar cvf action.jar auth/SysPropAction.class
+
+If you look at the policy file in Listing 9.8, you will see that the UNIX user with
+the name harry has the permission to read all files. Change harry to your login name.
+Then run the command
+java -classpath login.jar:action.jar
+-Djava.security.policy=auth/AuthTest.policy
+-Djava.security.auth.login.config=auth/jaas.config
+auth.AuthTest
+
+Listing 9.9 shows the login configuration.
+On Windows, change UnixPrincipal to NTUserPrincipal in AuthTest.policy and UnixLoginModule
+to NTLoginModule in jaas.config. When running the program, use a semicolon to separate
+the JAR files:
+java -classpath login.jar;action.jar . . .
+
+From the Library of Hristo Dimov Hristov
+
+534
+
+Chapter 9
+
+Security
+
+The AuthTest program should now display the value of the user.home property.
+However, if you log in with a different name, a security exception should be
+thrown because you no longer have the required permission.
+
+CAUTION: Be careful to follow these instructions exactly. It is very easy to get
+the setup wrong by making seemingly innocuous changes.
+
+Listing 9.6
+1
+
+auth/AuthTest.java
+
+package auth;
+
+2
+3
+4
+5
+
+import java.security.*;
+import javax.security.auth.*;
+import javax.security.auth.login.*;
+
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+
+/**
+* This program authenticates a user via a custom login and then executes the SysPropAction with
+* the user's privileges.
+* @version 1.01 2007-10-06
+* @author Cay Horstmann
+*/
+public class AuthTest
+{
+public static void main(final String[] args)
+{
+System.setSecurityManager(new SecurityManager());
+try
+{
+LoginContext context = new LoginContext("Login1");
+context.login();
+System.out.println("Authentication successful.");
+Subject subject = context.getSubject();
+System.out.println("subject=" + subject);
+PrivilegedAction<String> action = new SysPropAction("user.home");
+String result = Subject.doAsPrivileged(subject, action, null);
+System.out.println(result);
+context.logout();
+}
+catch (LoginException e)
+{
+e.printStackTrace();
+}
+}
+}
+
+From the Library of Hristo Dimov Hristov
+
+9.3 User Authentication
+
+Listing 9.7
+1
+
+535
+
+auth/SysPropAction.java
+
+package auth;
+
+2
+3
+
+import java.security.*;
+
+4
+5
+6
+7
+8
+9
+10
+11
+12
+
+/**
+This action looks up a system property.
+* @version 1.01 2007-10-06
+* @author Cay Horstmann
+*/
+public class SysPropAction implements PrivilegedAction<String>
+{
+private String propertyName;
+
+13
+
+/**
+Constructs an action for looking up a given property.
+@param propertyName the property name (such as "user.home")
+*/
+public SysPropAction(String propertyName) { this.propertyName = propertyName; }
+
+14
+15
+16
+17
+18
+19
+
+public String run()
+{
+return System.getProperty(propertyName);
+}
+
+20
+21
+22
+23
+24
+
+}
+
+Listing 9.8
+1
+2
+3
+4
+5
+
+auth/AuthTest.policy
+
+grant codebase "file:login.jar"
+{
+permission javax.security.auth.AuthPermission "createLoginContext.Login1";
+permission javax.security.auth.AuthPermission "doAsPrivileged";
+};
+
+6
+7
+8
+9
+10
+
+grant principal com.sun.security.auth.UnixPrincipal "harry"
+{
+permission java.util.PropertyPermission "user.*", "read";
+};
+
+Listing 9.9
+1
+2
+3
+4
+
+auth/jaas.config
+
+Login1
+{
+com.sun.security.auth.module.UnixLoginModule required;
+};
+
+From the Library of Hristo Dimov Hristov
+
+536
+
+Chapter 9
+
+Security
+
+javax.security.auth.login.LoginContext 1.4
+
+• LoginContext(String name)
+constructs a login context. The name corresponds to the login descriptor in the JAAS
+configuration file.
+• void login()
+establishes a login or throws LoginException if the login failed. Invokes the login method
+on the managers in the JAAS configuration file.
+• void logout()
+logs out the subject. Invokes the logout method on the managers in the JAAS
+configuration file.
+• Subject getSubject()
+returns the authenticated subject.
+
+javax.security.auth.Subject 1.4
+
+• Set<Principal> getPrincipals()
+gets the principals of this subject.
+• static Object doAs(Subject subject, PrivilegedAction action)
+• static Object doAs(Subject subject, PrivilegedExceptionAction action)
+• static Object doAsPrivileged(Subject subject, PrivilegedAction action, AccessControlContext
+context)
+
+• static
+
+Object doAsPrivileged(Subject
+AccessControlContext context)
+
+subject,
+
+PrivilegedExceptionAction
+
+action,
+
+executes the privileged action on behalf of the subject. Returns the return value of
+the run method. The doAsPrivileged methods execute the action in the given access
+control context. You can supply a “context snapshot” that you obtained earlier by
+calling the static method AccessController.getContext(), or you can supply null to execute
+the code in a new context.
+
+java.security.PrivilegedAction 1.4
+
+• Object run()
+You must define this method to execute the code that you want to have executed
+on behalf of a subject.
+
+From the Library of Hristo Dimov Hristov
+
+9.3 User Authentication
+
+537
+
+java.security.PrivilegedExceptionAction 1.4
+
+• Object run()
+You must define this method to execute the code that you want to have executed
+on behalf of a subject. This method may throw any checked exceptions.
+
+java.security.Principal 1.1
+
+• String getName()
+returns the identifying name of this principal.
+
+9.3.2 JAAS Login Modules
+In this section, we’ll look at a JAAS example that shows you
+• How to implement your own login module
+• How to implement role-based authentication
+Supplying your own login module is useful if you store login information in a
+database. Even if you are happy with the default module, studying a custom
+module will help you understand the JAAS configuration file options.
+Role-based authentication is essential if you manage a large number of users. It
+would be impractical to put the names of all legitimate users into a policy file.
+Instead, the login module should map users to roles such as “admin” or “HR”,
+and the permissions should be based on these roles.
+One job of the login module is to populate the principal set of the subject that is
+being authenticated. If a login module supports roles, it adds Principal objects that
+describe roles. The Java library does not provide a class for this purpose, so we
+wrote our own (see Listing 9.10). The class simply stores a description/value pair,
+such as role=admin. Its getName method returns that pair, so we can add role-based
+permissions into a policy file:
+grant principal SimplePrincipal "role=admin" { . . . }
+
+Our login module looks up users, passwords, and roles in a text file that contains
+lines like this:
+harry|secret|admin
+carl|guessme|HR
+
+Of course, in a realistic login module, you would store this information in a
+database or directory.
+
+From the Library of Hristo Dimov Hristov
+
+538
+
+Chapter 9
+
+Security
+
+You can find the code for the SimpleLoginModule in Listing 9.11. The checkLogin method
+checks whether the user name and password match a record in the password file.
+If so, we add two SimplePrincipal objects to the subject’s principal set:
+Set<Principal> principals = subject.getPrincipals();
+principals.add(new SimplePrincipal("username", username));
+principals.add(new SimplePrincipal("role", role));
+
+The remainder of SimpleLoginModule is straightforward plumbing. The initialize method
+receives
+•
+•
+•
+•
+
+The Subject that is being authenticated
+A handler to retrieve login information
+A sharedState map that can be used for communication between login modules
+An options map that contains the name/value pairs that are set in the login
+configuration
+
+For example, we configure our module as follows:
+SimpleLoginModule required pwfile="password.txt";
+
+The login module retrieves the pwfile settings from the options map.
+The login module does not gather the user name and password; that is the job of
+a separate handler. This separation allows you to use the same login module
+without worrying whether the login information comes from a GUI dialog box,
+a console prompt, or a configuration file.
+The handler is specified when you construct the LoginContext, for example:
+LoginContext context = new LoginContext("Login1",
+new com.sun.security.auth.callback.DialogCallbackHandler());
+
+The DialogCallbackHandler pops up a simple GUI dialog box to retrieve the user name
+and password. The com.sun.security.auth.callback.TextCallbackHandler class gets the
+information from the console.
+However, in our application, we have our own GUI for collecting the user name
+and password (see Figure 9.10). We produce a simple handler that merely
+stores and returns that information (see Listing 9.12).
+The handler has a single method, handle, that processes an array of Callback objects.
+A number of predefined classes, such as NameCallback and PasswordCallback, implement
+the Callback interface. You could also add your own class, such as RetinaScanCallback.
+The handler code is a bit unsightly because it needs to analyze the types of the
+callback objects:
+
+From the Library of Hristo Dimov Hristov
+
+9.3 User Authentication
+
+539
+
+Figure 9.10 A custom login module
+public void handle(Callback[] callbacks)
+{
+for (Callback callback : callbacks)
+{
+if (callback instanceof NameCallback) . . .
+else if (callback instanceof PasswordCallback) . . .
+else . . .
+}
+}
+
+The login module prepares an array of the callbacks that it needs for
+authentication:
+NameCallback nameCall = new NameCallback("username: ");
+PasswordCallback passCall = new PasswordCallback("password: ", false);
+callbackHandler.handle(new Callback[] { nameCall, passCall });
+
+Then it retrieves the information from the callbacks.
+The program in Listing 9.13 displays a form for entering the login information
+and the name of a system property. If the user is authenticated, the property
+value is retrieved in a PrivilegedAction. As you can see from the policy file in
+Listing 9.14, only users with the admin role have permission to read properties.
+As in the preceding section, you must separate the login and action code. Create
+two JAR files:
+javac *.java
+jar cvf login.jar JAAS*.class Simple*.class
+jar cvf action.jar SysPropAction.class
+
+Then run the program as
+java -classpath login.jar:action.jar
+-Djava.security.policy=JAASTest.policy
+-Djava.security.auth.login.config=jaas.config
+JAASTest
+
+Listing 9.15 shows the policy file.
+
+From the Library of Hristo Dimov Hristov
+
+540
+
+Chapter 9
+
+Security
+
+NOTE: It is possible to support a more complex two-phase protocol, whereby a
+login is committed if all modules in the login configuration were successful. For
+more information, see the login module developer’s guide at http://docs.oracle.
+com/javase/8/docs/technotes/guides/security/jaas/JAASLMDevGuide.html.
+
+Listing 9.10
+1
+
+jaas/SimplePrincipal.java
+
+package jaas;
+
+2
+3
+4
+
+import java.security.*;
+import java.util.*;
+
+5
+6
+7
+8
+9
+10
+11
+12
+
+/**
+* A principal with a named value (such as "role=HR" or "username=harry").
+*/
+public class SimplePrincipal implements Principal
+{
+private String descr;
+private String value;
+
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+
+/**
+* Constructs a SimplePrincipal to hold a description and a value.
+* @param descr the description
+* @param value the associated value
+*/
+public SimplePrincipal(String descr, String value)
+{
+this.descr = descr;
+this.value = value;
+}
+
+24
+25
+26
+27
+28
+29
+30
+31
+32
+
+/**
+* Returns the role name of this principal.
+* @return the role name
+*/
+public String getName()
+{
+return descr + "=" + value;
+}
+
+33
+34
+35
+36
+37
+38
+39
+40
+41
+
+public boolean equals(Object otherObject)
+{
+if (this == otherObject) return true;
+if (otherObject == null) return false;
+if (getClass() != otherObject.getClass()) return false;
+SimplePrincipal other = (SimplePrincipal) otherObject;
+return Objects.equals(getName(), other.getName());
+}
+
+From the Library of Hristo Dimov Hristov
+
+9.3 User Authentication
+
+541
+
+42
+
+public int hashCode()
+{
+return Objects.hashCode(getName());
+}
+
+43
+44
+45
+46
+47
+
+}
+
+Listing 9.11
+1
+
+jaas/SimpleLoginModule.java
+
+package jaas;
+
+2
+3
+4
+5
+6
+7
+8
+9
+10
+
+import java.io.*;
+import java.nio.file.*;
+import java.security.*;
+import java.util.*;
+import javax.security.auth.*;
+import javax.security.auth.callback.*;
+import javax.security.auth.login.*;
+import javax.security.auth.spi.*;
+
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+
+/**
+* This login module authenticates users by reading usernames, passwords, and roles from a text
+* file.
+*/
+public class SimpleLoginModule implements LoginModule
+{
+private Subject subject;
+private CallbackHandler callbackHandler;
+private Map<String, ?> options;
+
+21
+22
+23
+24
+25
+26
+27
+28
+
+public void initialize(Subject subject, CallbackHandler callbackHandler,
+Map<String, ?> sharedState, Map<String, ?> options)
+{
+this.subject = subject;
+this.callbackHandler = callbackHandler;
+this.options = options;
+}
+
+29
+30
+31
+32
+
+public boolean login() throws LoginException
+{
+if (callbackHandler == null) throw new LoginException("no handler");
+
+33
+34
+35
+36
+37
+38
+39
+
+NameCallback nameCall = new NameCallback("username: ");
+PasswordCallback passCall = new PasswordCallback("password: ", false);
+try
+{
+callbackHandler.handle(new Callback[] { nameCall, passCall });
+}
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+542
+
+Chapter 9
+
+Security
+
+Listing 9.11 (Continued)
+catch (UnsupportedCallbackException e)
+{
+LoginException e2 = new LoginException("Unsupported callback");
+e2.initCause(e);
+throw e2;
+}
+catch (IOException e)
+{
+LoginException e2 = new LoginException("I/O exception in callback");
+e2.initCause(e);
+throw e2;
+}
+
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+
+try
+{
+return checkLogin(nameCall.getName(), passCall.getPassword());
+}
+catch (IOException ex)
+{
+LoginException ex2 = new LoginException();
+ex2.initCause(ex);
+throw ex2;
+}
+
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+
+}
+
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+
+/**
+* Checks whether the authentication information is valid. If it is, the subject acquires
+* principals for the user name and role.
+* @param username the user name
+* @param password a character array containing the password
+* @return true if the authentication information is valid
+*/
+private boolean checkLogin(String username, char[] password) throws LoginException, IOException
+{
+try (Scanner in = new Scanner(Paths.get("" + options.get("pwfile")), "UTF-8"))
+{
+while (in.hasNextLine())
+{
+String[] inputs = in.nextLine().split("\\|");
+if (inputs[0].equals(username) && Arrays.equals(inputs[1].toCharArray(), password))
+{
+String role = inputs[2];
+Set<Principal> principals = subject.getPrincipals();
+principals.add(new SimplePrincipal("username", username));
+principals.add(new SimplePrincipal("role", role));
+return true;
+}
+}
+
+From the Library of Hristo Dimov Hristov
+
+9.3 User Authentication
+
+543
+
+return false;
+
+88
+
+}
+
+89
+
+}
+
+90
+91
+
+public boolean logout()
+{
+return true;
+}
+
+92
+93
+94
+95
+96
+
+public boolean abort()
+{
+return true;
+}
+
+97
+98
+99
+100
+101
+
+public boolean commit()
+{
+return true;
+}
+
+102
+103
+104
+105
+106
+
+}
+
+Listing 9.12
+1
+
+jaas/SimpleCallbackHandler.java
+
+package jaas;
+
+2
+3
+
+import javax.security.auth.callback.*;
+
+4
+5
+6
+7
+8
+9
+10
+11
+
+/**
+* This simple callback handler presents the given user name and password.
+*/
+public class SimpleCallbackHandler implements CallbackHandler
+{
+private String username;
+private char[] password;
+
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+
+/**
+* Constructs the callback handler.
+* @param username the user name
+* @param password a character array containing the password
+*/
+public SimpleCallbackHandler(String username, char[] password)
+{
+this.username = username;
+this.password = password;
+}
+
+23
+
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+544
+
+Chapter 9
+
+Security
+
+Listing 9.12 (Continued)
+public void handle(Callback[] callbacks)
+{
+for (Callback callback : callbacks)
+{
+if (callback instanceof NameCallback)
+{
+((NameCallback) callback).setName(username);
+}
+else if (callback instanceof PasswordCallback)
+{
+((PasswordCallback) callback).setPassword(password);
+}
+}
+}
+
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+
+}
+
+Listing 9.13
+1
+
+jaas/JAASTest.java
+
+package jaas;
+
+2
+3
+4
+
+import java.awt.*;
+import javax.swing.*;
+
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+
+/**
+* This program authenticates a user via a custom login and then looks up a system property with
+* the user's privileges.
+* @version 1.02 2016-05-10
+* @author Cay Horstmann
+*/
+public class JAASTest
+{
+public static void main(final String[] args)
+{
+System.setSecurityManager(new SecurityManager());
+EventQueue.invokeLater(() ->
+{
+JFrame frame = new JAASFrame();
+frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+frame.setTitle("JAASTest");
+frame.setVisible(true);
+});
+}
+}
+
+From the Library of Hristo Dimov Hristov
+
+9.3 User Authentication
+
+Listing 9.14
+1
+2
+3
+4
+5
+6
+7
+8
+9
+
+545
+
+jaas/JAASTest.policy
+
+grant codebase "file:login.jar"
+{
+permission java.awt.AWTPermission "showWindowWithoutWarningBanner";
+permission java.awt.AWTPermission "accessEventQueue";
+permission javax.security.auth.AuthPermission "createLoginContext.Login1";
+permission javax.security.auth.AuthPermission "doAsPrivileged";
+permission javax.security.auth.AuthPermission "modifyPrincipals";
+permission java.io.FilePermission "jaas/password.txt", "read";
+};
+
+10
+11
+12
+13
+14
+
+grant principal jaas.SimplePrincipal "role=admin"
+{
+permission java.util.PropertyPermission "*", "read";
+};
+
+Listing 9.15
+1
+2
+3
+4
+
+jaas/jaas.config
+
+Login1
+{
+jaas.SimpleLoginModule required pwfile="jaas/password.txt" debug=true;
+};
+
+javax.security.auth.callback.CallbackHandler 1.4
+
+• void handle(Callback[] callbacks)
+handles the given callbacks, interacting with the user if desired, and stores the
+security information in the callback objects.
+
+javax.security.auth.callback.NameCallback 1.4
+
+• NameCallback(String prompt)
+• NameCallback(String prompt, String defaultName)
+constructs a NameCallback with the given prompt and default name.
+• String getName()
+• void setName(String name)
+gets or sets the name gathered by this callback.
+• String getPrompt()
+gets the prompt to use when querying this name.
+• String getDefaultName()
+gets the default name to use when querying this name.
+
+From the Library of Hristo Dimov Hristov
+
+546
+
+Chapter 9
+
+Security
+
+javax.security.auth.callback.PasswordCallback 1.4
+
+• PasswordCallback(String prompt, boolean echoOn)
+constructs a PasswordCallback with the given prompt and echo flag.
+• char[] getPassword()
+• void setPassword(char[] password)
+gets or sets the password gathered by this callback.
+• String getPrompt()
+gets the prompt to use when querying this password.
+• boolean isEchoOn()
+gets the echo flag to use when querying this password.
+
+javax.security.auth.spi.LoginModule 1.4
+
+• voidinitialize(Subjectsubject,CallbackHandlerhandler,Map<String,?>sharedState,Map<String,?>
+options)
+
+initializes this LoginModule for authenticating the given subject. During login processing,
+uses the given handler to gather login information. Use the sharedState map for
+communicating with other login modules.The options map contains the name/value
+pairs specified in the login configuration for this module instance.
+• boolean login()
+carries out the authentication process and populates the subject’s principals. Returns
+true if the login was successful.
+• boolean commit()
+is called after all login modules were successful, for login scenarios that require a
+two-phase commit. Returns true if the operation was successful.
+• boolean abort()
+is called if the failure of another login module caused the login process to abort.
+Returns true if the operation was successful.
+• boolean logout()
+logs out this subject. Returns true if the operation was successful.
+

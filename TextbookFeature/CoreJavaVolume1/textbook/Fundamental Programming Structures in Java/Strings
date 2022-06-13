@@ -1,0 +1,119 @@
+  Conceptually, Java strings are sequences of Unicode characters. For example, the string "Java\u2122" consists of the five Unicode characters J, a, v, a, and ™. Java does not have a built-in string type. Instead, the standard Java library contains a predefined class called, naturally enough, String. Each quoted string is an instance of the String class: String e = ""; // an empty string String greeting = "Hello"; 
+3.6.1 Substrings
+  You can extract a substring from a larger string with the substring method of the String class. For example, String greeting = "Hello"; 
+  String s = greeting.substring(0, 3); 
+  creates a string consisting of the characters "Hel". 
+  Note Like C and C++, Java counts code units and code points in strings starting with 0. 
+  The second parameter of substring is the first position that you do not want to copy. In our case, we want to copy positions 0, 1, and 2 (from position 0 to position 2 inclusive). As substring counts it, this means from position 0 inclusive to position 3 exclusive. 
+  There is one advantage to the way substring works: Computing the length of the substring is easy. The string s.substring(a, b) always has length b − a. For example, the substring "Hel" has length 3 − 0 = 3. 
+3.6.2 Concatenation
+  Java, like most programming languages, allows you to use + to join (concatenate) two strings. 
+  String expletive = "Expletive"; 
+  String PG13 = "deleted"; 
+  String message = expletive + PG13; 
+  The preceding code sets the variable message to the string "Expletivedeleted". (Note the lack of a space between the words: The + operator joins two strings in the order received, exactly as they are given.) When you concatenate a string with a value that is not a string, the latter is converted to a string. (As you will see in Chapter 5, every Java object can be converted to a string.) For example, int age = 13; 
+  String rating = "PG" + age; 
+  sets rating to the string "PG13". 
+  This feature is commonly used in output statements. For example, System.out.println("The answer is " + answer); 
+  is perfectly acceptable and prints what you would expect (and with correct spacing because of the space after the word is). 
+  If you need to put multiple strings together, separated by a delimiter, use the static join method: String all = String.join(" / ", "S", "M", "L", "XL"); 
+  // all is the string "S / M / L / XL" 
+  As of Java 11, there is a repeat method: String repeated = "Java".repeat(3); // repeated is "JavaJavaJava" 
+3.6.3 Strings Are Immutable
+  The String class gives no methods that let you change a character in an existing string. If you want to turn greeting into "Help!", you cannot directly change the last positions of greeting into 'p' and '!'. If you are a C programmer, this can make you feel pretty helpless. How are we going to modify the string? In Java, it is quite easy: Concatenate the substring that you want to keep with the characters that you want to replace. 
+  greeting = greeting.substring(0, 3) + "p!"; 
+  This declaration changes the current value of the greeting variable to "Help!". 
+  Since you cannot change the individual characters in a Java string, the documentation refers to the objects of the String class as immutable. Just as the number 3 is always 3, the string "Hello" will always contain the code-unit sequence for the characters H, e, l, l, o. You cannot change these values. Yet you can, as you just saw, change the contents of the string variable greeting and make it refer to a different string, just as you can make a numeric variable currently holding the value 3 hold the value 4. 
+  Isn’t that a lot less efficient? It would seem simpler to change the code units than to build up a whole new string from scratch. Well, yes and no. Indeed, it isn’t efficient to generate a new string that holds the concatenation of "Hel" 
+  and "p!". But immutable strings have one great advantage: The compiler can arrange that strings are shared. 
+  To understand how this works, think of the various strings as sitting in a common pool. String variables then point to locations in the pool. If you copy a string variable, both the original and the copy share the same characters. 
+  Overall, the designers of Java decided that the efficiency of sharing outweighs the inefficiency of string editing by extracting substrings and   concatenating. Look at your own programs; we suspect that most of the time, you don’t change strings—you just compare them. (There is one common exception—assembling strings from individual characters or from shorter strings that come from the keyboard or a file. For these situations, Java provides a separate class that we describe in Section 3.6.9, "Building Strings," on p. 74.)   That is a wrong analogy: A Java string is roughly analogous to a char* pointer, char* greeting = "Hello"; 
+  When you replace greeting with another string, the Java code does roughly the following: char* temp = malloc(6); 
+  strncpy(temp, greeting, 3); 
+  strncpy(temp + 3, "p!", 3); 
+  greeting = temp; 
+  Sure, now greeting points to the string "Help!". And even the most hardened C programmer must admit that the Java syntax is more pleasant than a sequence of strncpy calls. But what if we make another assignment to greeting? 
+  greeting = "Howdy"; 
+  Don’t we have a memory leak? After all, the original string was allocated on the heap. Fortunately, Java does automatic garbage collection. If a block of memory is no longer needed, it will eventually be recycled. 
+  If you are a C++ programmer and use the string class defined by ANSI C++, you will be much more comfortable with the Java   String type. C++ string objects also perform automatic allocation and deallocation of memory. The memory management is performed explicitly by constructors, assignment operators, and destructors. However, C++ strings are mutable—you can modify individual characters in a string. 
+3.6.4 Testing Strings for Equality
+  To test whether two strings are equal, use the equals method. The expression s.equals(t)   returns true if the strings s and t are equal, false otherwise. Note that s and t can be string variables or string literals. For example, the expression "Hello".equals(greeting)   is perfectly legal. To test whether two strings are identical except for the upper/lowercase letter distinction, use the equalsIgnoreCase method. 
+  "Hello".equalsIgnoreCase("hello")   Do not use the == operator to test whether two strings are equal! It only determines whether or not the strings are stored in the same location. Sure, if strings are in the same location, they must be equal. But it is entirely possible to store multiple copies of identical strings in different places. 
+  String greeting = "Hello"; // initialize greeting to a string if (greeting == "Hello") . . . 
+  // probably true if (greeting.substring(0, 3) == "Hel") . . . 
+  // probably false   If the virtual machine always arranges for equal strings to be shared, then you could use the == operator for testing equality. But only string literals are shared, not strings that are the result of operations like + or substring. 
+  Therefore, never use == to compare strings lest you end up with a program with the worst kind of bug—an intermittent one that seems to occur randomly. 
+  the == operator to test for equality of the string contents. It is perhaps unfortunate that Java goes out of its way to give strings the same "look and feel" as numeric values but then makes strings behave like pointers for equality testing. The language designers could have redefined == for strings, just as they made a special arrangement for +. Oh well, every language has its share of inconsistencies. 
+  C programmers never use == to compare strings but use strcmp instead. The Java method compareTo is the exact analog of strcmp. You can use if (greeting.compareTo("Hello") == 0) . . . 
+  but it seems clearer to use equals instead. 
+3.6.5 Empty and Null Strings
+  The empty string "" is a string of length 0. You can test whether a string is empty by calling if (str.length() == 0)   or if (str.equals(""))   An empty string is a Java object which holds the string length (namely, 0) and an empty contents. However, a String variable can also hold a special value, called null, that indicates that no object is currently associated with the variable. (See Chapter 4 for more information about null.) To test whether a string is null, use if (str == null)   Sometimes, you need to test that a string is neither null nor empty. Then use if (str != null && str.length() != 0)   You need to test that str is not null first. As you will see in Chapter 4, it is   an error to invoke a method on a null value. 
+3.6.6 Code Points and Code Units
+  Java strings are sequences of char values. As we discussed in Section 3.3.3, "The char Type," on p. 46, the char data type is a code unit for representing Unicode code points in the UTF-16 encoding. The most commonly used Unicode characters can be represented with a single code unit. The supplementary characters require a pair of code units. 
+  The length method yields the number of code units required for a given string in the UTF-16 encoding. For example: String greeting = "Hello"; 
+  int n = greeting.length(); // is 5   To get the true length—that is, the number of code points—call int cpCount = greeting.codePointCount(0, greeting.length()); 
+  The call s.charAt(n) returns the code unit at position n, where n is between 0 and s.length() – 1. For example: char first = greeting.charAt(0); // first is 'H' char last = greeting.charAt(4); // last is 'o'   To get at the ith code point, use the statements int index = greeting.offsetByCodePoints(0, i); 
+  int cp = greeting.codePointAt(index); 
+  Why are we making a fuss about code units? Consider the sentence is the set of octonions. 
+  The character (U+1D546) requires two code units in the UTF-16 encoding. Calling char ch = sentence.charAt(1)   doesn’t return a space but the second code unit of . To avoid this problem, you should not use the char type. It is too low-level. 
+  Note Don’t think that you can ignore exotic characters with code units above U+FFFF. Your emoji-loving users may put characters such as (U+1F37A, beer mug) into strings. 
+  If your code traverses a string, and you want to look at each code point in turn, you can use these statements: int cp = sentence.codePointAt(i); 
+  if (Character.isSupplementaryCodePoint(cp)) i += 2; 
+  else i++; 
+  You can move backwards with the following statements: i--; 
+  if (Character.isSurrogate(sentence.charAt(i))) i--; 
+  int cp = sentence.codePointAt(i); 
+  Obviously, that is quite painful. An easier way is to use the codePoints method that yields a "stream" of int values, one for each code point. (We will discuss streams in Chapter 2 of Volume II.) You can just turn the stream into an array (see Section 3.10, "Arrays," on p. 108) and traverse that. 
+  int[] codePoints = str.codePoints().toArray(); 
+  Conversely, to turn an array of code points to a string, use a constructor. (We discuss constructors and the new operator in detail in Chapter 4.) String str = new String(codePoints, 0, codePoints.length); 
+  Note   The virtual machine does not have to implement strings as sequences of code units. In Java 9, strings that hold only single-byte code units use a byte array, and all others a char array. 
+3.6.7 The String API
+  The String class in Java contains more than 50 methods. A surprisingly large number of them are sufficiently useful that we can imagine using them frequently. The following API note summarizes the ones we found most useful. 
+  These API notes, found throughout the book, will help you understand the Java Application Programming Interface (API). Each API note starts with the name of a class, such as java.lang.String. (The significance of the socalled package name java.lang is explained in Chapter 4.) The class name is followed by the names, explanations, and parameter descriptions of one or more methods. 
+  We typically do not list all methods of a particular class but select those that are most commonly used and describe them in a concise form. For a full listing, consult the online documentation (see Section 3.6.8, "Reading the Online API Documentation," on p. 71). 
+  We also list the version number in which a particular class was introduced. If a method has been added later, it has a separate version number. 
+  java.lang.String 1.0 char charAt(int index) returns the code unit at the specified location. You probably don’t want to call this method unless you are interested in low-level code units. 
+  int codePointAt(int index) 5 returns the code point that starts at the specified location. 
+  int offsetByCodePoints(int startIndex, int cpCount) 5   returns the index of the code point that is cpCount code points away from the code point at startIndex. 
+  int compareTo(String other) returns a negative value if the string comes before other in dictionary order, a positive value if the string comes after other in dictionary order, or 0 if the strings are equal. 
+  IntStream codePoints() 8 returns the code points of this string as a stream. Call toArray to put them in an array. 
+  new String(int[] codePoints, int offset, int count) 5 constructs a string with the count code points in the array starting at offset. 
+  boolean empty() boolean blank() 11 returns true if the string is empty or consists of whitespace. 
+  boolean equals(Object other) returns true if the string equals other. 
+  boolean equalsIgnoreCase(String other) returns true if the string equals other, except for upper/lowercase distinction. 
+  boolean startsWith(String prefix) boolean endsWith(String suffix) returns true if the string starts or ends with suffix. 
+  int indexOf(String str) int indexOf(String str, int fromIndex) int indexOf(int cp)   int indexOf(int cp, int fromIndex) returns the start of the first substring equal to the string str or the code point cp, starting at index 0 or at fromIndex, or -1 if str does not occur in this string. 
+  int lastIndexOf(String str) int lastIndexOf(String str, int fromIndex) int lastindexOf(int cp) int lastindexOf(int cp, int fromIndex) returns the start of the last substring equal to the string str or the code point cp, starting at the end of the string or at fromIndex. 
+  int length() returns the number of code units of the string. 
+  int codePointCount(int startIndex, int endIndex) 5 returns the number of code points between startIndex and endIndex – 1. 
+  String replace(CharSequence oldString, CharSequence newString) returns a new string that is obtained by replacing all substrings matching oldString in the string with the string newString. You can supply String or StringBuilder objects for the CharSequence parameters. 
+  String substring(int beginIndex) String substring(int beginIndex, int endIndex) returns a new string consisting of all code units from beginIndex until the end of the string or until endIndex – 1. 
+  String toLowerCase() String toUpperCase()   returns a new string containing all characters in the original string, with uppercase characters converted to lowercase, or lowercase characters converted to uppercase. 
+  String trim() String strip() 11 returns a new string by eliminating all leading and trailing characters that are ≤ U+0020 (trim) or whitespace (strip) in the original string. 
+  String join(CharSequence delimiter, CharSequence... elements) 8 returns a new string joining all elements with the given delimiter. 
+  String repeat(int count) 11 returns a string that repeats this string count times. 
+  Note In the API notes, there are a few parameters of type CharSequence. This is an interface type to which all strings belong. You will learn about interface types in Chapter 6. For now, you just need to know that you can pass arguments of type String whenever you see a CharSequence parameter. 
+3.6.8 Reading the Online API Documentation
+  As you just saw, the String class has lots of methods. Furthermore, there are thousands of classes in the standard libraries, with many more methods. It is plainly impossible to remember all useful classes and methods. Therefore, it is essential that you become familiar with the online API documentation that lets you look up all classes and methods in the standard library. You can download the API documentation from Oracle and save it locally, or you can point your browser to http://docs.oracle.com/javase/9/docs/api. 
+  As of Java 9, the API documentation has a search box (see Figure 3.2). Older versions have frames with lists of packages and classes. You can still get those lists by clicking on the Frames menu item. For example, to get more information on the methods of the String class, type "String" into the search box and select the type java.lang.String, or locate the link in the frame with class names and click it. You get the class description, as shown in Figure 3.3. 
+  Figure 3.2 The Java API documentation   Figure 3.3 Class description for the String class When you scroll down, you reach a summary of all methods, sorted in alphabetical order (see Figure 3.4). Click on any method name for a detailed description of that method (see Figure 3.5). For example, if you click on the compareToIgnoreCase link, you’ll get the description of the compareToIgnoreCase method. 
+  Figure 3.4 Method summary of the String class   Figure 3.5 Detailed description of a String method   Tip If you have not already done so, download the JDK documentation, as described in Chapter 2. Bookmark the jdk-9docs/index.html page in your browser right now. 
+3.6.9 Building Strings
+  Occasionally, you need to build up strings from shorter strings, such as keystrokes or words from a file. It would be inefficient to use string concatenation for this purpose. Every time you concatenate strings, a new String object is constructed. This is time consuming and wastes memory. 
+  Using the StringBuilder class avoids this problem. 
+  Follow these steps if you need to build a string from many small pieces. First, construct an empty string builder: StringBuilder builder = new StringBuilder(); 
+  Each time you need to add another part, call the append method. 
+  builder.append(ch); // appends a single character builder.append(str); // appends a string   When you are done building the string, call the toString method. You will get a String object with the character sequence contained in the builder. 
+  String completedString = builder.toString(); 
+  Note The StringBuilder class was introduced in Java 5. Its predecessor, StringBuffer, is slightly less efficient, but it allows multiple threads to add or remove characters. If all string editing happens in a single thread (which is usually the case), you should use StringBuilder instead. The APIs of both classes are identical. 
+  The following API notes contain the most important methods for the StringBuilder class. 
+  java.lang.StringBuilder 5 StringBuilder() constructs an empty string builder. 
+  int length() returns the number of code units of the builder or buffer. 
+  StringBuilder append(String str) appends a string and returns this. 
+  StringBuilder append(char c) appends a code unit and returns this. 
+  StringBuilder appendCodePoint(int cp) appends a code point, converting it into one or two code units, and returns this. 
+  void setCharAt(int i, char c) sets the ith code unit to c. 
+  StringBuilder insert(int offset, String str) inserts a string at position offset and returns this. 
+  StringBuilder insert(int offset, char c) inserts a code unit at position offset and returns this. 
+  StringBuilder delete(int startIndex, int endIndex) deletes the code units with offsets startIndex to endIndex – 1 and returns this. 
+  String toString() returns a string with the same data as the builder or buffer contents. 

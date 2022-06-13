@@ -1,0 +1,24 @@
+  Looping is controlled by while, do-while and for, which are sometimes classified as iteration statements. A statement repeats until the controlling Boolean-expression evaluates to false. The form for a while loop is: 
+  while(Boolean-expression) statement  The Boolean-expression is evaluated once at the beginning of the loop and again before each further iteration of the statement. 
+  Here’s a simple example that generates random numbers until a particular condition is met: 
+  The condition( ) method uses the static method random( ) in the Math library, which generates a double value between 0 and 1. (It includes 0, but not 1.) The result value comes from the comparison operator <, which produces a boolean result. If you print a boolean value, you automatically get the appropriate string “true” or “false.” The conditional expression for the while says: “repeat the statements in the body as long as condition( ) returns true.” 
+do-while
+  The form for do-while is  do statement while(Boolean-expression); 
+  The sole difference between while and do-while is that the statement of the do-while always executes at least once, even if the expression evaluates to false the first time. In a while, if the conditional is false the first time the statement never executes. In practice, do- while is less common than while. 
+for
+  A for loop is perhaps the most commonly used form of iteration. This loop performs initialization before the first iteration. Then it performs conditional testing and, at the end of each iteration, some form of “stepping.” The form of the for loop is: 
+  for(initialization; Boolean-expression; step) statement  Any of the expressions initialization, Boolean-expression or step can be empty. The expression is tested before each iteration, and as soon as it evaluates to false, execution will continue at the line following the for statement. At the end of each loop, the step executes. 
+  for loops are usually used for “counting” tasks: 
+  Note that the variable c is defined at the point where it is used, inside the control expression of the for loop, rather than at the beginning of main( ). The scope of c is the statement controlled by the for. 
+  This program also uses the java.lang.Character “wrapper” class, which not only wraps the primitive char type in an object, but also provides other utilities. Here, the static isLowerCase( ) method is used to detect whether the character in question is a lowercase letter. 
+  Traditional procedural languages like C require that all variables be defined at the beginning of a block so that when the compiler creates a block, it can allocate space for those variables. In Java and C++, you can spread your variable declarations throughout the block, defining them at the point that you need them. This allows a more natural coding style and makes code easier to understand. 
+  Exercise 1: (1) Write a program that prints values from 1 to 100. 
+  Exercise 2: (2) Write a program that generates 25 random int values. For each value, use an if-else statement to classify it as greater than, less than, or equal to a second randomly generated value. 
+  Exercise 3: (1) Modify Exercise 2 so that your code is surrounded by an “infinite” while loop. It will then run until you interrupt it from the keyboard (typically by pressing Control- C). 
+  Exercise 4: (3) Write a program that uses two nested for loops and the modulus operator (%) to detect and print prime numbers (integral numbers that are not evenly divisible by any other numbers except for themselves and 1). 
+  Exercise 5: (4) Repeat Exercise 10 from the previous chapter, using the ternary operator and a bitwise test to display the ones and zeroes, instead of Integer.toBinaryString( ). 
+The comma operator
+  Earlier in this chapter I stated that the comma operator (not the comma separator, which is used to separate definitions and method arguments) has only one use in Java: in the control expression of a for loop. In both the initialization and step portions of the control expression, you can have a number of statements separated by commas, and those statements will be evaluated sequentially. 
+  Using the comma operator, you can define multiple variables within a for statement, but they must be of the same type: 
+  The int definition in the for statement covers both i and j. The initialization portion can have any number of definitions of one type. The ability to define variables in a control expression is limited to the for loop. You cannot use this approach with any of the other selection or iteration statements. 
+  You can see that in both the initialization and step portions, the statements are evaluated in sequential order. 

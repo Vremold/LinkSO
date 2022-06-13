@@ -1,0 +1,110 @@
+  The initial release of Java supplied only a small set of classes for the most useful data structures: Vector, Stack, Hashtable, BitSet, and the Enumeration interface that provides an abstract mechanism for visiting elements in an arbitrary container. That was certainly a wise choice—it takes time and skill to come up with a comprehensive collection class library. 
+  With the advent of Java 1.2, the designers felt that the time had come to roll out a full-fledged set of data structures. They faced a number of conflicting design challenges. They wanted the library to be small and easy to learn. 
+  They did not want the complexity of the Standard Template Library (or STL) of C++, but they wanted the benefit of "generic algorithms" that STL pioneered. They wanted the legacy classes to fit into the new framework. As all designers of collections libraries do, they had to make some hard choices, and they came up with a number of idiosyncratic design decisions along the way. In this section, we will explore the basic design of the Java collections framework, show you how to put it to work, and explain the reasoning behind some of the more controversial features. 
+9.1.1 Separating Collection Interfaces and Implementation
+  As is common with modern data structure libraries, the Java collection library separates interfaces and implementations. Let us look at that separation with a familiar data structure, the queue. 
+  A queue interface specifies that you can add elements at the tail end of the queue, remove them at the head, and find out how many elements are in the queue. You use a queue when you need to collect objects and retrieve them in a "first in, first out" fashion (see Figure 9.1). 
+  Figure 9.1 A queue A minimal form of a queue interface might look like this:   public interface Queue<E> // a simplified form of the interface in the standar {   void add(E element); 
+  E remove(); 
+  int size(); 
+  } 
+  The interface tells you nothing about how the queue is implemented. Of the two common implementations of a queue, one uses a "circular array" and one uses a linked list (see Figure 9.2). 
+  Figure 9.2 Queue implementations Each implementation can be expressed by a class that implements the Queue interface. 
+  public class CircularArrayQueue<E> implements Queue<E> // not an actual libra { private int head; 
+  private int tail; 
+  CircularArrayQueue(int capacity) { . . . } 
+  public void add(E element) { . . . } 
+  public E remove() { . . . } 
+  public int size() { . . . } 
+  private E[] elements; 
+  } 
+  public class LinkedListQueue<E> implements Queue<E> // not an actual library c { private Link head; 
+  private Link tail; 
+  LinkedListQueue() { . . . } 
+  public void add(E element) { . . . } 
+  public E remove() { . . . } 
+  public int size() { . . . } 
+  } 
+  Note The Java library doesn’t actually have classes named CircularArrayQueue and LinkedListQueue. We use these classes as examples to explain the conceptual distinction between collection interfaces and implementations. If you need a circular array queue, use the ArrayDeque class. For a linked list queue, simply use the LinkedList class—it implements the Queue interface. 
+  When you use a queue in your program, you don’t need to know which implementation is actually used once the collection has been constructed. 
+  Therefore, it makes sense to use the concrete class only when you construct the collection object. Use the interface type to hold the collection reference. 
+  Queue<Customer> expressLane = new CircularArrayQueue<>(100); 
+  expressLane.add(new Customer("Harry")); 
+  With this approach, if you change your mind, you can easily use a different implementation. You only need to change your program in one place—in the constructor call. If you decide that a LinkedListQueue is a better choice after all, your code becomes Queue<Customer> expressLane = new LinkedListQueue<>(); 
+  expressLane.add(new Customer("Harry")); 
+  Why would you choose one implementation over another? The interface says nothing about the efficiency of an implementation. A circular array is somewhat more efficient than a linked list, so it is generally preferable. 
+  However, as usual, there is a price to pay. 
+  The circular array is a bounded collection—it has a finite capacity. If you don’t have an upper limit on the number of objects that your program will collect, you may be better off with a linked list implementation after all. 
+  When you study the API documentation, you will find another set of classes whose name begins with Abstract, such as AbstractQueue. These classes are intended for library implementors. In the (perhaps unlikely) event that you want to implement your own queue class, you will find it easier to extend AbstractQueue than to implement all the methods of the Queue interface. 
+9.1.2 The Collection Interface
+  The fundamental interface for collection classes in the Java library is the Collection interface. The interface has two fundamental methods: public interface Collection<E> { boolean add(E element); 
+  Iterator<E> iterator(); 
+  . . . 
+  } 
+  There are several methods in addition to these two; we will discuss them later. 
+  The add method adds an element to the collection. The add method returns true if adding the element actually changes the collection, and false if the collection is unchanged. For example, if you try to add an object to a set and the object is already present, the add request has no effect because sets reject duplicates. 
+  The iterator method returns an object that implements the Iterator interface. You can use the iterator object to visit the elements in the collection   one by one. We discuss iterators in the next section. 
+9.1.3 Iterators
+  The Iterator interface has four methods: public interface Iterator<E> { E next(); 
+  boolean hasNext(); 
+  void remove(); 
+  default void forEachRemaining(Consumer<? super E> action); 
+  } 
+  By repeatedly calling the next method, you can visit the elements from the collection one by one. However, if you reach the end of the collection, the next method throws a NoSuchElementException. Therefore, you need to call the hasNext method before calling next. That method returns true if the iterator object still has more elements to visit. If you want to inspect all elements in a collection, request an iterator and then keep calling the next method while hasNext returns true. For example: Collection<String> c = . . .; 
+  Iterator<String> iter = c.iterator(); 
+  while (iter.hasNext()) { String element = iter.next(); 
+  do something with element } 
+  You can write such a loop more concisely as the "for each" loop: for (String element : c) { do something with element } 
+  The compiler simply translates the "for each" loop into a loop with an iterator. 
+  The "for each" loop works with any object that implements the Iterable interface, an interface with a single abstract method:   public interface Iterable<E> { Iterator<E> iterator(); 
+  . . . 
+  } 
+  The Collection interface extends the Iterable interface. Therefore, you can use the "for each" loop with any collection in the standard library. 
+  Instead of writing a loop, you can call the forEachRemaining method with a lambda expression that consumes an element. The lambda expression is invoked with each element of the iterator, until there are none left. 
+  iterator.forEachRemaining(element -> do something with element); 
+  The order in which the elements are visited depends on the collection type. If you iterate over an ArrayList, the iterator starts at index 0 and increments the index in each step. However, if you visit the elements in a HashSet, you will get them in an essentially random order. You can be assured that you will encounter all elements of the collection during the course of the iteration, but you cannot make any assumptions about their ordering. This is usually not a problem because the ordering does not matter for computations such as computing totals or counting matches. 
+  Note Old-timers will notice that the next and hasNext methods of the Iterator interface serve the same purpose as the nextElement and hasMoreElements methods of an Enumeration. The designers of the Java collections library could have chosen to make use of the Enumeration interface. But they disliked the cumbersome method names and instead introduced a new interface with shorter method names. 
+  There is an important conceptual difference between iterators in the Java collections library and iterators in other libraries. In traditional collections   libraries, such as the Standard Template Library of C++, iterators are modeled after array indexes. Given such an iterator, you can look up the element that is stored at that position, much like you can look up an array element a[i] if you have an array index i. Independently of the lookup, you can advance the iterator to the next position. This is the same operation as advancing an array index by calling i++, without performing a lookup. 
+  However, the Java iterators do not work like that. The lookup and position change are tightly coupled. The only way to look up an element is to call next, and that lookup advances the position. 
+  Instead, think of Java iterators as being between elements. When you call next, the iterator jumps over the next element, and it returns a reference to the element that it just passed (see Figure 9.3). 
+  Figure 9.3 Advancing an iterator   Note   Here is another useful analogy. You can think of Iterator.next as the equivalent of InputStream.read. Reading a byte from a stream automatically "consumes" the byte. The next call to read consumes and returns the next byte from the input. Similarly, repeated calls to next let you read all elements in a collection. 
+  The remove method of the Iterator interface removes the element that was returned by the last call to next. In many situations, that makes sense— you need to see the element before you can decide that it is the one that should be removed. But if you want to remove an element in a particular position, you still need to skip past the element. For example, here is how you remove the first element in a collection of strings: Iterator<String> it = c.iterator(); 
+  it.next(); // skip over the first element it.remove(); // now remove it   More importantly, there is a dependency between the calls to the next and remove methods. It is illegal to call remove if it wasn’t preceded by a call to next. If you try, an IllegalStateException is thrown. 
+  If you want to remove two adjacent elements, you cannot simply call it.remove(); 
+  it.remove(); // ERROR   Instead, you must first call next to jump over the element to be removed. 
+  it.remove(); 
+  it.next(); 
+  it.remove(); // OK 9.1.4 Generic Utility Methods
+  The Collection and Iterator interfaces are generic, which means you can write utility methods that operate on any kind of collection. For example, here is a generic method that tests whether an arbitrary collection contains a given element:   public static <E> boolean contains(Collection<E> c, Object obj) { for (E element : c) if (element.equals(obj)) return true; 
+  return false; 
+  } 
+  The designers of the Java library decided that some of these utility methods are so useful that the library should make them available. That way, library users don’t have to keep reinventing the wheel. The contains method is one such method. 
+  In fact, the Collection interface declares quite a few useful methods that all implementing classes must supply. Among them are int size() boolean isEmpty() boolean contains(Object obj) boolean containsAll(Collection<?> c) boolean equals(Object other) boolean addAll(Collection<? extends E> from) boolean remove(Object obj) boolean removeAll(Collection<?> c) void clear() boolean retainAll(Collection<?> c) Object[] toArray() <T> T[] toArray(T[] arrayToFill)   Many of these methods are self-explanatory; you will find full documentation in the API notes at the end of this section. 
+  Of course, it is a bother if every class that implements the Collection interface has to supply so many routine methods. To make life easier for implementors, the library supplies a class AbstractCollection that leaves the fundamental methods size and iterator abstract but implements the routine methods in terms of them. For example: public abstract class AbstractCollection<E> implements Collection<E> { . . . 
+  public abstract Iterator<E> iterator(); 
+  public boolean contains(Object obj) { for (E element : this) // calls iterator() if (element.equals(obj)) return true; 
+  return false; 
+  } 
+  . . . 
+  } 
+  A concrete collection class can now extend the AbstractCollection class. It is up to the concrete collection class to supply an iterator method, but the contains method has been taken care of by the AbstractCollection superclass. However, if the subclass has a more efficient way of implementing contains, it is free to do so. 
+  This approach is a bit outdated. It would be nicer if the methods were default methods of the Collection interface. This has not happened. However, several default methods have been added. Most of them deal with streams (which we will discuss in Volume II). In addition, there is a useful method default boolean removeIf(Predicate<? super E> filter)   for removing elements that fulfill a condition. 
+  java.util.Collection<E> 1.2 Iterator<E> iterator() returns an iterator that can be used to visit the elements in the collection. 
+  int size() returns the number of elements currently stored in the collection. 
+  boolean isEmpty() returns true if this collection contains no elements. 
+  boolean contains(Object obj) returns true if this collection contains an object equal to obj. 
+  boolean containsAll(Collection<?> other) returns true if this collection contains all elements in the other collection. 
+  boolean add(E element) adds an element to the collection. Returns true if the collection changed as a result of this call. 
+  boolean addAll(Collection<? extends E> other) adds all elements from the other collection to this collection. Returns true if the collection changed as a result of this call. 
+  boolean remove(Object obj) removes an object equal to obj from this collection. Returns true if a matching object was removed. 
+  boolean removeAll(Collection<?> other) removes from this collection all elements from the other collection. 
+  Returns true if the collection changed as a result of this call. 
+  default boolean removeIf(Predicate<? super E> filter) 8 removes all elements for which filter returns true. Returns true if the collection changed as a result of this call. 
+  void clear() removes all elements from this collection. 
+  boolean retainAll(Collection<?> other) removes all elements from this collection that do not equal one of the elements in the other collection. Returns true if the collection changed as a result of this call. 
+  Object[] toArray() returns an array of the objects in the collection. 
+  <T> T[] toArray(T[] arrayToFill) returns an array of the objects in the collection. If arrayToFill has sufficient length, it is filled with the elements of this collection. If there is space, a null element is appended. Otherwise, a new array with the same component type as arrayToFill and the same length as the size of this collection is allocated and filled. 
+  java.util.Iterator<E> 1.2 boolean hasNext() returns true if there is another element to visit. 
+  E next() returns the next object to visit. Throws a NoSuchElementException if the end of the collection has been reached. 
+  void remove() removes the last visited object. This method must immediately follow an element visit. If the collection has been modified since the last element visit, this method throws an IllegalStateException. 
+  default void forEachRemaining(Consumer<? super E> action) 8 visits elements and passes them to the given action until no elements remain or the action throws an exception. 

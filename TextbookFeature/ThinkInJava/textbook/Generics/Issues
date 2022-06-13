@@ -1,0 +1,40 @@
+  This section addresses an assorted set of issues that appear when you are using Java generics. 
+No primitives as type parameters
+  As mentioned earlier in this chapter, one of the limitations you will discover in Java generics is that you cannot use primitives as type parameters. So you cannot, for example, create an ArrayList<int>. 
+  The solution is to use the primitive wrapper classes in conjunction with Java SE5 autoboxing. If you create an ArrayList< Integer> and use primitive ints with this container, you’ll    discover that autoboxing does the conversion to and from Integer automatically—so it’s almost as if you have an Ar r ayList < int >: 
+  Note that autoboxing even allows the foreach syntax to produce ints. 
+  In general this solution works fine—you’re able to successfully store and retrieve ints. There happen to be some conversions going on but these are hidden from you. However, if performance is a problem, you can use a specialized version of the containers adapted for primitive types; one opensource version of this is org.apache.commons.collections.primitives. 
+  Here’s another approach, which creates a Set of Bytes: 
+  Notice that autoboxing solves some problems, but not all. The following example shows a generic Generator interface that specifies a next( ) that returns an object of the parameter type. The FArray class contains a generic method that uses a generator to fill an array with objects (making the class generic wouldn’t work in this case because the method is static). The Generator implementations come from the Arrays chapter, and in main( ) you can see FArray.fill( ) used to fill arrays with objects: 
+  Since RandomGenerator.Integer implements Generator<Integer>, my hope was that autoboxing would automatically convert the value of next( ) from Integer to int. However, autoboxing doesn’t apply to arrays, so this won’t work. 
+  Exercise 30: (2) Create a Holder for each of the primitive wrapper types, and show that autoboxing and autounboxing works for the set( ) and get( ) methods of each instance. 
+Implementing parameterized interfaces
+  A class cannot implement two variants of the same generic interface. Because of erasure, these are both the same interface. Here’s a situation where this clash occurs: 
+  Hourly won’t compile because erasure reduces Payable<Employee> and Payable<Hourly> to the same class, Payable, and the above code would mean that you’d be implementing the same interface twice. Interestingly enough, if you remove the generic parameters from both uses of Payable—as the compiler does during erasure—the code compiles. 
+  This issue can become annoying when you are working with some of the more fundamental Java interfaces, such as Comparable<T>, as you’ll see a little later in this section. 
+  Exercise 31: (1) Remove all the generics from MultipleInterfaceVariants.java and modify the code so that the example compiles. 
+Casting and warnings
+  Using a cast or instanceof with a generic type parameter doesn’t have any effect. The following container stores values internally as Objects and casts them back to T when you fetch them: 
+  Without the @SuppressWarnings annotation, the compiler will produce an "unchecked cast" warning for pop( ). Because of erasure, it can’t know whether the cast is safe, and the pop( ) method doesn’t actually do any casting. T is erased to its first bound, which is Object by default, so pop( ) is actually just casting an Object to an Object. 
+  There are times when generics do not eliminate the need to cast, and this generates a warning by the compiler which is inappropriate. For example: 
+  As you’ll learn in the next chapter, readObject( ) cannot know what it is reading, so it returns an object that must be cast. But when you comment out the @SuppressWarnings annotation and compile the program, you get a warning: 
+  Note: NeedCasting.Java uses unchecked or unsafe operations. Note: Recompile with -Xlint:unchecked for details. 
+  And if you follow the instructions and recompile with -Xlint:unchecked: 
+  NeedCasting.Java:12: warning: [unchecked] unchecked cast found : java.lang.Object required: java.uti1.List<Widget> List<Shape> shapes = (List<Widget>)in.readObject(); 
+  You’re forced to cast, and yet you’re told you shouldn’t. To solve the problem, you must use a new form of cast introduced in Java SE5, the cast via a generic class: 
+  However, you can’t cast to the actual type (List<Widget>). That is, you can’t say  List<Widget>.class.cast(in.readObject()) 
+  and even if you add another cast like this: 
+  (List<Widget>)List.class.cast(in.readObject())  you’ll still get a warning. 
+  Exercise 32: (1) Verify that FixedSizeStack in GenericCast.java generates exceptions if you try to go out of its bounds. Does this mean that bounds-checking code is not required? 
+  Exercise 33: (3) Repair GenericCast.java using an ArrayList. 
+  
+Overloading
+  This won’t compile, even though it’s a reasonable thing to try: 
+  Overloading the method produces the identical type signature because of erasure. 
+  Instead, you must provide distinct method names when the erased arguments do not produce a unique argument list: 
+  Fortunately, this kind of problem is detected by the compiler. 
+Base class hijacks an interface
+  Suppose you have a Pet class that is Comparable to other Pet objects: 
+  It makes sense to try to narrow the type that a subclass of ComparablePet can be compared to. For example, a Cat should only be Comparable with other Cats: 
+  Unfortunately, this won’t work. Once the ComparablePet argument is established for Comparable, no other implementing class can ever be compared to anything but a ComparablePet: 
+  Hamster shows that it is possible to reimplement the same interface that is in ComparablePet, as long as it is exactly the same, including the parameter types. However, this is the same as just overriding the methods in the base class, as seen in Gecko. 

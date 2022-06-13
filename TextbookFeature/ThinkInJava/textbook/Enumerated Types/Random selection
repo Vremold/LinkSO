@@ -1,0 +1,4 @@
+  Many of the examples in this chapter require random selection from among enum instances, as you saw in CartoonCharacter.next( ). It’s possible to generalize this task using generics and put the result in the common library: 
+  The rather odd syntax <T extends Enum<T>> describes T as an enum instance. By passing in Class<T>, we make the class object available, and the array of enum instances can thus be produced. The overloaded random( ) method only needs to know that it is getting a T[] because it doesn’t need to perform Enum operations; it only needs to select an array element at random. The return type is the exact type of the enum. 
+  Here’s a simple test of the random( ) method: 
+  Although Enums is a small class, you’ll see that it prevents a fair amount of duplication in this chapter. Duplication tends to produce mistakes, so eliminating duplication is a useful pursuit. 

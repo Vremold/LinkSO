@@ -1,0 +1,15 @@
+  in methods and scopes  What you’ve seen so far encompasses the typical use for inner classes. In general, the code that you’ll write and read involving inner classes will be "plain" inner classes that are simple and easy to understand. However, the syntax for inner classes covers a number of other, more obscure techniques. Inner classes can be created within a method or even an arbitrary scope. There are two reasons for doing this: 
+  1. As shown previously, you’re implementing an interface of some kind so that you can create and return a reference. 
+  2. You’re solving a complicated problem and you want to create a class to aid in your solution, but you don’t want it publicly available. 
+  In the following examples, the previous code will be modified to use: 
+  1. A class defined within a method  2. A class defined within a scope inside a method 
+  3. An anonymous class implementing an interface  4. An anonymous class extending a class that has a non-default constructor 
+  5. An anonymous class that performs field initialization  6. An anonymous class that performs construction using instance initialization (anonymous inner classes cannot have constructors) 
+  The first example shows the creation of an entire class within the scope of a method (instead of the scope of another class). This is called a local inner class: 
+  The class PDestination is part of destination( ) rather than being part of Parcels. Therefore, PDestination cannot be accessed outside of destination( ). Notice the upcasting that occurs in the return statementnothing comes out of destination( ) except a reference to Destination, the base class. Of course, the fact that the name of the class PDestination is placed inside destination( ) doesn’t mean that PDestination is not a valid object once destination( ) returns. 
+  You could use the class identifier PDestination for an inner class inside each class in the same subdirectory without a name clash. 
+  The next example shows how you can nest an inner class within any arbitrary scope: 
+  The class TrackingSlip is nested inside the scope of an if statement. This does not mean that the class is conditionally created—it gets compiled along with everything else. However, it’s not available outside the scope in which it is defined. Other than that, it looks just like an ordinary class. 
+  Exercise 9: (1) Create an interface with at least one method, and implement that interface by defining an inner class within a method, which returns a reference to your interface. 
+  Exercise 10: (1) Repeat the previous exercise but define the inner class within a scope within a method. 
+  Exercise 11: (2) Create a private inner class that implements a public interface. Write a method that returns a reference to an instance of the private inner class, upcast to the interface. Show that the inner class is completely hidden by trying to downcast to it. 

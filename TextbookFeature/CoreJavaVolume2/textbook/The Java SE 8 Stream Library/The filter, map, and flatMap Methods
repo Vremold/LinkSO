@@ -1,0 +1,17 @@
+  9   1.3 The filter, map, and flatMap Methods A stream transformation produces a stream whose elements are derived from those of another stream. You have already seen the filter transformation that yields a stream with those elements that match a certain condition. Here, we transform a stream of strings into another stream containing only long words: List<String> wordList = . . .; 
+  Stream<String> longWords = wordList.stream().filter(w -> w.length() > 12); 
+  The argument of filter is a Predicate<T>—that is, a function from T to boolean. 
+  Often, you want to transform the values in a stream in some way. Use the map method and pass the function that carries out the transformation. For example, you can transform all words to lowercase like this: Stream<String> lowercaseWords = words.stream().map(String::toLowerCase); 
+  Here, we used map with a method reference. Often, a lambda expression is used instead: Stream<String> firstLetters = words.stream().map(s -> s.substring(0, 1)); 
+  The resulting stream contains the first letters of all words. 
+  When you use map, a function is applied to each element, and the result is a new stream with the results. Now, suppose you have a function that returns not just one value but a stream of values: public static Stream<String> letters(String s) { List<String> result = new ArrayList<>(); 
+  for (int i = 0; i < s.length(); i++) result.add(s.substring(i, i + 1)); 
+  return result.stream(); 
+  } 
+  For example, letters("boat") is the stream ["b", "o", "a", "t"]. 
+  NOTE: With the IntStream.range method in Section 1.13, “Primitive Type Streams,” on p. 36, you can implement this method much more elegantly. 
+  Suppose you map the letters method on a stream of strings: Stream<Stream<String>> result = words.stream().map(w -> letters(w)); 
+  From the Library of Hristo Dimov Hristov   10   Chapter 1   The Java SE 8 Stream Library   You will get a stream of streams, like [. . . ["y", "o", "u", "r"], ["b", "o", "a", "t"], . . .]. 
+  To flatten it out to a stream of letters [. . . "y", "o", "u", "r", "b", "o", "a", "t", . . .], use the flatMap method instead of map: Stream<String> flatResult = words.stream().flatMap(w -> letters(w)) // Calls letters on each word and flattens the results   NOTE: You will find a flatMap method in classes other than streams. It is a general concept in computer science. Suppose you have a generic type G (such as Stream) and functions f from some type T to G<U> and g from U to G<V>. Then you can compose them—that is, first apply f and then g, by using flatMap. This is a key idea in the theory of monads. But don’t worry—you can use flatMap without knowing anything about monads. 
+  java.util.stream.Stream 8   • Stream<T> filter(Predicate<? super T> predicate) yields a stream containing the elements of this stream that fulfill the predicate. 
+  • <R> Stream<R> map(Function<? super T,? extends R> mapper) yields a stream containing the results of applying mapper to the elements of this stream. 

@@ -1,0 +1,6 @@
+  To format a currency value, you can use the NumberFormat.getCurrencyInstance method. 
+  However, that method is not very flexible—it returns a formatter for a single currency. Suppose you prepare an invoice for an American customer in which some amounts are in dollars and others are in euros. You can’t just use two formatters NumberFormat dollarFormatter = NumberFormat.getCurrencyInstance(Locale.US); 
+  NumberFormat euroFormatter = NumberFormat.getCurrencyInstance(Locale.GERMANY); 
+  Your invoice would look very strange, with some values formatted like $100,000 and others like 100.000 €. (Note that the euro value uses a decimal point, not a comma.) Instead, use the Currency class to control the currency used by the formatters. You can get a Currency object by passing a currency identifier to the static Currency.getInstance method. Then call the setCurrency method for each formatter. Here is how you would set up the euro formatter for your American customer: NumberFormat euroFormatter = NumberFormat.getCurrencyInstance(Locale.US); 
+  euroFormatter.setCurrency(Currency.getInstance("EUR")); 
+  The currency identifiers are defined by ISO 4217 (see www.currency-iso.org/iso_index/ iso_tables/iso_tables_a1.htm). Table 7.3 provides a partial list. 

@@ -1,0 +1,151 @@
+  In this section, we will show you how to display information inside a frame (Figure 10.3). 
+  Figure 10.3 A frame that displays information   You could draw the message string directly onto a frame, but that is not considered good programming practice. In Java, frames are really designed to be containers for components, such as a menu bar and other user interface elements. You normally draw on another component which you add to the frame. 
+  The structure of a JFrame is surprisingly complex. Look at Figure 10.4 which shows the makeup of a JFrame. As you can see, four panes are layered in a JFrame. The root pane, layered pane, and glass pane are of no interest to us; they are required to organize the menu bar and content pane and to implement the look-and-feel. The part that most concerns Swing programmers is the content pane. Any components that you add to a frame are automatically placed into the content pane:   Figure 10.4 Internal structure of a JFrame Component c = . . .; 
+  frame.add(c); // added to the content pane   In our case, we want to add a single component to the frame onto which we will draw our message. To draw on a component, you define a class that extends JComponent and override the paintComponent method in that class. 
+  The paintComponent method takes one parameter of type Graphics. A Graphics object remembers a collection of settings for drawing images and text, such as the font you set or the current color. All drawing in Java must go through a Graphics object. It has methods that draw patterns, images, and text. 
+  Here’s how to make a component onto which you can draw: class MyComponent extends JComponent { public void paintComponent(Graphics g) { code for drawing } 
+  } 
+  Each time a window needs to be redrawn, no matter what the reason, the event handler notifies the component. This causes the paintComponent methods of all components to be executed. 
+  Never call the paintComponent method yourself. It is called automatically whenever a part of your application needs to be redrawn, and you should not interfere with this automatic process. 
+  What sorts of actions trigger this automatic response? For example, painting occurs when the user increases the size of the window, or minimizes and then restores the window. If the user popped up another window that covered an existing window and then made the overlaid window disappear, the window that was covered is now corrupted and will need to be repainted. (The graphics system does not save the pixels underneath.) And, of course, when the window is displayed for the first time, it needs to process the code that   specifies how and where it should draw the initial elements. 
+  Tip If you need to force repainting of the screen, call the repaint method instead of paintComponent. The repaint method will cause paintComponent to be called for all components, with a properly configured Graphics object. 
+  As you saw in the code fragment above, the paintComponent method takes a single parameter of type Graphics. Measurement on a Graphics object for screen display is done in pixels. The (0, 0) coordinate denotes the top left corner of the component on whose surface you are drawing. 
+  The Graphics class has various drawing methods, and displaying text is considered a special kind of drawing. Our paintComponent method looks like this: public class NotHelloWorldComponent extends JComponent { public static final int MESSAGE_X = 75; 
+  public static final int MESSAGE_Y = 100; 
+  public void paintComponent(Graphics g) { g.drawString("Not a Hello, World program", MESSAGE_X, MESSAGE_Y); 
+  } 
+  . . . 
+  } 
+  Finally, a component should tell its users how big it would like to be. 
+  Override the getPreferredSize method and return an object of the Dimension class with the preferred width and height: public class NotHelloWorldComponent extends JComponent { private static final int DEFAULT_WIDTH = 300; 
+  private static final int DEFAULT_HEIGHT = 200; 
+  . . . 
+  public Dimension getPreferredSize() { return new Dimension(DEFAULT_WIDTH, DEFAULT_HEIGHT); 
+  } 
+  } 
+  When you fill a frame with one or more components, and you simply want to use their preferred size, call the pack method instead of the setSize method: class NotHelloWorldFrame extends JFrame { public NotHelloWorldFrame() { add(new NotHelloWorldComponent()); 
+  pack(); 
+  } 
+  } 
+  javax.swing.JFrame 1.2 Component add(Component c) adds and returns the given component to the content pane of this frame. 
+  java.awt.Component 1.0 void repaint() causes a repaint of the component "as soon as possible." 
+  Dimension getPreferredSize() is the method to override to return the preferred size of this component. 
+  javax.swing.JComponent 1.2 void paintComponent(Graphics g) is the method to override to describe how your component needs to be painted. 
+  java.awt.Window 1.0 void pack() resizes this window, taking into account the preferred sizes of its components. 
+10.3.1 Working with 2D Shapes
+  Starting with Java 1.0, the Graphics class has methods to draw lines, rectangles, ellipses, and so on. But those drawing operations are very limited. 
+  We will instead use the shape classes from the Java 2D library. 
+  To use this library, you need to obtain an object of the Graphics2D class. 
+  This class is a subclass of the Graphics class. Ever since Java 1.2, methods such as paintComponent automatically receive an object of the Graphics2D class. Simply use a cast, as follows: public void paintComponent(Graphics g) { Graphics2D g2 = (Graphics2D) g; 
+  . . . 
+  } 
+  The Java 2D library organizes geometric shapes in an object-oriented fashion. 
+  In particular, there are classes to represent lines, rectangles, and ellipses:   Line2D Rectangle2D Ellipse2D   These classes all implement the Shape interface. The Java 2D library supports more complex shapes—arcs, quadratic and cubic curves, and general paths—that we do not discuss in this chapter. 
+  To draw a shape, you first create an object of a class that implements the Shape interface and then call the draw method of the Graphics2D class. 
+  For example: Rectangle2D rect = . . .; 
+  g2.draw(rect); 
+  The Java 2D library uses floating-point coordinates, not integers, for pixels. 
+  Internal calculations are carried out with single-precision float quantities. 
+  Single precision is sufficient—after all, the ultimate purpose of the geometric computations is to set pixels on the screen or printer. As long as any roundoff errors stay within one pixel, the visual outcome is not affected. 
+  However, manipulating float values is sometimes inconvenient for the programmer because Java is adamant about requiring casts when converting double values into float values. For example, consider the following statement: float f = 1.2; // ERROR--possible loss of precision   This statement does not compile because the constant 1.2 has type double, and the compiler is nervous about loss of precision. The remedy is to add an F suffix to the floating-point constant: float f = 1.2F; // OK   Now consider this statement: float f = r.getWidth(); // ERROR   This statement does not compile either, for the same reason. The getWidth method returns a double. This time, the remedy is to provide a cast: float f = (float) r.getWidth(); // OK   These suffixes and casts are a bit of a pain, so the designers of the 2D library decided to supply two versions of each shape class: one with float coordinates for frugal programmers, and one with double coordinates for the lazy ones. (In this book, we fall into the second camp and use double coordinates whenever we can.) The library designers chose a curious mechanism for packaging these choices. Consider the Rectangle2D class. This is an abstract class with two concrete subclasses, which are also static inner classes: Rectangle2D.Float Rectangle2D.Double   Figure 10.5 shows the inheritance diagram. 
+  Figure 10.5 2D rectangle classes It is best to ignore the fact that the two concrete classes are static inner classes—that is just a gimmick to avoid names such as FloatRectangle2D and DoubleRectangle2D. 
+  When you construct a Rectangle2D.Float object, you supply the coordinates as float numbers. For a Rectangle2D.Double object, you supply them as double numbers. 
+  var floatRect = new Rectangle2D.Float(10.0F, 25.0F, 22.5F, 20.0F); 
+  var doubleRect = new Rectangle2D.Double(10.0, 25.0, 22.5, 20.0); 
+  The construction parameters denote the top left corner, width, and height of the rectangle. 
+  The Rectangle2D methods use double parameters and return values. For example, the getWidth method returns a double value, even if the width is stored as a float in a Rectangle2D.Float object. 
+  Tip Simply use the Double shape classes to avoid dealing with float values altogether. However, if you are constructing thousands of shape objects, consider using the Float classes to conserve memory. 
+  What we just discussed for the Rectangle2D classes holds for the other shape classes as well. Furthermore, there is a Point2D class with subclasses Point2D.Float and Point2D.Double. Here is how to make a point object: var p = new Point2D.Double(10, 20); 
+  The classes Rectangle2D and Ellipse2D both inherit from the common superclass RectangularShape. Admittedly, ellipses are not rectangular, but they have a bounding rectangle (see Figure 10.6). 
+  Figure 10.6 The bounding rectangle of an ellipse The RectangularShape class defines over 20 methods that are common to these shapes, among them such useful methods as getWidth, getHeight, getCenterX, and getCenterY (but, sadly, at the time of this writing, not a getCenter method that would return the center as a Point2D object). 
+  Finally, a couple of legacy classes from Java 1.0 have been fitted into the shape class hierarchy. The Rectangle and Point classes, which store a rectangle and a point with integer coordinates, extend the Rectangle2D and Point2D classes. 
+  Figure 10.7 shows the relationships between the shape classes. However, the Double and Float subclasses are omitted. Legacy classes are marked with a gray fill. 
+  Figure 10.7 Relationships between the shape classes Rectangle2D and Ellipse2D objects are simple to construct. You need to specify The x and y coordinates of the top left corner; and The width and height. 
+  For ellipses, these refer to the bounding rectangle. For example, var e = new Ellipse2D.Double(150, 200, 100, 50); 
+  constructs an ellipse that is bounded by a rectangle with the top left corner at (150, 200), width of 100, and height of 50. 
+  When constructing an ellipse, you usually know the center, width, and height, but not the corner points of the bounding rectangle (which don’t even lie on the ellipse). The setFrameFromCenter method uses the center point, but it still requires one of the four corner points. Thus, you will usually end up constructing an ellipse as follows:   var ellipse = new Ellipse2D.Double(centerX - width / 2, centerY - height / 2, width, he   To construct a line, you supply the start and end points, either as Point2D objects or as pairs of numbers: var line = new Line2D.Double(start, end); 
+  or var line = new Line2D.Double(startX, startY, endX, endY); 
+  The program in Listing 10.3 draws a rectangle, the ellipse that is enclosed in the rectangle, a diagonal of the rectangle, and a circle that has the same center as the rectangle. Figure 10.8 shows the result. 
+  java.awt.geom.RectangularShape 1.2 double getCenterX() double getCenterY() double getMinX() double getMinY() double getMaxX() double getMaxY() returns the center, minimum, or maximum x or y value of the enclosing rectangle. 
+  double getWidth() double getHeight() returns the width or height of the enclosing rectangle. 
+  double getX() double getY() returns the x or y coordinate of the top left corner of the enclosing   rectangle. 
+  java.awt.geom.Rectangle2D.Double 1.2 Rectangle2D.Double(double x, double y, double w, double h) constructs a rectangle with the given top left corner, width, and height. 
+  java.awt.geom.Ellipse2D.Double 1.2 Ellipse2D.Double(double x, double y, double w, double h) constructs an ellipse whose bounding rectangle has the given top left corner, width, and height. 
+  java.awt.geom.Point2D.Double 1.2 Point2D.Double(double x, double y) constructs a point with the given coordinates. 
+  java.awt.geom.Line2D.Double 1.2 Line2D.Double(Point2D start, Point2D end) Line2D.Double(double startX, double startY, double endX, double endY) constructs a line with the given start and end points. 
+10.3.2 Using Color
+  The setPaint method of the Graphics2D class lets you select a color that is used for all subsequent drawing operations on the graphics context. 
+  For example: g2.setPaint(Color.RED); 
+  g2.drawString("Warning!", 100, 100); 
+  You can fill the interiors of closed shapes (such as rectangles or ellipses) with a color. Simply call fill instead of draw: Rectangle2D rect = . . .; 
+  g2.setPaint(Color.RED); 
+  g2.fill(rect); // fills rect with red   To draw in multiple colors, select a color, draw or fill, then select another color, and draw or fill again. 
+  Note The fill method paints one fewer pixel to the right and the bottom. 
+  For example, if you draw a new Rectangle2D.Double(0, 0, 10, 20), then the drawing includes the pixels with x = 10 and y = 20. If you fill the same rectangle, those pixels are not painted. 
+  Define colors with the Color class. The java.awt.Color class offers predefined constants for the following 13 standard colors: BLACK, BLUE, CYAN, DARK_GRAY, GRAY, GREEN, LIGHT_GRAY, MAGENTA, ORANGE, PINK, RED, WHITE, YELLOW   You can specify a custom color by creating a Color object by its red, green, and blue components, each a value between 0 and 255: g2.setPaint(new Color(0, 128, 128)); // a dull blue-green g2.drawString("Welcome!", 75, 125); 
+  Note   In addition to solid colors, you can call setPaint with instances of classes that implement the Paint interface. This enables drawing with gradients and textures. 
+  To set the background color, use the setBackground method of the Component class, an ancestor of JComponent. 
+  var component = new MyComponent(); 
+  component.setBackground(Color.PINK); 
+  There is also a setForeground method. It specifies the default color that is used for drawing on the component. 
+  java.awt.Color 1.0 Color(int r, int g, int b) creates a color object with the given red, green, and blue components between 0 and 255. 
+  java.awt.Graphics2D 1.2 Paint getPaint() void setPaint(Paint p) gets or sets the paint property of this graphics context. The Color class implements the Paint interface. Therefore, you can use this method to set the paint attribute to a solid color. 
+  void fill(Shape s) fills the shape with the current paint. 
+  java.awt.Component 1.0 Color getForeground()   Color getBackground() void setForeground(Color c) void setBackground(Color c) gets or sets the foreground or background color. 
+10.3.3 Using Fonts
+  The "Not a Hello World" program at the beginning of this chapter displayed a string in the default font. Sometimes, you will want to show your text in a different font. You can specify a font by its font face name. A font face name is composed of a font family name, such as "Helvetica", and an optional suffix such as "Bold". For example, the font faces "Helvetica" and "Helvetica Bold" are both considered to be part of the family named "Helvetica." 
+  To find out which fonts are available on a particular computer, call the getAvailableFontFamilyNames method of the GraphicsEnvironment class. The method returns an array of strings containing the names of all available fonts. To obtain an instance of the GraphicsEnvironment class that describes the graphics environment of the user’s system, use the static getLocalGraphicsEnvironment method. The following program prints the names of all fonts on your system: import java.awt.*; 
+  public class ListFonts { public static void main(String[] args) { String[] fontNames = GraphicsEnvironment .getLocalGraphicsEnvironment() .getAvailableFontFamilyNames(); 
+  for (String fontName : fontNames) System.out.println(fontName); 
+  } 
+  } 
+  The AWT defines five logical font names: SansSerif Serif   Monospaced Dialog DialogInput   These names are always mapped to some fonts that actually exist on the client machine. For example, on a Windows system, SansSerif is mapped to Arial. 
+  In addition, the Oracle JDK always includes three font families named "Lucida Sans," "Lucida Bright," and "Lucida Sans Typewriter." 
+  To draw characters in a font, you must first create an object of the class Font. Specify the font face name, the font style, and the point size. Here is an example of how you construct a Font object: var sansbold14 = new Font("SansSerif", Font.BOLD, 14); 
+  The third argument is the point size. Points are commonly used in typography to indicate the size of a font. There are 72 points per inch. 
+  You can use a logical font name in place of the font face name in the Font constructor. Specify the style (plain, bold, italic, or bold italic) by setting the second Font constructor argument to one of the following values: Font.PLAIN Font.BOLD Font.ITALIC Font.BOLD + Font.ITALIC   The font is plain with a font size of 1 point. Use the deriveFont method to get a font of the desired size: Font f = f1.deriveFont(14.0F); 
+  Caution There are two overloaded versions of the deriveFont method. 
+  One of them (with a float parameter) sets the font size, the other (with an int parameter) sets the font style. Thus, f1.deriveFont(14) sets the style and not the size! (The result is an italic font because it happens that the binary representation of   14 has the ITALIC bit but not the BOLD bit set.) Here’s the code that displays the string "Hello, World!" in the standard sans serif font on your system, using 14-point bold type: var sansbold14 = new Font("SansSerif", Font.BOLD, 14); 
+  g2.setFont(sansbold14); 
+  var message = "Hello, World!"; 
+  g2.drawString(message, 75, 100); 
+  Next, let’s center the string in its component instead of drawing it at an arbitrary position. We need to know the width and height of the string in pixels. These dimensions depend on three factors: The font used (in our case, sans serif, bold, 14 point); 
+  The string (in our case, "Hello, World!"); and The device on which the font is drawn (in our case, the user’s screen). 
+  To obtain an object that represents the font characteristics of the screen device, call the getFontRenderContext method of the Graphics2D class. It returns an object of the FontRenderContext class. Simply pass that object to the getStringBounds method of the Font class: FontRenderContext context = g2.getFontRenderContext(); 
+  Rectangle2D bounds = sansbold14.getStringBounds(message, context); 
+  The getStringBounds method returns a rectangle that encloses the string. 
+  To interpret the dimensions of that rectangle, you should know some basic typesetting terms (see Figure 10.9). The baseline is the imaginary line where, for example, the bottom of a character like ‘e’ rests. The ascent is the distance from the baseline to the top of an ascender, which is the upper part of a letter like ‘b’ or ‘k’, or an uppercase character. The descent is the distance from the baseline to a descender, which is the lower portion of a letter like ‘p’ or ‘g’. 
+  Figure 10.9 Typesetting terms illustrated Leading is the space between the descent of one line and the ascent of the next line. (The term has its origin from the strips of lead that typesetters used to separate lines.) The height of a font is the distance between successive baselines, which is the same as descent + leading + ascent. 
+  The width of the rectangle that the getStringBounds method returns is the horizontal extent of the string. The height of the rectangle is the sum of ascent, descent, and leading. The rectangle has its origin at the baseline of the string. The top y coordinate of the rectangle is negative. Thus, you can obtain string width, height, and ascent as follows: double stringWidth = bounds.getWidth(); 
+  double stringHeight = bounds.getHeight(); 
+  double ascent = -bounds.getY(); 
+  If you need to know the descent or leading, use the getLineMetrics method of the Font class. That method returns an object of the LineMetrics class, which has methods to obtain the descent and leading: LineMetrics metrics = f.getLineMetrics(message, context); 
+  float descent = metrics.getDescent(); 
+  float leading = metrics.getLeading(); 
+  Note When you need to compute layout dimensions outside the   paintComponent method, you can’t obtain the font render context from the Graphics2D object. Instead, call the getFontMetrics method of the JComponent class and then call getFontRenderContext. 
+  FontRenderContext context = getFontMetrics(f).getFontRenderContext(); 
+  To show that the positioning is accurate, the sample program in Listing 10.4 centers the string in the frame and draws the baseline and the bounding rectangle. Figure 10.10 shows the screen display. 
+  Figure 10.10 Drawing the baseline and string bounds   java.awt.Font 1.0 Font(String name, int style, int size) creates a new font object. The font name is either a font face name (such as "Helvetica Bold") or a logical font name (such as "Serif", "SansSerif"). The style is one of Font.PLAIN, Font.BOLD, Font.ITALIC, or Font.BOLD + Font.ITALIC. 
+  String getFontName() gets the font face name (such as "Helvetica Bold"). 
+  String getFamily() gets the font family name (such as "Helvetica"). 
+  String getName()   gets the logical name (such as "SansSerif") if the font was created with a logical font name; otherwise, gets the font face name. 
+  Rectangle2D getStringBounds(String s, FontRenderContext context) 1.2 returns a rectangle that encloses the string. The origin of the rectangle falls on the baseline. The top y coordinate of the rectangle equals the negative of the ascent. The height of the rectangle equals the sum of ascent, descent, and leading. The width equals the string width. 
+  LineMetrics getLineMetrics(String s, FontRenderContext context) 1.2 returns a line metrics object to determine the extent of the string. 
+  Font deriveFont(int style) 1.2 Font deriveFont(float size) 1.2 Font deriveFont(int style, float size) 1.2 returns a new font that is equal to this font, except that it has the given size and style. 
+  java.awt.font.LineMetrics 1.2 float getAscent() gets the font ascent—the distance from the baseline to the tops of uppercase characters. 
+  float getDescent() gets the font descent—the distance from the baseline to the bottoms of descenders. 
+  float getLeading() gets the font leading—the space between the bottom of one line of text and the top of the next line. 
+  float getHeight()   gets the total height of the font—the distance between the two baselines of text (descent + leading + ascent). 
+  java.awt.Graphics2D 1.2 FontRenderContext getFontRenderContext() gets a font render context that specifies font characteristics in this graphics context. 
+  void drawString(String str, float x, float y) draws a string in the current font and color. 
+  javax.swing.JComponent 1.2 FontMetrics getFontMetrics(Font f) 5 gets the font metrics for the given font. The FontMetrics class is a precursor to the LineMetrics class. 
+  java.awt.FontMetrics 1.0 FontRenderContext getFontRenderContext() 1.2 gets a font render context for the font. 
+10.3.4 Displaying Images
+  You can use the ImageIcon class to read an image from a file: Image image = new ImageIcon(filename).getImage(); 
+  Now the variable image contains a reference to an object that encapsulates the image data. Display the image with the drawImage method of the Graphics class. 
+  public void paintComponent(Graphics g) { . . . 
+  g.drawImage(image, x, y, null); 
+  } 
+  We can take this a little bit further and tile the window with the graphics image. The result looks like the screen shown in Figure 10.11. We do the tiling in the paintComponent method. We first draw one copy of the image in the top left corner and then use the copyArea call to copy it into the entire window:   Figure 10.11 Window with tiled graphics image   for (int i = 0; i * imageWidth <= getWidth(); i++) for (int j = 0; j * imageHeight <= getHeight(); j++) if (i + j > 0) g.copyArea(0, 0, imageWidth, imageHeight, i * imageWidth, j * imageHe   java.awt.Graphics 1.0 boolean drawImage(Image img, int x, int y, ImageObserver observer) boolean drawImage(Image img, int x, int y, int width, int height, ImageObserver observer) draws an unscaled or scaled image. Note: This call may return before the image is drawn. The imageObserver object is notified of the rendering progress. This was a useful feature in the distant past. 
+  Nowadays, just pass a null observer. 
+  void copyArea(int x, int y, int width, int height, int dx, int dy) copies an area of the screen. The dx and dy parameters are the distance from the source area to the target area. 

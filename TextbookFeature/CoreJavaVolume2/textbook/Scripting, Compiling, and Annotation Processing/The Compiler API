@@ -1,0 +1,190 @@
+  443   8.2 The Compiler API In the preceding sections, you saw how to interact with code in a scripting language. Now we turn to a different scenario: Java programs that compile Java code. There are quite a few tools that need to invoke the Java compiler, such as: • • • •   Development environments Java teaching and tutoring programs Build and test automation tools Templating tools that process snippets of Java code, such as JavaServer Pages (JSP)   In the past, applications invoked the Java compiler by calling undocumented classes in the jdk/lib/tools.jar library. Nowadays, a public API for compilation is a part of the Java platform, and it is no longer necessary to use tools.jar. This section explains the compiler API. 
+8.2.1 Compiling the Easy Way
+  It is very easy to invoke the compiler. Here is a sample call: JavaCompiler compiler = ToolProvider.getSystemJavaCompiler(); 
+  OutputStream outStream = . . .; 
+  OutputStream errStream = . . .; 
+  int result = compiler.run(null, outStream, errStream, "-sourcepath", "src", "Test.java"); 
+  A result value of 0 indicates successful compilation. 
+  The compiler sends output and error messages to the provided streams. You can set these parameters to null, in which case System.out and System.err are used. The first parameter of the run method is an input stream. As the compiler takes no console input, you can always leave it as null. (The run method is inherited from a generic Tool interface, which allows for tools that read input.) The remaining parameters of the run method are simply the arguments that you would pass to javac if you invoked it on the command line. These can be options or file names. 
+8.2.2 Using Compilation Tasks
+  You can have even more control over the compilation process with a CompilationTask object. In particular, you can • Control the source of program code—for example, by providing code in a string builder instead of a file   From the Library of Hristo Dimov Hristov   444   Chapter 8   Scripting, Compiling, and Annotation Processing   • Control the placement of class files—for example, by storing them in a database • Listen to error and warning messages as they occur during compilation • Run the compiler in the background The location of source and class files is controlled by a JavaFileManager. It is responsible for determining JavaFileObject instances for source and class files. A JavaFileObject can correspond to a disk file, or it can provide another mechanism for reading and writing its contents. 
+  To listen to error messages, install a DiagnosticListener. The listener receives a Diagnostic object whenever the compiler reports a warning or error message. The DiagnosticCollector class implements this interface. It simply collects all diagnostics so that you can iterate through them after the compilation is complete. 
+  A Diagnostic object contains information about the problem location (including file name, line number, and column number) as well as a human-readable description. 
+  To obtain a CompilationTask object, call the getTask method of the JavaCompiler class. You need to specify: • A Writer for any compiler output that is not reported as a Diagnostic, or null to use System.err • A JavaFileManager, or null to use the compiler’s standard file manager • A DiagnosticListener • Option strings, or null for no options • Class names for annotation processing, or null if none are specified (we’ll discuss annotation processing later in this chapter) • JavaFileObject instances for source files You need to provide the last three arguments as Iterable objects. For example, a sequence of options might be specified as Iterable<String> options = Arrays.asList("-g", "-d", "classes"); 
+  Alternatively, you can use any collection class. 
+  If you want the compiler to read source files from disk, you can ask the StandardJavaFileManager to translate the file name strings or File objects to JavaFileObject instances. For example, StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null); 
+  Iterable<JavaFileObject> fileObjects = fileManager.getJavaFileObjectsFromStrings(fileNames); 
+  However, if you want the compiler to read source code from somewhere other than a disk file, you need to supply your own JavaFileObject subclass. Listing 8.3   From the Library of Hristo Dimov Hristov   8.2 The Compiler API   445   shows the code for a source file object with data contained in a StringBuilder. The class extends the SimpleJavaFileObject convenience class and overrides the getCharContent method to return the content of the string builder. We’ll use this class in our example program in which we dynamically produce the code for a Java class and then compile it. 
+  The CompilationTask interface extends the Callable<Boolean> interface. You can pass it to an Executor for execution in another thread, or you can simply invoke the call method. A return value of Boolean.FALSE indicates failure. 
+  Callable<Boolean> task = new JavaCompiler.CompilationTask(null, fileManager, diagnostics, options, null, fileObjects); 
+  if (!task.call()) System.out.println("Compilation failed"); 
+  If you simply want the compiler to produce class files on disk, you need not customize the JavaFileManager. However, our sample application will generate class files in byte arrays and later read them from memory, using a special class loader. 
+  Listing 8.4 defines a class that implements the JavaFileObject interface. Its openOutputStream method returns the ByteArrayOutputStream into which the compiler will deposit the bytecodes. 
+  It turns out a bit tricky to tell the compiler’s file manager to use these file objects. 
+  The library doesn’t supply a class that implements the StandardJavaFileManager interface. 
+  Instead, you subclass the ForwardingJavaFileManager class that delegates all calls to a given file manager. In our situation, we only want to change the getJavaFileForOutput method. We achieve this with the following outline: JavaFileManager fileManager = compiler.getStandardFileManager(diagnostics, null, null); 
+  fileManager = new ForwardingJavaFileManager<JavaFileManager>(fileManager) { public JavaFileObject getJavaFileForOutput(Location location, final String className, Kind kind, FileObject sibling) throws IOException { return custom file object } 
+  }; 
+  In summary, call the run method of the JavaCompiler task if you simply want to invoke the compiler in the usual way, reading and writing disk files. You can capture the output and error messages, but you need to parse them yourself. 
+  If you want more control over file handling or error reporting, use the CompilationTask interface instead. Its API is quite complex, but you can control every aspect of the compilation process. 
+  From the Library of Hristo Dimov Hristov   446   Chapter 8   Listing 8.3 1   Scripting, Compiling, and Annotation Processing   compiler/StringBuilderJavaSource.java   package compiler; 
+  2 3 4   import java.net.*; 
+  import javax.tools.*; 
+  5 6 7 8 9 10 11 12 13   /** * A Java source that holds the code in a string builder. 
+  * @version 1.00 2007-11-02 * @author Cay Horstmann */ public class StringBuilderJavaSource extends SimpleJavaFileObject { private StringBuilder code; 
+  14   /** * Constructs a new StringBuilderJavaSource. 
+  * @param name the name of the source file represented by this file object */ public StringBuilderJavaSource(String name) { super(URI.create("string:///" + name.replace('.', '/') + Kind.SOURCE.extension), Kind.SOURCE); 
+  code = new StringBuilder(); 
+  } 
+  15 16 17 18 19 20 21 22 23 24 25   public CharSequence getCharContent(boolean ignoreEncodingErrors) { return code; 
+  } 
+  26 27 28 29 30   public void append(String str) { code.append(str); 
+  code.append('\n'); 
+  } 
+  31 32 33 34 35 36   } 
+  Listing 8.4 1   compiler/ByteArrayJavaClass.java   package compiler; 
+  2 3 4 5   import java.io.*; 
+  import java.net.*; 
+  import javax.tools.*; 
+  6   From the Library of Hristo Dimov Hristov   8.2 The Compiler API   7 8 9 10 11 12 13 14   447   /** * A Java class that holds the bytecodes in a byte array. 
+  * @version 1.00 2007-11-02 * @author Cay Horstmann */ public class ByteArrayJavaClass extends SimpleJavaFileObject { private ByteArrayOutputStream stream; 
+  15   /** * Constructs a new ByteArrayJavaClass. 
+  * @param name the name of the class file represented by this file object */ public ByteArrayJavaClass(String name) { super(URI.create("bytes:///" + name), Kind.CLASS); 
+  stream = new ByteArrayOutputStream(); 
+  } 
+  16 17 18 19 20 21 22 23 24 25   public OutputStream openOutputStream() throws IOException { return stream; 
+  } 
+  26 27 28 29 30   public byte[] getBytes() { return stream.toByteArray(); 
+  } 
+  31 32 33 34 35   } 
+  javax.tools.Tool 6   • int run(InputStream in, OutputStream out, OutputStream err, String... arguments) runs the tool with the given input, output, and error streams and the given arguments. Returns 0 for success, a nonzero value for failure. 
+  javax.tools.JavaCompiler 6   • StandardJavaFileManager getStandardFileManager(DiagnosticListener<? super JavaFileObject> diagnosticListener, Locale locale, Charset charset)   gets the standard file manager for this compiler. You can supply null for default error reporting, locale, and character set. 
+  (Continues)   From the Library of Hristo Dimov Hristov   448   Chapter 8   Scripting, Compiling, and Annotation Processing   javax.tools.JavaCompiler 6 (Continued)   • JavaCompiler.CompilationTaskgetTask(Writerout,JavaFileManagerfileManager,DiagnosticListener<? 
+  super JavaFileObject> diagnosticListener, Iterable<String> options, Iterable<String> classesForAnnotationProcessing, Iterable<? extends JavaFileObject> sourceFiles)   gets a compilation task that, when called, will compile the given source files. See the discussion in the preceding section for details. 
+  javax.tools.StandardJavaFileManager 6   • Iterable<? extends JavaFileObject> getJavaFileObjectsFromStrings(Iterable<String> fileNames) • Iterable<? extends JavaFileObject> getJavaFileObjectsFromFiles(Iterable<? extends File> files) translates a sequence of file names or files into a sequence of JavaFileObject instances. 
+  javax.tools.JavaCompiler.CompilationTask 6   • Boolean call() performs the compilation task. 
+  javax.tools.DiagnosticCollector<S> 6   • DiagnosticCollector() constructs an empty collector. 
+  • List<Diagnostic<? extends S>> getDiagnostics() gets the collected diagnostics. 
+  javax.tools.Diagnostic<S> 6   • S getSource() gets the source object associated with this diagnostic. 
+  • Diagnostic.Kind getKind() gets the type of this diagnostic—one of ERROR, WARNING, MANDATORY_WARNING, NOTE, or OTHER. 
+  (Continues)   From the Library of Hristo Dimov Hristov   8.2 The Compiler API   449   javax.tools.Diagnostic<S> 6 (Continued)   • String getMessage(Locale locale) gets the message describing the issue raised in this diagnostic. Pass null for the default locale. 
+  • long getLineNumber() • long getColumnNumber() gets the position of the issue raised in this diagnostic. 
+  javax.tools.SimpleJavaFileObject 6   • CharSequence getCharContent(boolean ignoreEncodingErrors) Override this method for a file object that represents a source file and produces the source code. 
+  • OutputStream openOutputStream() Override this method for a file object that represents a class file and produces a stream to which the bytecodes can be written. 
+  javax.tools.ForwardingJavaFileManager<M extends JavaFileManager> 6   • protected ForwardingJavaFileManager(M fileManager) constructs a JavaFileManager that delegates all calls to the given file manager. 
+  • FileObjectgetFileForOutput(JavaFileManager.Locationlocation,StringclassName,JavaFileObject. 
+  Kind kind, FileObject sibling)   intercept this call if you want to substitute a file object for writing class files; kind is one of SOURCE, CLASS, HTML, or OTHER. 
+8.2.3 An Example: Dynamic Java Code Generation
+  In the JSP technology for dynamic web pages, you can mix HTML with snippets of Java code, for example <p>The current date and time is <b><%= new java.util.Date() %></b>.</p>   The JSP engine dynamically compiles the Java code into a servlet. In our sample application, we use a simpler example and generate dynamic Swing code instead. 
+  The idea is that you use a GUI builder to lay out the components in a frame and specify the behavior of the components in an external file. Listing 8.5 shows a   From the Library of Hristo Dimov Hristov   450   Chapter 8   Scripting, Compiling, and Annotation Processing   very simple example of a frame class, and Listing 8.6 shows the code for the button actions. Note that the constructor of the frame class calls an abstract method addEventHandlers. Our code generator will produce a subclass that implements the addEventHandlers method, adding an action listener for each line in the action.properties file. (We leave it as the proverbial exercise to the reader to extend the code generation to other event types.) We place the subclass into a package with the name x, which we hope is not used anywhere else in the program. The generated code has the form package x; 
+  public class Frame extends SuperclassName { protected void addEventHandlers() { componentName1.addActionListener(new java.awt.event.ActionListener() { public void actionPerformed(java.awt.event.ActionEvent) { code for event handler1 } 
+  }); 
+  // repeat for the other event handlers ... 
+  } 
+  } 
+  The buildSource method in the program of Listing 8.7 builds up this code and places it into a StringBuilderJavaSource object. That object is passed to the Java compiler. 
+  We use a ForwardingJavaFileManager with a getJavaFileForOutput method that constructs a ByteArrayJavaClass object for every class in the x package. These objects capture the class files generated when the x.Frame class is compiled. The method adds each file object to a list before returning it so that we can locate the bytecodes later. 
+  Note that compiling the x.Frame class produces a class file for the main class and one class file per listener class. 
+  After compilation, we build a map that associates class names with bytecode arrays. A simple class loader (shown in Listing 8.8) loads the classes stored in this map. 
+  We ask the class loader to load the class that we just compiled. Then, we construct and display the application’s frame class. 
+  ClassLoader loader = new MapClassLoader(byteCodeMap); 
+  Class<?> cl = loader.loadClass("x.Frame"); 
+  Frame frame = (JFrame) cl.newInstance(); 
+  frame.setVisible(true); 
+  When you click the buttons, the background color changes in the usual way. 
+  To see that the actions are dynamically compiled, change one of the lines in action.properties, for example, like this:   From the Library of Hristo Dimov Hristov   8.2 The Compiler API   451   yellowButton=panel.setBackground(java.awt.Color.YELLOW); yellowButton.setEnabled(false); 
+  Run the program again. Now the Yellow button is disabled after you click it. Also, have a look at the code directories. You will not find any source or class files for the classes in the x package. This example demonstrates how you can use dynamic compilation with in-memory source and class files. 
+  Listing 8.5 1 2   buttons2/ButtonFrame.java   package buttons2; 
+  import javax.swing.*; 
+  3 4 5 6 7 8 9 10 11 12   /** * A frame with a button panel. 
+  * @version 1.00 2007-11-02 * @author Cay Horstmann */ public abstract class ButtonFrame extends JFrame { public static final int DEFAULT_WIDTH = 300; 
+  public static final int DEFAULT_HEIGHT = 200; 
+  13   protected JPanel panel; 
+  protected JButton yellowButton; 
+  protected JButton blueButton; 
+  protected JButton redButton; 
+  14 15 16 17 18   protected abstract void addEventHandlers(); 
+  19 20   public ButtonFrame() { setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT); 
+  21 22 23 24   panel = new JPanel(); 
+  add(panel); 
+  25 26 27   yellowButton = new JButton("Yellow"); 
+  blueButton = new JButton("Blue"); 
+  redButton = new JButton("Red"); 
+  28 29 30 31   panel.add(yellowButton); 
+  panel.add(blueButton); 
+  panel.add(redButton); 
+  32 33 34 35   addEventHandlers(); 
+  36   } 
+  37 38   } 
+  From the Library of Hristo Dimov Hristov   452   Chapter 8   Listing 8.6 1 2   buttons2/action.properties   yellowButton=panel.setBackground(java.awt.Color.YELLOW); 
+  blueButton=panel.setBackground(java.awt.Color.BLUE); 
+  Listing 8.7 1   Scripting, Compiling, and Annotation Processing   compiler/CompilerTest.java   package compiler; 
+  2 3 4 5 6 7 8 9   import java.awt.*; 
+  import java.io.*; 
+  import java.util.*; 
+  import java.util.List; 
+  import javax.swing.*; 
+  import javax.tools.*; 
+  import javax.tools.JavaFileObject.*; 
+  10 11 12 13 14 15 16 17 18 19   /** * @version 1.01 2016-05-10 * @author Cay Horstmann */ public class CompilerTest { public static void main(final String[] args) throws IOException, ClassNotFoundException { JavaCompiler compiler = ToolProvider.getSystemJavaCompiler(); 
+  20 21   final List<ByteArrayJavaClass> classFileObjects = new ArrayList<>(); 
+  22 23   DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>(); 
+  24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39   JavaFileManager fileManager = compiler.getStandardFileManager(diagnostics, null, null); 
+  fileManager = new ForwardingJavaFileManager<JavaFileManager>(fileManager) { public JavaFileObject getJavaFileForOutput(Location location, final String className, Kind kind, FileObject sibling) throws IOException { if (className.startsWith("x.")) { ByteArrayJavaClass fileObject = new ByteArrayJavaClass(className); 
+  classFileObjects.add(fileObject); 
+  return fileObject; 
+  } 
+  else return super.getJavaFileForOutput(location, className, kind, sibling); 
+  } 
+  }; 
+  40   From the Library of Hristo Dimov Hristov   8.2 The Compiler API   453   String frameClassName = args.length == 0 ? "buttons2.ButtonFrame" : args[0]; 
+  JavaFileObject source = buildSource(frameClassName); 
+  JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, diagnostics, null, null, Arrays.asList(source)); 
+  Boolean result = task.call(); 
+  41 42 43 44 45 46   for (Diagnostic<? extends JavaFileObject> d : diagnostics.getDiagnostics()) System.out.println(d.getKind() + ": " + d.getMessage(null)); 
+  fileManager.close(); 
+  if (!result) { System.out.println("Compilation failed."); 
+  System.exit(1); 
+  } 
+  47 48 49 50 51 52 53 54 55   EventQueue.invokeLater(() -> { try { Map<String, byte[]> byteCodeMap = new HashMap<>(); 
+  for (ByteArrayJavaClass cl : classFileObjects) byteCodeMap.put(cl.getName().substring(1), cl.getBytes()); 
+  ClassLoader loader = new MapClassLoader(byteCodeMap); 
+  JFrame frame = (JFrame) loader.loadClass("x.Frame").newInstance(); 
+  frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
+  frame.setTitle("CompilerTest"); 
+  frame.setVisible(true); 
+  } 
+  catch (Exception ex) { ex.printStackTrace(); 
+  } 
+  }); 
+  56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74   } 
+  75 76 77 78 79 80 81 82 83 84 85 86 87   /* * Builds the source for the subclass that implements the addEventHandlers method. 
+  * @return a file object containing the source in a string builder */ static JavaFileObject buildSource(String superclassName) throws IOException, ClassNotFoundException { StringBuilderJavaSource source = new StringBuilderJavaSource("x.Frame"); 
+  source.append("package x;\n"); 
+  source.append("public class Frame extends " + superclassName + " {"); 
+  source.append("protected void addEventHandlers() {"); 
+  final Properties props = new Properties(); 
+  (Continues)   From the Library of Hristo Dimov Hristov   454   Chapter 8   Scripting, Compiling, and Annotation Processing   Listing 8.7 (Continued) props.load(Class.forName(superclassName).getResourceAsStream("action.properties")); 
+  for (Map.Entry<Object, Object> e : props.entrySet()) { String beanName = (String) e.getKey(); 
+  String eventCode = (String) e.getValue(); 
+  source.append(beanName + ".addActionListener(event -> {"); 
+  source.append(eventCode); 
+  source.append("} );"); 
+  } 
+  source.append("} }"); 
+  return source; 
+  88 89 90 91 92 93 94 95 96 97 98   } 
+  99 100   } 
+  Listing 8.8 1   compiler/MapClassLoader.java   package compiler; 
+  2 3   import java.util.*; 
+  4 5 6 7 8 9 10 11 12 13   /** * A class loader that loads classes from a map whose keys are class names and whose values are * byte code arrays. 
+  * @version 1.00 2007-11-02 * @author Cay Horstmann */ public class MapClassLoader extends ClassLoader { private Map<String, byte[]> classes; 
+  14   public MapClassLoader(Map<String, byte[]> classes) { this.classes = classes; 
+  } 
+  15 16 17 18 19   protected Class<?> findClass(String name) throws ClassNotFoundException { byte[] classBytes = classes.get(name); 
+  if (classBytes == null) throw new ClassNotFoundException(name); 
+  Class<?> cl = defineClass(name, classBytes, 0, classBytes.length); 
+  if (cl == null) throw new ClassNotFoundException(name); 
+  return cl; 
+  } 
+  20 21 22 23 24 25 26 27 28   } 

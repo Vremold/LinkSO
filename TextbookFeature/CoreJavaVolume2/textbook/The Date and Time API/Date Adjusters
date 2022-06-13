@@ -1,0 +1,17 @@
+  For scheduling applications, you often need to compute dates such as “the first Tuesday of every month.” The TemporalAdjusters class provides a number of static methods for common adjustments. You pass the result of an adjustment method to the with method. For example, the first Tuesday of a month can be computed like this:   From the Library of Hristo Dimov Hristov   6.3 Date Adjusters   359   LocalDate firstTuesday = LocalDate.of(year, month, 1).with( TemporalAdjusters.nextOrSame(DayOfWeek.TUESDAY)); 
+  As always, the with method returns a new LocalDate object without modifying the original. Table 6.3 shows the available adjusters. 
+  Table 6.3 Date Adjusters in the TemporalAdjusters Class Method   Description   next(weekday), previous(weekday)   Next or previous date that falls on the given weekday   nextOrSame(weekday), previousOrSame(weekday)   Next or previous date that falls on the given weekday, starting from the given date   dayOfWeekInMonth(n, weekday)   The nth weekday in the month   lastInMonth(weekday)   The last weekday in the month   firstDayOfMonth(), firstDayOfNextMonth(), firstDayOfNextYear(), lastDayOfMonth(), lastDayOfYear()   The date described in the method name   You can also make your own adjuster by implementing the TemporalAdjuster interface. 
+  Here is an adjuster for computing the next weekday. 
+  TemporalAdjuster NEXT_WORKDAY = w -> { LocalDate result = (LocalDate) w; 
+  do { result = result.plusDays(1); 
+  } 
+  while (result.getDayOfWeek().getValue() >= 6); 
+  return result; 
+  }; 
+  LocalDate backToWork = today.with(NEXT_WORKDAY); 
+  Note that the parameter of the lambda expression has type Temporal, and it must be cast to LocalDate. You can avoid this cast with the ofDateAdjuster method that expects a lambda of type UnaryOperator<LocalDate>. 
+  TemporalAdjuster NEXT_WORKDAY = TemporalAdjusters.ofDateAdjuster(w -> { LocalDate result = w; // No cast do { result = result.plusDays(1); 
+  From the Library of Hristo Dimov Hristov   360   Chapter 6   The Date and Time API   } 
+  while (result.getDayOfWeek().getValue() >= 6); 
+  return result; 
+  }); 

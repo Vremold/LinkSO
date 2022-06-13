@@ -1,0 +1,31 @@
+  If your programming experience comes from a development environment such as Microsoft Visual Studio, you are accustomed to a system with a builtin text editor, menus to compile and launch a program, and a debugger. The JDK contains nothing even remotely similar. You do everything by typing in commands in a terminal window. This sounds cumbersome, but it is nevertheless an essential skill. When you first install Java, you will want to troubleshoot your installation before you install a development environment. 
+  Moreover, by executing the basic steps yourself, you gain a better understanding of what a development environment does behind your back. 
+  However, after you have mastered the basic steps of compiling and running Java programs, you will want to use a professional development environment. You will see how to do that in the following section. 
+  Let’s get started the hard way: compiling and launching a Java program from the command line. 
+  1. Open a terminal window. 
+  2. Go to the corejava/v1ch02/Welcome directory. (The corejava directory is where you installed the source code for the book examples, as explained in Section 2.1.3, "Installing Source Files and Documentation," on p. 22.) 3. Enter the following commands: javac Welcome.java java Welcome   You should see the output shown in Figure 2.3 in the terminal window. 
+  Figure 2.3 Compiling and running Welcome.java Congratulations! You have just compiled and run your first Java program. 
+  What happened? The javac program is the Java compiler. It compiles the file Welcome.java into the file Welcome.class. The java program launches the Java virtual machine. It executes the bytecodes that the compiler placed in the class file. 
+  The Welcome program is extremely simple. It merely prints a message to   the terminal. You may enjoy looking inside the program, shown in Listing 2.1. You will see how it works in the next chapter. 
+  In the age of integrated development environments, many programmers are unfamiliar with running programs in a terminal window. Any number of things can go wrong, leading to frustrating results. 
+  Pay attention to the following points: If you type in the program by hand, make sure you correctly enter the uppercase and lowercase letters. In particular, the class name is Welcome and not welcome or WELCOME. 
+  The compiler requires a file name (Welcome.java). When you run the program, you specify a class name (Welcome) without a .java or .class extension. 
+  If you get a message such as "Bad command or file name" or "javac: command not found", go back and double-check your installation, in particular the executable path setting. 
+  If javac reports that it cannot find the file Welcome.java, you should check whether that file is present in the directory. 
+  Under Linux, check that you used the correct capitalization for Welcome.java. 
+  Under Windows, use the dir command, not the graphical Explorer tool. 
+  Some text editors (in particular Notepad) insist on adding an extension .txt to every file’s name. If you use Notepad to edit Welcome.java, it will actually save it as Welcome.java.txt. 
+  Under the default Windows settings, Explorer conspires with Notepad and hides the .txt extension because it belongs to a "known file type." 
+  In that case, you need to rename the file, using the ren command, or save it again, placing quotes around the file name: "Welcome.java". 
+  If you launch your program and get an error message complaining about a java.lang.NoClassDefFoundError, then carefully check the name of the offending class. 
+  If you get a complaint about welcome (with a lowercase w), then you should reissue the java Welcome command with an uppercase W. As always, case matters in Java. 
+  If you get a complaint about Welcome/java, it means you accidentally typed java Welcome.java. Reissue the command as java Welcome. 
+  If you typed java Welcome and the virtual machine can’t find the Welcome class, check if someone has set the CLASSPATH environment variable on your system. It is not a good idea to set this variable globally, but some poorly written software installers in Windows do just that. Follow the same procedure as for setting the PATH environment variable, but this time, remove the setting. 
+  Tip   The excellent tutorial at http://docs.oracle.com/javase/tutorial/getStarted/cupoja goes into much greater detail about the "gotchas" that beginners can run into. 
+  Note In JDK 11, the javac command is not required with a single source file. This feature is intended to support shell scripts starting with a "shebang" line #!/path/to/java. 
+  The Welcome program was not terribly exciting. Next, try out a graphical application. This program is a simple image file viewer that loads and displays an image. As before, compile and run the program from the command line. 
+  1. Open a terminal window. 
+  2. Change to the directory corejava/v1ch02/ImageViewer. 
+  3. Enter the following: javac ImageViewer.java java ImageViewer   A new program window pops up with the ImageViewer application. Now, select File → Open and look for an image file to open. (There are a couple of sample files in the same directory.) The image is displayed (see Figure 2.4). 
+  To close the program, click on the Close box in the title bar or select File → Exit from the menu. 
+  Figure 2.4 Running the ImageViewer application Have a quick look at the source code (Listing 2.2). The program is substantially longer than the first program, but it is not too complex if you consider how much code it would take in C or C++ to write a similar application. You’ll learn how to write graphical user interfaces like this in Chapter 10. 

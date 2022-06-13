@@ -1,0 +1,198 @@
+Historically, the fundamental time unit—the second—was derived from Earth’s
+rotation around its axis. There are 24 hours or 24 × 60 × 60 = 86400 seconds in a
+full revolution, so it seems just a question of astronomical measurements to precisely define a second. Unfortunately, Earth wobbles slightly, and a more precise
+definition was needed. In 1967, a new precise definition of a second, matching
+the historical definition, was derived from an intrinsic property of atoms of
+caesium-133. Since then, a network of atomic clocks keeps the official time.
+Ever so often, the official time keepers synchronize the absolute time with the
+rotation of Earth. At first, the official seconds were slightly adjusted, but starting
+in 1972, “leap seconds” were occasionally inserted. (In theory, a second might
+need to be removed once in a while, but that has not yet happened.) There is talk
+of changing the system again. Clearly, leap seconds are a pain, and many computer
+systems instead use “smoothing” where time is artificially slowed down or sped
+up just before the leap second, keeping 86,400 seconds per day. This works because
+the local time on a computer isn’t all that precise, and computers are used to
+synchronizing themselves with an external time service.
+The Java Date and Time API specification requires that Java uses a time scale that:
+• Has 86,400 seconds per day.
+• Exactly matches the official time at noon each day.
+• Closely matches it elsewhere, in a precisely defined way.
+That gives Java the flexibility to adjust to future changes in the official time.
+In Java, an Instant represents a point on the time line. An origin, called the epoch,
+is arbitrarily set at midnight of January 1, 1970 at the prime meridian that passes
+through the Greenwich Royal Observatory in London. This is the same convention
+used in the UNIX/POSIX time. Starting from that origin, time is measured in
+86,400 seconds per day, forward and backward, to nanosecond precision. The
+Instant values go back as far as a billion years (Instant.MIN). That’s not quite enough
+to express the age of the universe (around 13.5 billion years), but it should be
+enough for all practical purposes. After all, a billion years ago, the earth was
+covered in ice and populated by microscopic ancestors of today’s plants and animals. The largest value, Instant.MAX, is December 31 of the year 1,000,000,000.
+The static method call Instant.now() gives the current instant. You can compare
+two instants with the equals and compareTo methods in the usual way, so you can use
+instants as timestamps.
+To find out the difference between two instants, use the static method Duration.between.
+For example, here is how you can measure the running time of an algorithm:
+
+From the Library of Hristo Dimov Hristov
+
+6.1 The Time Line
+
+353
+
+Instant start = Instant.now();
+runAlgorithm();
+Instant end = Instant.now();
+Duration timeElapsed = Duration.between(start, end);
+long millis = timeElapsed.toMillis();
+
+A Duration is the amount of time between two instants. You can get the length of
+a Duration in conventional units by calling toNanos, toMillis, getSeconds, toMinutes, toHours,
+or toDays.
+Durations require more than a long value for their internal storage. The number
+of seconds is stored in a long, and the number of nanoseconds in an additional int.
+If you want to make computations to nanosecond accuracy, and you actually
+need the entire range of a Duration, you can use one of the methods in Table 6.1.
+Otherwise, you can just call toNanos and do your calculations with long values.
+
+NOTE: It takes almost 300 years of nanoseconds to overflow a long.
+
+For example, if you want to check whether an algorithm is at least ten times faster
+than another, you can compute
+Duration timeElapsed2 = Duration.between(start2, end2);
+boolean overTenTimesFaster =
+timeElapsed.multipliedBy(10).minus(timeElapsed2).isNegative();
+// Or timeElapsed.toNanos() * 10 < timeElapsed2.toNanos()
+
+Table 6.1 Arithmetic Operations for Time Instants and Durations
+Method
+
+Description
+
+plus, minus
+
+Adds a duration to, or subtracts a duration from,
+this Instant or Duration.
+
+plusNanos, plusMillis, plusSeconds,
+minusNanos, minusMillis, minusSeconds
+
+Adds or subtracts a number of the given time units
+to this Instant or Duration.
+
+plusMinutes, plusHours, plusDays,
+minusMinutes, minusHours, minusDays
+
+Adds or subtracts a number of the given time units
+to this Duration.
+
+multipliedBy, dividedBy, negated
+
+Returns a duration obtained by multiplying or
+dividing this Duration by a given long, or by –1. Note
+that you can scale only durations, not instants.
+
+isZero, isNegative
+
+Checks whether this Duration is zero or negative.
+
+From the Library of Hristo Dimov Hristov
+
+354
+
+Chapter 6
+
+The Date and Time API
+
+NOTE: The Instant and Duration classes are immutable, and all methods, such
+as multipliedBy or minus, return a new instance.
+
+In the example program in Listing 6.1, you can see how to use the Instant and
+Duration classes for timing two algorithms.
+
+Listing 6.1
+1
+
+timeline/TimeLine.java
+
+package timeline;
+
+2
+3
+4
+5
+
+import java.time.*;
+import java.util.*;
+import java.util.stream.*;
+
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+
+public class Timeline
+{
+public static void main(String[] args)
+{
+Instant start = Instant.now();
+runAlgorithm();
+Instant end = Instant.now();
+Duration timeElapsed = Duration.between(start, end);
+long millis = timeElapsed.toMillis();
+System.out.printf("%d milliseconds\n", millis);
+
+17
+
+Instant start2 = Instant.now();
+runAlgorithm2();
+Instant end2 = Instant.now();
+Duration timeElapsed2 = Duration.between(start2, end2);
+System.out.printf("%d milliseconds\n", timeElapsed2.toMillis());
+boolean overTenTimesFaster = timeElapsed.multipliedBy(10)
+.minus(timeElapsed2).isNegative();
+System.out.printf("The first algorithm is %smore than ten times faster",
+overTenTimesFaster ? "" : "not ");
+
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+
+}
+
+28
+29
+30
+31
+32
+33
+34
+35
+36
+
+public static void runAlgorithm()
+{
+int size = 10;
+List<Integer> list = new Random().ints().map(i -> i % 100).limit(size)
+.boxed().collect(Collectors.toList());
+Collections.sort(list);
+System.out.println(list);
+}
+
+37
+
+From the Library of Hristo Dimov Hristov
+

@@ -1,0 +1,29 @@
+  Threads can be in one of six states: New Runnable Blocked Waiting Timed waiting Terminated Each of these states is explained in the sections that follow. 
+  To determine the current state of a thread, simply call the getState method. 
+12.2.1 New Threads
+     When you create a thread with the new operator—for example, new Thread(r)—the thread is not yet running. This means that it is in the new state. When a thread is in the new state, the program has not started executing code inside of it. A certain amount of bookkeeping needs to be done before a thread can run. 
+12.2.2 Runnable Threads
+  Once you invoke the start method, the thread is in the runnable state. A runnable thread may or may not actually be running. It is up to the operating system to give the thread time to run. (The Java specification does not call this a separate state, though. A running thread is still in the runnable state.) Once a thread is running, it doesn’t necessarily keep running. In fact, it is desirable that running threads occasionally pause so that other threads have a chance to run. The details of thread scheduling depend on the services that the operating system provides. Preemptive scheduling systems give each runnable thread a slice of time to perform its task. When that slice of time is exhausted, the operating system preempts the thread and gives another thread an opportunity to work (see Figure 12.2). When selecting the next thread, the operating system takes into account the thread priorities—see Section 12.3.5, "Thread Priorities," on p. 749 for more information. 
+  All modern desktop and server operating systems use preemptive scheduling. 
+  However, small devices such as cell phones may use cooperative scheduling. 
+  In such a device, a thread loses control only when it calls the yield method, or when it is blocked or waiting. 
+  On a machine with multiple processors, each processor can run a thread, and you can have multiple threads run in parallel. Of course, if there are more threads than processors, the scheduler still has to do time slicing. 
+  Always keep in mind that a runnable thread may or may not be running at any given time. (This is why the state is called "runnable" and not "running.") java.lang.Thread 1.0 static void yield()   causes the currently executing thread to yield to another thread. Note that this is a static method. 
+12.2.3 Blocked and Waiting Threads
+  When a thread is blocked or waiting, it is temporarily inactive. It doesn’t execute any code and consumes minimal resources. It is up to the thread scheduler to reactivate it. The details depend on how the inactive state was reached. 
+  When the thread tries to acquire an intrinsic object lock (but not a Lock in the java.util.concurrent library) that is currently held by another thread, it becomes blocked. (We discuss java.util.concurrent locks in Section 12.4.3, "Lock Objects," 
+  on p. 755 and intrinsic object locks in Section 12.4.5, "The synchronized Keyword," on p. 764.) The thread becomes unblocked when all other threads have relinquished the lock and the thread scheduler has allowed this thread to hold it. 
+  When the thread waits for another thread to notify the scheduler of a condition, it enters the waiting state. We discuss conditions in Section 12.4.4, "Condition Objects," on p. 758. This happens by calling the Object.wait or Thread.join method, or by waiting for a Lock or Condition in the java.util.concurrent library. In practice, the difference between the blocked and waiting state is not significant. 
+  Several methods have a timeout parameter. Calling them causes the thread to enter the timed waiting state. This state persists either until the timeout expires or the appropriate notification has been received. 
+  Methods with timeout include Thread.sleep and the timed versions of Object.wait, Thread.join, Lock.tryLock, and Condition.await. 
+  Figure 12.1 shows the states that a thread can have and the possible transitions from one state to another. When a thread is blocked or waiting (or, of course, when it terminates), another thread will be scheduled to run. When a thread is reactivated (for example, because its timeout has expired or it has succeeded in acquiring a lock), the scheduler checks to see if it has a higher   priority than the currently running threads. If so, it preempts one of the current threads and picks a new thread to run. 
+  Figure 12.1 Thread states 12.2.4 Terminated Threads
+  A thread is terminated for one of two reasons: It dies a natural death because the run method exits normally. 
+  It dies abruptly because an uncaught exception terminates the run method. 
+  In particular, you can kill a thread by invoking its stop method. That method throws a ThreadDeath error object that kills the thread. However, the stop method is deprecated, and you should never call it in your own code. 
+  java.lang.Thread 1.0 void join() waits for the specified thread to terminate. 
+  void join(long millis) waits for the specified thread to die or for the specified number of milliseconds to pass. 
+  Thread.State getState() 5 gets the state of this thread: one of NEW, RUNNABLE, BLOCKED, WAITING, TIMED_WAITING, or TERMINATED. 
+  void stop() stops the thread. This method is deprecated. 
+  void suspend() suspends this thread’s execution. This method is deprecated. 
+  void resume() resumes this thread. This method is only valid after suspend() has been invoked. This method is deprecated. 

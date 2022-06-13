@@ -1,0 +1,640 @@
+Reusing Classes	The final keyword	FinalData.java	{"java.util.Random.nextInt": 0.06471867148031912}
+Reusing Classes	The final keyword	FinalOverridingIllusion.java	{}
+Reusing Classes	The final keyword	FinalArguments.java	{}
+Reusing Classes	The final keyword	Beetle.java	{}
+Reusing Classes	The final keyword	Jurassic.java	{}
+Reusing Classes	The final keyword	BlankFinal.java	{}
+Reusing Classes	Upcasting	Wind.java	{"javax.sound.midi.Instrument.tune": 0.3566776939160451}
+Reusing Classes	Delegation	Car.java	{}
+Reusing Classes	Delegation	SpaceShipControls.java	{}
+Reusing Classes	Delegation	SpaceShipDelegation.java	{}
+Reusing Classes	Delegation	CADSystem.java	{}
+Reusing Classes	Delegation	PlaceSetting.java	{}
+Reusing Classes	Delegation	Hide.java	{}
+Reusing Classes	Delegation	Lisa.java	{"System.out.println": 0.0}
+Reusing Classes	Delegation	SpaceShip.java	{}
+Reusing Classes	protected	Orc.java	{}
+Reusing Classes	Inheritance syntax	Cartoon.java	{}
+Reusing Classes	Inheritance syntax	Detergent.java	{}
+Reusing Classes	Inheritance syntax	Chess.java	{}
+Reusing Classes	Composition syntax	SprinklerSystem.java	{"System.out.println": 0.0}
+Introduction	Introduction	ShowProperties.java	{"System.getProperties": 0.26750827043703385, "System.out.println": 0.0, "System.getProperties.list": 0.26750827043703385, "System.getProperty": 0.36172974573408134}
+Introduction	Introduction	HelloDate.java	{"System.out.println": 0.0}
+Introduction	Introduction	Documentation2.java	{}
+Introduction	Introduction	Documentation3.java	{}
+Introduction	Introduction	Documentation1.java	{}
+Containers in Depth	Optional operations	Unsupported.java	{"java.util.Arrays.asList": 0.020423858708460675, "System.out.println": 0.0, "java.util.Collection.add": 0.00887263966950438, "java.util.Collection.addAll": 0.01094662999230829, "java.util.Collections.unmodifiableList": 0.01774527933900876, "java.util.Collection.retainAll": 0.01094662999230829, "java.util.Collection.remove": 0.005473314996154145, "java.util.Collection.removeAll": 0.01094662999230829, "java.util.Collection.clear": 0.01094662999230829}
+Containers in Depth	Collection functionality	CollectionMethods.java	{"java.util.Collections.min": 0.027366574980770726, "java.util.Collection.addAll": 0.01094662999230829, "java.util.Collection.isEmpty": 0.005473314996154145, "java.util.Collection.retainAll": 0.01094662999230829, "java.util.Collection.removeAll": 0.01094662999230829, "java.util.Collections.max": 0.027366574980770726, "java.util.Collection.clear": 0.01094662999230829}
+Containers in Depth	Hashing and hash codes	Groundhog.java	{}
+Containers in Depth	Hashing and hash codes	SpringDetector.java	{"java.util.Map.put": 0.007401120117321358, "java.lang.reflect.Constructor.newInstance": 0.01094662999230829, "java.util.Map.get": 0.007401120117321358, "java.util.Map.containsKey": 0.00443631983475219}
+Containers in Depth	Hashing and hash codes	IndividualTest.java	{"System.out.println": 0.0, "java.util.Set.add": 0.014802240234642716}
+Containers in Depth	Hashing and hash codes	SlowMap.java	{"java.util.List.indexOf": 0.006259720877862485, "java.util.List.add": 0.0339276375359444, "System.out.println": 0.0, "java.util.List.get": 0.011346588171367042, "java.util.List.set": 0.005473314996154145, "java.util.List.contains": 0.00887263966950438, "java.util.Iterator.next": 0.029299213869845967, "java.util.List.iterator": 0.022203360351964074, "java.util.Iterator.hasNext": 0.007990694691776172, "java.util.Set.add": 0.014802240234642716}
+Containers in Depth	Hashing and hash codes	CountedString.java	{"java.util.Map.put": 0.007401120117321358, "java.util.List.add": 0.0339276375359444, "java.util.Map.get": 0.007401120117321358}
+Containers in Depth	Hashing and hash codes	Groundhog2.java	{}
+Containers in Depth	Hashing and hash codes	MapEntry.java	{}
+Containers in Depth	Hashing and hash codes	SimpleHashMap.java	{"System.out.println": 0.0, "java.util.ListIterator.hasNext": 0.01094662999230829, "java.util.ListIterator.next": 0.027366574980770726, "java.util.ListIterator.set": 0.01094662999230829, "java.util.Set.add": 0.014802240234642716}
+Containers in Depth	Hashing and hash codes	Prediction.java	{"java.util.Random.nextDouble": 0.0031298604389312424}
+Containers in Depth	Hashing and hash codes	Individual.java	{"java.lang.String.hashCode": 0.005473314996154145, "java.lang.String.compareTo": 0.016419944988462436}
+Containers in Depth	Hashing and hash codes	StringHashCode.java	{"System.out.println": 0.0}
+Containers in Depth	Hashing and hash codes	SpringDetector2.java	{}
+Containers in Depth	Utilities	ListSortSearch.java	{"java.util.Collections.binarySearch": 0.04378651996923316, "java.util.Collections.shuffle": 0.00887263966950438, "java.util.List.get": 0.011346588171367042, "java.util.List.listIterator": 0.01094662999230829, "java.util.ListIterator.hasNext": 0.01094662999230829, "java.util.ListIterator.next": 0.027366574980770726, "java.util.Collections.sort": 0.03283988997692487, "java.util.List.addAll": 0.00443631983475219, "java.util.ListIterator.remove": 0.01094662999230829}
+Containers in Depth	Utilities	Utilities.java	{"java.util.Collections.min": 0.027366574980770726, "java.util.Collections.copy": 0.005473314996154145, "java.util.Collections.shuffle": 0.00887263966950438, "java.util.Collections.singletonList": 0.005473314996154145, "java.util.Vector.addElement": 0.005473314996154145, "java.util.Enumeration.nextElement": 0.00887263966950438, "java.util.Collections.frequency": 0.005473314996154145, "java.util.Collections.enumeration": 0.02189325998461658, "java.util.Collections.nCopies": 0.00887263966950438, "java.util.Vector.elements": 0.01094662999230829, "java.util.Collections.disjoint": 0.01094662999230829, "java.util.List.size": 0.005327129794517449, "java.util.Collections.reverse": 0.005473314996154145, "java.util.Collections.fill": 0.01094662999230829, "java.util.Collections.max": 0.027366574980770726, "java.util.Collections.lastIndexOfSubList": 0.005473314996154145, "java.util.Arrays.asList": 0.020423858708460675, "java.util.Collections.indexOfSubList": 0.005473314996154145, "java.util.Collections.replaceAll": 0.005473314996154145, "java.util.Collections.swap": 0.005473314996154145, "java.util.Enumeration.hasMoreElements": 0.00887263966950438, "java.util.Collections.list": 0.02189325998461658, "java.util.Collections.rotate": 0.005473314996154145}
+Containers in Depth	Utilities	FailFast.java	{"java.util.Iterator.next": 0.029299213869845967, "java.util.Collection.iterator": 0.005473314996154145, "System.out.println": 0.0, "java.util.Collection.add": 0.00887263966950438}
+Containers in Depth	Utilities	ReadOnly.java	{"java.util.Collections.unmodifiableSortedSet": 0.02189325998461658, "java.util.Collections.unmodifiableSet": 0.02189325998461658, "java.util.Collections.unmodifiableCollection": 0.005473314996154145, "java.util.Collections.unmodifiableList": 0.01774527933900876, "java.util.List.listIterator": 0.01094662999230829, "java.util.Collections.unmodifiableMap": 0.027366574980770726, "java.util.Collections.unmodifiableSortedMap": 0.027366574980770726, "java.util.ListIterator.next": 0.027366574980770726}
+Containers in Depth	Utilities	Synchronization.java	{"java.util.Collections.synchronizedSortedMap": 0.02189325998461658, "java.util.Collections.synchronizedList": 0.00887263966950438, "java.util.Collections.synchronizedSortedSet": 0.016419944988462436, "java.util.Collections.synchronizedCollection": 0.005473314996154145, "java.util.Collections.synchronizedMap": 0.01774527933900876, "java.util.Collections.synchronizedSet": 0.016419944988462436}
+Containers in Depth	Sets and storage order	SortedSetDemo.java	{"java.util.SortedSet.last": 0.005473314996154145, "java.util.SortedSet.subSet": 0.005473314996154145, "java.util.Iterator.next": 0.029299213869845967, "java.util.Collections.addAll": 0.003700560058660679, "java.util.SortedSet.iterator": 0.005473314996154145, "java.util.SortedSet.headSet": 0.005473314996154145, "java.util.SortedSet.first": 0.005473314996154145, "java.util.SortedSet.tailSet": 0.005473314996154145}
+Containers in Depth	Sets and storage order	TypesForSets.java	{"System.out.println": 0.0}
+Containers in Depth	Filling containers	CountingIntegerList.java	{"System.out.println": 0.0}
+Containers in Depth	Filling containers	CountingMapData.java	{"System.out.println": 0.0, "java.util.Set.add": 0.014802240234642716}
+Containers in Depth	Filling containers	Countries.java	{"java.util.Map.keySet": 0.005473314996154145}
+Containers in Depth	Filling containers	MapData.java	{}
+Containers in Depth	Filling containers	CollectionData.java	{}
+Containers in Depth	Filling containers	Pair.java	{}
+Containers in Depth	Filling containers	CollectionDataTest.java	{"java.util.Set.addAll": 0.005473314996154145, "System.out.println": 0.0}
+Containers in Depth	Filling containers	FillingLists.java	{"java.util.Collections.fill": 0.01094662999230829, "java.util.Collections.nCopies": 0.00887263966950438, "System.out.println": 0.0}
+Containers in Depth	Filling containers	MapDataTest.java	{}
+Containers in Depth	Filling containers	CollectionDataGeneration.java	{"System.out.println": 0.0}
+Containers in Depth	Understanding Maps	AssociativeArray.java	{}
+Containers in Depth	Understanding Maps	Maps.java	{}
+Containers in Depth	Understanding Maps	LinkedHashMapDemo.java	{"java.util.LinkedHashMap.putAll": 0.005473314996154145, "java.util.LinkedHashMap.get": 0.01094662999230829}
+Containers in Depth	Understanding Maps	SortedMapDemo.java	{"java.util.TreeMap.keySet": 0.005473314996154145, "java.util.TreeMap.firstKey": 0.005473314996154145, "java.util.TreeMap.tailMap": 0.005473314996154145, "java.util.TreeMap.subMap": 0.005473314996154145, "java.util.Iterator.next": 0.029299213869845967, "java.util.TreeMap.headMap": 0.005473314996154145, "java.util.TreeMap.lastKey": 0.005473314996154145}
+Containers in Depth	List functionality	Lists.java	{"java.util.ListIterator.previous": 0.005473314996154145, "java.util.ListIterator.hasPrevious": 0.005473314996154145, "java.util.ListIterator.next": 0.027366574980770726, "java.util.ListIterator.set": 0.01094662999230829, "java.util.ListIterator.remove": 0.01094662999230829, "java.util.ListIterator.add": 0.01094662999230829}
+Containers in Depth	Queues	Deque.java	{"java.util.LinkedList.addLast": 0.005473314996154145, "java.util.LinkedList.getFirst": 0.00443631983475219, "java.util.LinkedList.addFirst": 0.00887263966950438, "java.util.LinkedList.getLast": 0.01094662999230829, "java.util.LinkedList.removeLast": 0.005473314996154145, "java.util.LinkedList.toString": 0.005473314996154145, "java.util.LinkedList.size": 0.005473314996154145, "java.util.LinkedList.removeFirst": 0.00887263966950438}
+Containers in Depth	Queues	QueueBehavior.java	{"System.out.println": 0.0, "System.out.print": 0.0026724298792957734}
+Containers in Depth	Queues	DequeTest.java	{}
+Containers in Depth	Queues	ToDoList.java	{"java.util.PriorityQueue.add": 0.00443631983475219, "System.out.println": 0.0}
+Containers in Depth	Holding references	References.java	{"java.lang.ref.ReferenceQueue.poll": 0.005473314996154145, "System.out.println": 0.0, "java.util.LinkedList.getLast": 0.01094662999230829, "System.gc": 0.04925983496538731, "java.lang.ref.Reference.get": 0.005473314996154145, "java.util.LinkedList.add": 0.005473314996154145}
+Containers in Depth	Holding references	CanonicalMapping.java	{"java.util.WeakHashMap.put": 0.005473314996154145, "System.out.println": 0.0, "System.gc": 0.04925983496538731}
+Containers in Depth	Java 1.01.1 containers	Stacks.java	{"java.util.LinkedList.addFirst": 0.00887263966950438, "java.util.LinkedList.isEmpty": 0.005473314996154145, "java.util.Stack.addElement": 0.005473314996154145, "java.util.LinkedList.removeFirst": 0.00887263966950438, "java.util.Stack.elementAt": 0.005473314996154145, "java.util.Stack.pop": 0.005473314996154145, "java.util.Stack.empty": 0.005473314996154145, "java.util.Stack.push": 0.005473314996154145}
+Containers in Depth	Java 1.01.1 containers	Bits.java	{"java.util.Random.nextInt": 0.002482813483899711, "java.util.BitSet.set": 0.01094662999230829}
+Containers in Depth	Java 1.01.1 containers	Enumerations.java	{"java.util.Collections.enumeration": 0.02189325998461658, "java.util.Enumeration.hasMoreElements": 0.00887263966950438, "java.util.Vector.elements": 0.01094662999230829, "java.util.Enumeration.nextElement": 0.00887263966950438, "System.out.print": 0.0026724298792957734}
+Containers in Depth	Choosing an implementation	ListPerformance.java	{"java.util.Arrays.asList": 0.020423858708460675, "java.util.List.add": 0.0339276375359444, "java.util.List.subList": 0.013308959504256571, "java.util.Random.nextInt": 0.002482813483899711, "java.util.ListIterator.add": 0.01094662999230829}
+Containers in Depth	Choosing an implementation	TestParam.java	{"java.lang.Integer.decode": 0.01094662999230829}
+Containers in Depth	Choosing an implementation	SetPerformance.java	{"java.util.List.add": 0.0339276375359444, "java.util.Iterator.next": 0.029299213869845967, "java.util.Iterator.hasNext": 0.007990694691776172}
+Containers in Depth	Choosing an implementation	MapPerformance.java	{"java.util.List.add": 0.0339276375359444, "java.util.Iterator.next": 0.029299213869845967, "java.util.Iterator.hasNext": 0.007990694691776172}
+Containers in Depth	Choosing an implementation	RandomBounds.java	{"System.exit": 0.002269317634273409}
+Containers in Depth	Choosing an implementation	Test.java	{}
+Containers in Depth	Choosing an implementation	Tester.java	{"System.nanoTime": 0.037558325267174904, "System.out.println": 0.0, "System.out.format": 0.05550840087991018, "java.util.List.size": 0.005327129794517449}
+Strings	Overloading ‘+’ vs. StringBuilder	WhitherStringBuilder.java	{"java.lang.String.append": 0.0176137132798047, "java.lang.String.toString": 0.0176137132798047}
+Strings	Overloading ‘+’ vs. StringBuilder	UsingStringBuilder.java	{"java.util.Random.nextInt": 0.0015979918884029417, "System.out.println": 0.0}
+Strings	Overloading ‘+’ vs. StringBuilder	Concatenation.java	{"System.out.println": 0.0}
+Strings	StringTokenizer	ReplacingStringTokenizer.java	{"System.out.println": 0.0, "java.util.StringTokenizer.hasMoreElements": 0.00880685663990235, "java.util.Arrays.toString": 0.021429092074653523, "java.util.Scanner.hasNext": 0.014276551896198407, "java.util.Scanner.next": 0.014276551896198407, "java.util.StringTokenizer.nextToken": 0.00880685663990235, "System.out.print": 0.010033526172335435}
+Strings	Unintended recursion	InfiniteRecursion.java	{"java.util.List.add": 0.0021836553541653104, "System.out.println": 0.0}
+Strings	Unintended recursion	ArrayListDisplay.java	{"java.util.ArrayList.add": 0.0050361128873338094, "System.out.println": 0.0}
+Strings	Formatting output	Hex.java	{"System.out.println": 0.0}
+Strings	Formatting output	Conversion.java	{"java.util.Formatter.format": 0.29062626911677747, "System.out.println": 0.0}
+Strings	Formatting output	Receipt.java	{"java.util.Formatter.format": 0.29062626911677747}
+Strings	Formatting output	DatabaseException.java	{"java.lang.String.format": 0.00880685663990235, "System.out.println": 0.0}
+Strings	Formatting output	SimpleFormat.java	{"System.out.println": 0.0, "System.out.printf": 0.010072225774667619, "System.out.format": 0.1548143767750801}
+Strings	Formatting output	Turtle.java	{"java.util.Formatter.format": 0.29062626911677747}
+Strings	Regular expressions	Replacing.java	{}
+Strings	Regular expressions	Splitting.java	{"java.util.Arrays.toString": 0.021429092074653523, "System.out.println": 0.0}
+Strings	Regular expressions	IntegerMatch.java	{"System.out.println": 0.0}
+Strings	Regular expressions	ReFlags.java	{"System.out.println": 0.0, "java.util.regex.Matcher.find": 0.08806856639902348, "java.util.regex.Matcher.group": 0.08806856639902348, "java.util.regex.Pattern.matcher": 0.029771995533669247, "java.util.regex.Pattern.compile": 0.08931598660100773}
+Strings	Regular expressions	TheReplacements.java	{"java.util.regex.Matcher.find": 0.08806856639902348, "java.util.regex.Matcher.appendReplacement": 0.00880685663990235, "java.util.regex.Matcher.appendTail": 0.00880685663990235, "java.util.regex.Matcher.group": 0.08806856639902348, "java.util.regex.Pattern.matcher": 0.029771995533669247, "java.util.regex.Pattern.compile": 0.08931598660100773}
+Strings	Regular expressions	SplitDemo.java	{"java.util.Arrays.toString": 0.021429092074653523, "java.util.regex.Pattern.compile": 0.08931598660100773}
+Strings	Regular expressions	Resetting.java	{"System.out.println": 0.0, "java.util.regex.Matcher.reset": 0.0176137132798047, "java.util.regex.Matcher.find": 0.08806856639902348, "java.util.regex.Matcher.group": 0.08806856639902348, "java.util.regex.Pattern.compile": 0.08931598660100773, "System.out.print": 0.010033526172335435}
+Strings	Regular expressions	Finding.java	{"java.util.regex.Matcher.find": 0.08806856639902348, "java.util.regex.Pattern.compile": 0.08931598660100773, "java.util.regex.Matcher.group": 0.08806856639902348}
+Strings	Regular expressions	StartEnd.java	{"java.util.regex.Matcher.matches": 0.00880685663990235, "java.util.regex.Matcher.end": 0.0352274265596094, "java.util.regex.Matcher.find": 0.08806856639902348, "java.util.regex.Matcher.lookingAt": 0.00880685663990235, "java.util.regex.Matcher.group": 0.08806856639902348, "java.util.regex.Matcher.start": 0.04403428319951174, "java.util.regex.Pattern.matcher": 0.029771995533669247, "java.util.regex.Pattern.compile": 0.08931598660100773}
+Strings	Regular expressions	Rudolph.java	{"System.out.println": 0.0}
+Strings	Regular expressions	JGrep.java	{"System.out.println": 0.0, "java.util.regex.Matcher.reset": 0.0176137132798047, "java.util.regex.Matcher.find": 0.08806856639902348, "java.util.regex.Matcher.group": 0.08806856639902348, "java.util.regex.Matcher.start": 0.04403428319951174, "java.util.regex.Pattern.matcher": 0.029771995533669247, "java.util.regex.Pattern.compile": 0.08931598660100773, "System.exit": 0.00730290695473994}
+Strings	Regular expressions	Groups.java	{"java.util.regex.Matcher.find": 0.08806856639902348, "java.util.regex.Pattern.compile": 0.08931598660100773, "java.util.regex.Matcher.group": 0.08806856639902348, "java.util.regex.Matcher.groupCount": 0.00880685663990235}
+Strings	Regular expressions	TestRegularExpression.java	{"java.util.regex.Matcher.end": 0.0352274265596094, "java.util.regex.Matcher.find": 0.08806856639902348, "java.util.regex.Matcher.group": 0.08806856639902348, "java.util.regex.Matcher.start": 0.04403428319951174, "java.util.regex.Pattern.matcher": 0.029771995533669247, "java.util.regex.Pattern.compile": 0.08931598660100773, "System.exit": 0.00730290695473994}
+Strings	Scanning input	ThreatAnalyzer.java	{"java.util.Scanner.match": 0.00880685663990235, "System.out.format": 0.1548143767750801, "java.util.Scanner.next": 0.014276551896198407, "java.util.regex.MatchResult.group": 0.0176137132798047, "java.util.Scanner.hasNext": 0.014276551896198407}
+Strings	Scanning input	SimpleRead.java	{"java.io.BufferedReader.readLine": 0.014276551896198407, "System.out.println": 0.0, "System.err.println": 0.017863197320201547, "System.out.format": 0.1548143767750801}
+Strings	Scanning input	BetterRead.java	{"java.util.Scanner.nextInt": 0.0176137132798047, "System.out.println": 0.0, "java.util.Scanner.nextDouble": 0.00880685663990235, "System.out.format": 0.1548143767750801, "java.util.Scanner.nextLine": 0.00880685663990235}
+Strings	Scanning input	ScannerDelimiter.java	{"java.util.Scanner.nextInt": 0.0176137132798047, "java.util.Scanner.hasNextInt": 0.00880685663990235, "java.util.Scanner.useDelimiter": 0.00880685663990235, "System.out.println": 0.0}
+Strings	Immutable Strings	Immutable.java	{}
+Enumerated Types	Random selection	RandomTest.java	{"System.out.print": 0.009046927123849762}
+Enumerated Types	Random selection	Enums.java	{"java.util.Random.nextInt": 0.01008602672420558}
+Enumerated Types	Basic enum features	Burrito.java	{"System.out.println": 0.0}
+Enumerated Types	Basic enum features	EnumClass.java	{}
+Enumerated Types	Basic enum features	Spiciness.java	{}
+Enumerated Types	Implements, not inherits	EnumImplementation.java	{"java.util.Random.nextInt": 0.01008602672420558, "System.out.print": 0.009046927123849762}
+Enumerated Types	enums in switch statements	TrafficLight.java	{}
+Enumerated Types	Using EnumSet instead of flags	AlarmPoints.java	{}
+Enumerated Types	Using EnumSet instead of flags	EnumSets.java	{"java.util.EnumSet.add": 0.05558613411678626, "java.util.EnumSet.addAll": 0.02779306705839313, "java.util.EnumSet.of": 0.08337920117517938, "java.util.EnumSet.complementOf": 0.02779306705839313, "java.util.EnumSet.allOf": 0.05558613411678626, "java.util.EnumSet.removeAll": 0.05558613411678626, "java.util.EnumSet.range": 0.022527286433611772, "java.util.EnumSet.noneOf": 0.02779306705839313}
+Enumerated Types	Using EnumSet instead of flags	BigEnumSet.java	{"java.util.EnumSet.allOf": 0.05558613411678626, "System.out.println": 0.0}
+Enumerated Types	The mystery of values()	Reflection.java	{"java.util.Set.removeAll": 0.022527286433611772, "java.util.Set.containsAll": 0.02779306705839313, "java.lang.reflect.Method.getName": 0.022527286433611772}
+Enumerated Types	The mystery of values()	UpcastEnum.java	{"System.out.println": 0.0, "java.lang.Enum.getClass": 0.02779306705839313}
+Enumerated Types	The mystery of values()	NonEnum.java	{"java.lang.Class.getEnumConstants": 0.02779306705839313, "System.out.println": 0.0}
+Enumerated Types	Adding methods to an enum	OzWitch.java	{}
+Enumerated Types	Adding methods to an enum	SpaceShip.java	{"java.lang.String.charAt": 0.02779306705839313, "java.lang.String.substring": 0.02779306705839313, "System.out.println": 0.0}
+Enumerated Types	Multiple dispatching	RoShamBo4.java	{}
+Enumerated Types	Multiple dispatching	RoShamBo1.java	{"java.util.Random.nextInt": 0.01008602672420558, "System.out.println": 0.0}
+Enumerated Types	Multiple dispatching	RoShamBo2.java	{}
+Enumerated Types	Multiple dispatching	RoShamBo3.java	{}
+Enumerated Types	Multiple dispatching	RoShamBo6.java	{}
+Enumerated Types	Multiple dispatching	RoShamBo.java	{"System.out.println": 0.0}
+Enumerated Types	Multiple dispatching	RoShamBo5.java	{"java.util.EnumMap.put": 0.22234453646714503, "java.util.EnumMap.get": 0.1389653352919656}
+Enumerated Types	Multiple dispatching	Competitor.java	{}
+Enumerated Types	Constant-specific methods	NotClasses.java	{}
+Enumerated Types	Constant-specific methods	Input.java	{"java.util.Random.nextInt": 0.01008602672420558}
+Enumerated Types	Constant-specific methods	CarWash.java	{"java.util.EnumSet.of": 0.08337920117517938, "java.util.EnumSet.add": 0.05558613411678626, "java.util.EnumSet.toString": 0.02779306705839313}
+Enumerated Types	Constant-specific methods	VendingMachine.java	{"java.util.EnumMap.put": 0.22234453646714503, "java.util.Iterator.next": 0.013525374997768328, "java.util.EnumMap.get": 0.1389653352919656, "java.util.Iterator.hasNext": 0.013525374997768328}
+Enumerated Types	Constant-specific methods	PostOffice.java	{}
+Enumerated Types	Constant-specific methods	OverrideConstantSpecific.java	{}
+Enumerated Types	Constant-specific methods	ConstantSpecificMethod.java	{"System.getenv": 0.02779306705839313, "java.text.DateFormat.getDateInstance": 0.02779306705839313, "System.getProperty": 0.018791155622549682, "System.out.println": 0.0}
+Enumerated Types	Using interfaces for organization	Meal2.java	{"System.out.println": 0.0}
+Enumerated Types	Using interfaces for organization	Food.java	{}
+Enumerated Types	Using interfaces for organization	Course.java	{}
+Enumerated Types	Using interfaces for organization	Meal.java	{"System.out.println": 0.0}
+Enumerated Types	Using interfaces for organization	TypeOfFood.java	{}
+Enumerated Types	Using interfaces for organization	SecurityCategory.java	{"System.out.println": 0.0}
+Enumerated Types	Using EnumMap	EnumMaps.java	{"java.util.EnumMap.entrySet": 0.02779306705839313, "java.util.Map.getValue": 0.022527286433611772, "java.util.Map.getKey": 0.022527286433611772, "java.util.EnumMap.get": 0.1389653352919656, "java.util.EnumMap.put": 0.22234453646714503}
+IO	File reading & writing utilities	TextFile.java	{"java.util.Arrays.asList": 0.016397800318291838, "java.io.BufferedReader.readLine": 0.028494473189127005, "System.out.println": 0.0, "java.io.BufferedReader.close": 0.013183159118046843, "java.io.PrintWriter.close": 0.010685427445922628, "java.util.TreeSet.headSet": 0.004394386372682281, "java.io.PrintWriter.println": 0.014247236594563503}
+IO	File reading & writing utilities	BinaryFile.java	{"java.io.BufferedInputStream.read": 0.008788772745364562, "java.io.BufferedInputStream.close": 0.008788772745364562, "java.io.BufferedInputStream.available": 0.004394386372682281}
+IO	Process control	OSExecute.java	{"java.io.BufferedReader.readLine": 0.028494473189127005, "System.out.println": 0.0, "System.err.println": 0.01782651724356869}
+IO	Process control	OSExecuteDemo.java	{}
+IO	Process control	OSExecuteException.java	{}
+IO	New IO	LargeMappedFiles.java	{"java.nio.MappedByteBuffer.put": 0.008788772745364562, "java.nio.MappedByteBuffer.get": 0.004394386372682281}
+IO	New IO	FileLocking.java	{"java.nio.channels.FileLock.release": 0.008788772745364562, "java.io.FileOutputStream.close": 0.004394386372682281, "java.io.FileOutputStream.getChannel": 0.004394386372682281, "System.out.println": 0.0}
+IO	New IO	Endians.java	{"java.nio.ByteBuffer.array": 0.013183159118046843, "java.nio.ByteBuffer.wrap": 0.0219719318634114, "java.util.Arrays.toString": 0.006415526949660131, "java.nio.ByteBuffer.order": 0.008788772745364562, "java.nio.ByteBuffer.asCharBuffer": 0.03954947735414053, "java.nio.ByteBuffer.rewind": 0.07470456833559877}
+IO	New IO	GetData.java	{"java.nio.ByteBuffer.get": 0.026366318236093686, "java.nio.ByteBuffer.limit": 0.017577545490729124, "java.nio.ByteBuffer.getShort": 0.004394386372682281, "java.nio.ByteBuffer.asFloatBuffer": 0.004394386372682281, "java.nio.ByteBuffer.asCharBuffer": 0.03954947735414053, "java.nio.ByteBuffer.allocate": 0.04630351893233138, "java.nio.ByteBuffer.asLongBuffer": 0.004394386372682281, "java.nio.ByteBuffer.getChar": 0.004394386372682281, "java.nio.ByteBuffer.getLong": 0.004394386372682281, "java.nio.ByteBuffer.getFloat": 0.004394386372682281, "java.nio.ByteBuffer.asIntBuffer": 0.008788772745364562, "java.nio.ByteBuffer.asDoubleBuffer": 0.004394386372682281, "java.nio.ByteBuffer.rewind": 0.07470456833559877, "java.nio.ByteBuffer.getInt": 0.004394386372682281, "java.nio.ByteBuffer.getDouble": 0.004394386372682281, "java.nio.ByteBuffer.asShortBuffer": 0.004394386372682281}
+IO	New IO	ViewBuffers.java	{"java.nio.ByteBuffer.wrap": 0.0219719318634114, "java.nio.IntBuffer.position": 0.004394386372682281, "java.nio.FloatBuffer.get": 0.004394386372682281, "java.nio.DoubleBuffer.get": 0.004394386372682281, "java.nio.CharBuffer.hasRemaining": 0.004394386372682281, "java.nio.ByteBuffer.get": 0.026366318236093686, "java.nio.LongBuffer.get": 0.004394386372682281, "java.nio.CharBuffer.get": 0.004394386372682281, "java.nio.LongBuffer.hasRemaining": 0.004394386372682281, "java.nio.DoubleBuffer.hasRemaining": 0.004394386372682281, "java.nio.LongBuffer.position": 0.004394386372682281, "java.nio.ShortBuffer.position": 0.004394386372682281, "java.nio.ShortBuffer.get": 0.004394386372682281, "java.nio.IntBuffer.get": 0.017577545490729124, "java.nio.ByteBuffer.position": 0.017577545490729124, "java.nio.ByteBuffer.hasRemaining": 0.008788772745364562, "java.nio.ByteBuffer.rewind": 0.07470456833559877, "java.nio.IntBuffer.hasRemaining": 0.008788772745364562, "java.nio.FloatBuffer.position": 0.004394386372682281, "java.nio.ShortBuffer.hasRemaining": 0.004394386372682281, "java.nio.CharBuffer.position": 0.004394386372682281, "java.nio.FloatBuffer.hasRemaining": 0.004394386372682281, "java.nio.DoubleBuffer.position": 0.004394386372682281}
+IO	New IO	AvailableCharSets.java	{"java.util.SortedMap.keySet": 0.004394386372682281, "java.util.SortedMap.get": 0.004394386372682281, "java.util.Iterator.next": 0.0021385089832200435, "java.nio.charset.Charset.availableCharsets": 0.004394386372682281, "java.util.Iterator.hasNext": 0.006415526949660131}
+IO	New IO	ChannelCopy.java	{"java.nio.ByteBuffer.flip": 0.0219719318634114, "System.out.println": 0.0, "java.nio.ByteBuffer.clear": 0.013183159118046843, "java.nio.ByteBuffer.allocate": 0.04630351893233138, "java.nio.channels.FileChannel.write": 0.026366318236093686, "System.exit": 0.00728791125257415, "java.nio.channels.FileChannel.read": 0.0219719318634114}
+IO	New IO	UsingBuffers.java	{"java.nio.CharBuffer.put": 0.004394386372682281, "java.nio.ByteBuffer.allocate": 0.04630351893233138, "java.nio.ByteBuffer.asCharBuffer": 0.03954947735414053, "java.nio.CharBuffer.rewind": 0.013183159118046843}
+IO	New IO	LockingMappedFiles.java	{"java.nio.ByteBuffer.get": 0.026366318236093686, "System.out.println": 0.0, "java.nio.channels.FileChannel.lock": 0.013183159118046843, "java.nio.ByteBuffer.limit": 0.017577545490729124, "java.nio.ByteBuffer.position": 0.017577545490729124, "java.nio.MappedByteBuffer.put": 0.008788772745364562, "java.nio.ByteBuffer.put": 0.013183159118046843, "java.nio.channels.FileLock.release": 0.008788772745364562, "java.nio.channels.FileChannel.map": 0.008788772745364562}
+IO	New IO	TransferTo.java	{"java.nio.channels.FileChannel.transferTo": 0.004394386372682281, "java.nio.channels.FileChannel.size": 0.013183159118046843, "System.exit": 0.00728791125257415, "System.out.println": 0.0}
+IO	New IO	BufferToText.java	{"java.nio.charset.Charset.forName": 0.013183159118046843, "java.nio.ByteBuffer.flip": 0.0219719318634114, "System.out.println": 0.0, "System.getProperty": 0.008913258621784345, "java.nio.ByteBuffer.wrap": 0.0219719318634114, "java.nio.ByteBuffer.asCharBuffer": 0.03954947735414053, "java.nio.ByteBuffer.clear": 0.013183159118046843, "java.nio.ByteBuffer.allocate": 0.04630351893233138, "java.nio.channels.FileChannel.write": 0.026366318236093686, "java.nio.ByteBuffer.rewind": 0.07470456833559877, "java.nio.channels.FileChannel.close": 0.026366318236093686, "java.nio.channels.FileChannel.read": 0.0219719318634114}
+IO	New IO	GetChannel.java	{"java.nio.ByteBuffer.flip": 0.0219719318634114, "java.nio.ByteBuffer.get": 0.026366318236093686, "java.nio.channels.FileChannel.position": 0.004394386372682281, "java.nio.ByteBuffer.hasRemaining": 0.008788772745364562, "java.nio.ByteBuffer.allocate": 0.04630351893233138, "System.out.print": 0.007152088177992111, "java.nio.channels.FileChannel.write": 0.026366318236093686, "java.nio.channels.FileChannel.close": 0.026366318236093686, "java.nio.channels.FileChannel.size": 0.013183159118046843, "java.nio.channels.FileChannel.read": 0.0219719318634114}
+IO	New IO	IntBufferDemo.java	{"java.nio.IntBuffer.get": 0.017577545490729124, "System.out.println": 0.0, "java.nio.IntBuffer.put": 0.017577545490729124, "java.nio.ByteBuffer.allocate": 0.04630351893233138, "java.nio.ByteBuffer.asIntBuffer": 0.008788772745364562, "java.nio.IntBuffer.flip": 0.004394386372682281, "java.nio.IntBuffer.hasRemaining": 0.008788772745364562}
+IO	New IO	MappedIO.java	{"java.nio.channels.FileChannel.close": 0.026366318236093686, "java.nio.IntBuffer.get": 0.017577545490729124, "java.io.DataOutputStream.writeInt": 0.004394386372682281, "java.io.DataInputStream.readInt": 0.0035618091486408756, "java.nio.IntBuffer.put": 0.017577545490729124, "java.io.DataOutputStream.close": 0.008788772745364562, "System.out.format": 0.005942172414522897, "System.out.print": 0.007152088177992111, "java.nio.channels.FileChannel.size": 0.013183159118046843, "java.nio.channels.FileChannel.map": 0.008788772745364562, "java.io.DataInputStream.close": 0.004394386372682281, "System.nanoTime": 0.007538657689663957}
+IO	Standard IO	ChangeSystemOut.java	{"java.io.PrintWriter.println": 0.014247236594563503}
+IO	Standard IO	Redirecting.java	{"System.setErr": 0.008788772745364562, "java.io.BufferedReader.readLine": 0.028494473189127005, "System.out.println": 0.0, "System.setOut": 0.026366318236093686, "java.io.PrintStream.close": 0.004394386372682281, "System.setIn": 0.008788772745364562}
+IO	Standard IO	Echo.java	{"java.io.BufferedReader.readLine": 0.028494473189127005, "System.out.println": 0.0}
+IO	Compression	ZipCompress.java	{"java.io.BufferedInputStream.close": 0.008788772745364562, "java.util.zip.ZipOutputStream.setComment": 0.004394386372682281, "java.util.zip.ZipOutputStream.putNextEntry": 0.004394386372682281, "java.io.BufferedOutputStream.write": 0.008788772745364562, "java.util.zip.CheckedOutputStream.getChecksum": 0.004394386372682281, "java.io.BufferedReader.close": 0.013183159118046843, "java.util.zip.ZipFile.entries": 0.004394386372682281, "java.util.Enumeration.hasMoreElements": 0.0035618091486408756, "java.util.zip.CheckedInputStream.getChecksum": 0.004394386372682281, "java.io.BufferedInputStream.read": 0.008788772745364562, "java.io.BufferedReader.read": 0.004394386372682281, "System.out.write": 0.05273263647218737, "java.util.zip.ZipInputStream.getNextEntry": 0.004394386372682281, "java.util.Enumeration.nextElement": 0.0035618091486408756, "java.io.BufferedOutputStream.close": 0.008788772745364562, "java.io.BufferedOutputStream.flush": 0.004394386372682281}
+IO	Compression	GZIPcompress.java	{"java.io.BufferedReader.readLine": 0.028494473189127005, "System.out.println": 0.0, "java.io.BufferedOutputStream.write": 0.008788772745364562, "java.io.BufferedOutputStream.close": 0.008788772745364562, "System.exit": 0.00728791125257415}
+IO	Typical uses of IO streams	MemoryInput.java	{"java.io.StringReader.read": 0.004394386372682281, "System.out.print": 0.007152088177992111}
+IO	Typical uses of IO streams	FileOutputShortcut.java	{"java.io.BufferedReader.readLine": 0.028494473189127005, "System.out.println": 0.0, "java.io.PrintWriter.println": 0.014247236594563503, "java.io.PrintWriter.close": 0.010685427445922628}
+IO	Typical uses of IO streams	BufferedInputFile.java	{"java.io.BufferedReader.readLine": 0.028494473189127005, "java.io.BufferedReader.close": 0.013183159118046843, "System.out.print": 0.007152088177992111}
+IO	Typical uses of IO streams	StoringAndRecoveringData.java	{"System.out.println": 0.0, "java.io.DataInputStream.readUTF": 0.008788772745364562, "java.io.DataInputStream.readDouble": 0.008788772745364562, "java.io.DataOutputStream.writeUTF": 0.008788772745364562, "java.io.DataOutputStream.close": 0.008788772745364562, "java.io.DataOutputStream.writeDouble": 0.008788772745364562}
+IO	Typical uses of IO streams	FormattedMemoryInput.java	{"System.err.println": 0.01782651724356869, "System.out.print": 0.007152088177992111, "java.io.DataInputStream.readByte": 0.008788772745364562}
+IO	Typical uses of IO streams	UsingRandomAccessFile.java	{"java.io.RandomAccessFile.close": 0.004394386372682281, "System.out.println": 0.0, "java.io.RandomAccessFile.seek": 0.004394386372682281, "java.io.RandomAccessFile.writeDouble": 0.004394386372682281}
+IO	Typical uses of IO streams	TestEOF.java	{"java.io.DataInputStream.available": 0.004394386372682281, "System.out.print": 0.007152088177992111, "java.io.DataInputStream.readByte": 0.008788772745364562}
+IO	Typical uses of IO streams	BasicFileOutput.java	{"java.io.BufferedReader.readLine": 0.028494473189127005, "System.out.println": 0.0, "java.io.PrintWriter.println": 0.014247236594563503, "java.io.PrintWriter.close": 0.010685427445922628}
+IO	XML	Person.java	{"java.util.Arrays.asList": 0.016397800318291838, "System.out.println": 0.0}
+IO	XML	People.java	{"System.out.println": 0.0}
+IO	The File class	PPrint.java	{"java.util.Arrays.asList": 0.016397800318291838, "System.out.println": 0.0}
+IO	The File class	DirectoryDemo.java	{}
+IO	The File class	ProcessFiles.java	{"System.out.println": 0.0, "java.io.File.getCanonicalFile": 0.004394386372682281}
+IO	The File class	DirList3.java	{"System.out.println": 0.0, "java.util.Arrays.sort": 0.021370854891845256, "java.util.regex.Pattern.matcher": 0.01485543103630724, "java.io.File.list": 0.026366318236093686, "java.util.regex.Pattern.compile": 0.01485543103630724}
+IO	The File class	DirList.java	{"System.out.println": 0.0, "java.util.Arrays.sort": 0.021370854891845256, "java.util.regex.Pattern.matcher": 0.01485543103630724, "java.io.File.list": 0.026366318236093686, "java.util.regex.Pattern.compile": 0.01485543103630724}
+IO	The File class	MakeDirectories.java	{"System.out.println": 0.0, "java.io.File.delete": 0.004394386372682281, "java.io.File.mkdirs": 0.004394386372682281, "java.io.File.exists": 0.004394386372682281, "System.exit": 0.00728791125257415, "System.err.println": 0.01782651724356869}
+IO	The File class	DirList2.java	{"System.out.println": 0.0, "java.util.Arrays.sort": 0.021370854891845256, "java.util.regex.Pattern.matcher": 0.01485543103630724, "java.io.File.list": 0.026366318236093686, "java.util.regex.Pattern.compile": 0.01485543103630724}
+IO	The File class	Directory.java	{"System.out.println": 0.0, "java.io.File.getName": 0.004394386372682281, "java.io.File.isDirectory": 0.004394386372682281, "java.util.List.iterator": 0.0029710862072614484, "java.util.regex.Pattern.matcher": 0.01485543103630724, "java.util.regex.Pattern.compile": 0.01485543103630724, "java.util.List.addAll": 0.007123618297281751}
+IO	Object serialization	MyWorld.java	{"java.io.Serializable.toString": 0.004394386372682281, "java.io.ByteArrayOutputStream.toByteArray": 0.017577545490729124, "java.io.ObjectInputStream.readObject": 0.04274170978369051, "java.io.ObjectOutputStream.writeObject": 0.0439438637268228}
+IO	Object serialization	Worm.java	{"java.io.ByteArrayOutputStream.toByteArray": 0.017577545490729124, "java.util.Random.nextInt": 0.002392065886336231, "java.io.ObjectOutputStream.flush": 0.004394386372682281, "java.io.ObjectOutputStream.writeObject": 0.0439438637268228, "java.io.ObjectInputStream.readObject": 0.04274170978369051}
+IO	Object serialization	Blips.java	{"java.io.ObjectInputStream.readObject": 0.04274170978369051, "java.io.ObjectOutputStream.writeObject": 0.0439438637268228, "java.io.ObjectOutputStream.close": 0.013183159118046843}
+IO	Object serialization	Blip3.java	{"java.io.ObjectInputStream.readObject": 0.04274170978369051, "java.io.ObjectOutputStream.writeObject": 0.0439438637268228, "java.io.ObjectOutputStream.close": 0.013183159118046843}
+IO	Object serialization	FreezeAlien.java	{"java.io.ObjectOutput.writeObject": 0.004394386372682281}
+IO	Object serialization	Logon.java	{"java.io.ObjectInputStream.readObject": 0.04274170978369051, "java.io.ObjectOutputStream.writeObject": 0.0439438637268228, "java.io.ObjectOutputStream.close": 0.013183159118046843}
+IO	Object serialization	SerialCtl.java	{"java.io.ObjectOutputStream.writeObject": 0.0439438637268228, "System.out.println": 0.0, "java.io.ObjectInputStream.readObject": 0.04274170978369051, "java.io.ByteArrayOutputStream.toByteArray": 0.017577545490729124}
+IO	Object serialization	ThawAlien.java	{"System.out.println": 0.0, "java.io.ObjectInputStream.readObject": 0.04274170978369051}
+IO	Object serialization	RecoverCADState.java	{"System.out.println": 0.0, "java.io.ObjectInputStream.readObject": 0.04274170978369051}
+IO	Object serialization	Alien.java	{}
+IO	Object serialization	StoreCADState.java	{"java.util.List.add": 0.00108958573113382, "System.out.println": 0.0, "java.util.List.get": 0.0018219778131435375, "java.util.Random.nextInt": 0.002392065886336231, "java.io.ObjectOutputStream.writeObject": 0.0439438637268228}
+IO	Preferences	PreferencesDemo.java	{"java.util.prefs.Preferences.putBoolean": 0.004394386372682281, "java.util.prefs.Preferences.keys": 0.004394386372682281, "java.util.prefs.Preferences.put": 0.008788772745364562, "java.util.prefs.Preferences.get": 0.004394386372682281, "java.util.prefs.Preferences.putInt": 0.008788772745364562, "java.util.prefs.Preferences.getInt": 0.008788772745364562, "java.util.prefs.Preferences.userNodeForPackage": 0.004394386372682281}
+Type Information	The need for RTTI	Shapes.java	{"java.util.Arrays.asList": 0.02275136397438212, "System.out.println": 0.0}
+Type Information	Registered factories	Factory.java	{}
+Type Information	Registered factories	RegisteredFactories.java	{"java.util.List.add": 0.04081755777401311, "System.out.println": 0.0, "java.util.List.get": 0.007583787991460708, "java.util.Random.nextInt": 0.003318906229759956, "java.util.List.size": 0.01780263033894293}
+Type Information	instanceof vs. Class equivalence	ShowMethods.java	{"java.lang.reflect.Method.toString": 0.036582327581132834, "java.util.regex.Pattern.matcher": 0.197869262623771, "java.util.regex.Pattern.compile": 0.012366828913985687, "System.exit": 0.04550272794876424, "java.lang.reflect.Constructor.toString": 0.036582327581132834}
+Type Information	instanceof vs. Class equivalence	FamilyVsExactType.java	{}
+Type Information	The Class object	ToyTest.java	{"System.exit": 0.04550272794876424}
+Type Information	The Class object	BoundedClassReferences.java	{}
+Type Information	The Class object	GenericToyTest.java	{"java.lang.Class.getSuperclass": 0.018291163790566417, "java.lang.Class.newInstance": 0.014825650046052193}
+Type Information	The Class object	ClassInitialization.java	{"System.out.println": 0.0}
+Type Information	The Class object	SweetShop.java	{}
+Type Information	The Class object	GenericClassReferences.java	{}
+Type Information	The Class object	FilledList.java	{"java.util.List.add": 0.04081755777401311, "System.out.println": 0.0}
+Type Information	The Class object	WildcardClassReferences.java	{}
+Type Information	The Class object	ClassCasts.java	{"java.lang.Class.cast": 0.018291163790566417}
+Type Information	Interfaces and type information	InterfaceViolation.java	{"System.out.println": 0.0}
+Type Information	Interfaces and type information	AnonymousImplementation.java	{"System.out.println": 0.0}
+Type Information	Interfaces and type information	HiddenImplementation.java	{"java.lang.reflect.Method.invoke": 0.014825650046052193, "java.lang.reflect.Method.setAccessible": 0.018291163790566417, "System.out.println": 0.0}
+Type Information	Interfaces and type information	A.java	{}
+Type Information	Interfaces and type information	HiddenC.java	{}
+Type Information	Interfaces and type information	InnerImplementation.java	{"System.out.println": 0.0}
+Type Information	Interfaces and type information	ModifyingPrivateFields.java	{"java.lang.reflect.Field.setInt": 0.018291163790566417, "System.out.println": 0.0, "java.lang.reflect.Field.set": 0.036582327581132834, "java.lang.reflect.Field.getInt": 0.018291163790566417, "java.lang.reflect.Field.get": 0.036582327581132834, "java.lang.reflect.Field.setAccessible": 0.05487349137169925}
+Type Information	Dynamic proxies	SimpleProxyDemo.java	{}
+Type Information	Dynamic proxies	SelectingMethods.java	{"java.lang.reflect.Proxy.newProxyInstance": 0.05930260018420877}
+Type Information	Dynamic proxies	SimpleDynamicProxy.java	{"System.out.println": 0.0, "java.lang.reflect.Proxy.newProxyInstance": 0.05930260018420877}
+Type Information	Null Objects	Person.java	{}
+Type Information	Null Objects	Staff.java	{"System.out.println": 0.0}
+Type Information	Null Objects	Operation.java	{}
+Type Information	Null Objects	SnowRemovalRobot.java	{"java.util.Arrays.asList": 0.02275136397438212, "System.out.println": 0.0}
+Type Information	Null Objects	Position.java	{}
+Type Information	Null Objects	NullRobot.java	{"java.util.Collections.emptyList": 0.018291163790566417, "java.lang.reflect.Proxy.newProxyInstance": 0.05930260018420877}
+Type Information	Null Objects	Null.java	{}
+Type Information	Null Objects	Robot.java	{"System.out.println": 0.0}
+Type Information	Checking before a cast	Person.java	{}
+Type Information	Checking before a cast	PetCount2.java	{}
+Type Information	Checking before a cast	PetCount4.java	{}
+Type Information	Checking before a cast	ForNameCreator.java	{"java.util.List.add": 0.04081755777401311}
+Type Information	Checking before a cast	Dog.java	{}
+Type Information	Checking before a cast	PetCreator.java	{"java.util.Collections.addAll": 0.03710048674195706, "java.util.Random.nextInt": 0.003318906229759956}
+Type Information	Checking before a cast	Mouse.java	{}
+Type Information	Checking before a cast	PetCount3.java	{"java.util.Map.getKey": 0.029651300092104385, "java.util.Map.getValue": 0.029651300092104385}
+Type Information	Checking before a cast	TypeCounter.java	{"java.util.Map.getKey": 0.029651300092104385, "java.util.Map.getValue": 0.029651300092104385}
+Type Information	Checking before a cast	Hamster.java	{}
+Type Information	Checking before a cast	Pet.java	{}
+Type Information	Checking before a cast	LiteralPetCreator.java	{"java.util.Arrays.asList": 0.02275136397438212, "java.util.List.indexOf": 0.010459619073693298, "System.out.println": 0.0, "java.util.Collections.unmodifiableList": 0.014825650046052193, "java.util.List.subList": 0.014825650046052193, "java.util.List.size": 0.01780263033894293}
+Type Information	Checking before a cast	Rat.java	{}
+Type Information	Checking before a cast	Pets.java	{}
+Type Information	Checking before a cast	Pug.java	{}
+Type Information	Checking before a cast	Rodent.java	{}
+Type Information	Checking before a cast	PetCount.java	{}
+Type Information	Checking before a cast	Cat.java	{}
+Type Information	Checking before a cast	Mutt.java	{}
+Type Information	Checking before a cast	Cymric.java	{}
+Type Information	Checking before a cast	EgyptianMau.java	{}
+Type Information	Checking before a cast	Manx.java	{}
+Interfaces	Nesting interfaces	NestingInterfaces.java	{}
+Interfaces	Fields in interfaces	RandVals.java	{"java.util.Random.nextLong": 0.23128014071841418, "java.util.Random.nextInt": 0.051774937184255306, "java.util.Random.nextDouble": 0.16317005754961542}
+Interfaces	Fields in interfaces	TestRandVals.java	{}
+Interfaces	Fields in interfaces	Months.java	{}
+Interfaces	“Multiple inheritance” in Java	HorrorShow.java	{}
+Interfaces	“Multiple inheritance” in Java	Adventure.java	{}
+Interfaces	“Multiple inheritance” in Java	InterfaceCollision.java	{}
+Interfaces	Interfaces	Music5.java	{}
+Interfaces	Complete decoupling	Waveform.java	{}
+Interfaces	Complete decoupling	LowPass.java	{}
+Interfaces	Complete decoupling	FilterProcessor.java	{}
+Interfaces	Complete decoupling	BandPass.java	{}
+Interfaces	Complete decoupling	Filter.java	{}
+Interfaces	Complete decoupling	Apply.java	{}
+Interfaces	Complete decoupling	HighPass.java	{}
+Interfaces	Complete decoupling	StringProcessor.java	{"java.util.Arrays.toString": 0.06943025832187741}
+Interfaces	Complete decoupling	Processor.java	{}
+Interfaces	Interfaces and factories	Games.java	{}
+Interfaces	Interfaces and factories	Factories.java	{}
+Interfaces	Adapting to an interface	RandomDoubles.java	{"java.util.Random.nextDouble": 0.16317005754961542, "System.out.print": 0.04644089256909544}
+Interfaces	Adapting to an interface	RandomWords.java	{"java.util.Scanner.next": 0.11564007035920709, "java.util.Random.nextInt": 0.051774937184255306, "System.out.println": 0.0, "java.util.Scanner.hasNext": 0.11564007035920709}
+Annotations	Writing annotation processors	Uniqueness.java	{}
+Annotations	Writing annotation processors	TableCreator.java	{"java.util.List.add": 0.014087475691916028, "System.out.println": 0.0, "java.lang.reflect.Field.getName": 0.03787727723002249, "System.exit": 0.007852240663724802, "java.lang.reflect.Field.getDeclaredAnnotations": 0.018938638615011244}
+Annotations	Writing annotation processors	SimulatingNull.java	{}
+Annotations	Writing annotation processors	Member.java	{}
+Annotations	Writing annotation processors	DBTable.java	{}
+Annotations	Writing annotation processors	SQLInteger.java	{}
+Annotations	Writing annotation processors	Constraints.java	{}
+Annotations	Writing annotation processors	UseCaseTracker.java	{"java.lang.reflect.Method.getAnnotation": 0.018938638615011244, "java.util.Collections.addAll": 0.05121837107739205, "System.out.println": 0.0}
+Annotations	Writing annotation processors	SQLString.java	{}
+Annotations	Using the Visitor pattern with apt	TableCreationProcessorFactory.java	{"java.util.Arrays.asList": 0.03926120331862401, "java.util.Collections.emptySet": 0.03787727723002249, "System.out.println": 0.0}
+Annotations	Annotation-based unit testing	AtUnit.java	{}
+Annotations	Annotation-based unit testing	TestObjectCleanup.java	{}
+Annotations	Annotation-based unit testing	AtUnitExample2.java	{"System.out.println": 0.0}
+Annotations	Annotation-based unit testing	AtUnitExample4.java	{"java.util.Arrays.asList": 0.03926120331862401, "java.util.List.add": 0.014087475691916028, "System.out.println": 0.0, "java.util.Collections.shuffle": 0.030700903635187723, "java.util.Iterator.next": 0.03686562388772252, "java.util.List.iterator": 0.05121837107739205, "java.util.Iterator.hasNext": 0.03686562388772252}
+Annotations	Annotation-based unit testing	StackLStringTest.java	{}
+Annotations	Annotation-based unit testing	TestProperty.java	{}
+Annotations	Annotation-based unit testing	AtUnitExample3.java	{"System.out.println": 0.0}
+Annotations	Annotation-based unit testing	TestObjectCreate.java	{}
+Annotations	Annotation-based unit testing	AtUnitRemover.java	{"System.arraycopy": 0.015350451817593862}
+Annotations	Annotation-based unit testing	AtUnitExample1.java	{"System.out.println": 0.0}
+Annotations	Annotation-based unit testing	AtUnitExample5.java	{"java.io.PrintWriter.print": 0.15150910892008995, "System.out.println": 0.0, "java.io.PrintWriter.close": 0.030700903635187723}
+Annotations	Annotation-based unit testing	AtUnitComposition.java	{}
+Annotations	Annotation-based unit testing	HashSetTest.java	{"java.util.HashSet.isEmpty": 0.03787727723002249, "java.util.HashSet.contains": 0.018938638615011244, "java.util.HashSet.remove": 0.018938638615011244, "java.util.HashSet.add": 0.03787727723002249}
+Annotations	Annotation-based unit testing	StackL.java	{"java.util.LinkedList.removeFirst": 0.015350451817593862, "java.util.LinkedList.getFirst": 0.015350451817593862, "java.util.LinkedList.addFirst": 0.015350451817593862}
+Annotations	Annotation-based unit testing	ClassNameFinder.java	{"java.io.DataInputStream.readLong": 0.018938638615011244, "java.io.DataInputStream.readInt": 0.030700903635187723, "java.util.Map.put": 0.025609185538696025, "java.io.DataInputStream.readShort": 0.1704477475351012, "java.io.DataInputStream.read": 0.03787727723002249, "java.util.Map.get": 0.025609185538696025}
+Annotations	Annotation-based unit testing	AtUnitExternalTest.java	{}
+Annotations	Basic syntax	UseCase.java	{}
+Annotations	Basic syntax	PasswordUtils.java	{}
+Annotations	Basic syntax	Testable.java	{"System.out.println": 0.0}
+Annotations	Basic syntax	Test.java	{}
+Annotations	Using apt to process annotations	InterfaceExtractorProcessor.java	{"java.util.ArrayList.add": 0.03248961322890573, "java.io.PrintWriter.close": 0.030700903635187723, "java.util.ArrayList.size": 0.046051355452781585, "java.io.PrintWriter.print": 0.15150910892008995, "java.io.PrintWriter.println": 0.06140180727037545}
+Annotations	Using apt to process annotations	Multiplier.java	{"System.out.println": 0.0}
+Annotations	Using apt to process annotations	InterfaceExtractorProcessorFactory.java	{"java.util.Collections.emptySet": 0.03787727723002249, "java.util.Collections.singleton": 0.018938638615011244}
+Annotations	Using apt to process annotations	ExtractInterface.java	{}
+Operators	Relational operators	EqualsMethod2.java	{"System.out.println": 0.0, "com.sun.jdi.Value.equals": 0.09727573470437595}
+Operators	Relational operators	EqualsMethod.java	{"java.lang.Integer.equals": 0.09727573470437595, "System.out.println": 0.0}
+Operators	Relational operators	Equivalence.java	{"System.out.println": 0.0}
+Operators	Simpler print statements	HelloDate.java	{}
+Operators	A compendium of operators	Overflow.java	{"System.out.println": 0.0}
+Operators	A compendium of operators	AllOps.java	{}
+Operators	String operator + and +=	StringOperators.java	{}
+Operators	Assignment	Assignment.java	{}
+Operators	Assignment	PassObject.java	{}
+Operators	Literals	Literals.java	{}
+Operators	Literals	Exponents.java	{"System.out.println": 0.0}
+Operators	Logical operators	ShortCircuit.java	{}
+Operators	Logical operators	Bool.java	{"java.util.Random.nextInt": 0.052951640302079286}
+Operators	Mathematical operators	MathOps.java	{"java.util.Random.nextFloat": 0.11125231196564687, "java.util.Random.nextInt": 0.052951640302079286}
+Operators	Auto increment and decrement	AutoInc.java	{}
+Operators	Ternary if-else operator	TernaryIfElse.java	{}
+Operators	Precedence	Precedence.java	{"System.out.println": 0.0}
+Operators	Casting operators	CastingNumbers.java	{}
+Operators	Casting operators	Casting.java	{}
+Operators	Casting operators	RoundingNumbers.java	{}
+Operators	Shift operators	BitManipulation.java	{"java.util.Random.nextLong": 0.1576910050352824, "java.util.Random.nextInt": 0.052951640302079286}
+Operators	Shift operators	URShift.java	{}
+Access Control	Java access specifiers	Dinner.java	{}
+Access Control	Java access specifiers	IceCream.java	{}
+Access Control	Java access specifiers	ChocolateChip2.java	{"System.out.println": 0.0}
+Access Control	Java access specifiers	Pie.java	{"System.out.println": 0.0}
+Access Control	Java access specifiers	ChocolateChip.java	{"System.out.println": 0.0}
+Access Control	Java access specifiers	Cake.java	{}
+Access Control	Java access specifiers	Cookie.java	{"System.out.println": 0.0}
+Access Control	Interface and implementation	OrganizedByAccess.java	{}
+Access Control	Class access	Lunch.java	{}
+Access Control	package: the library unit	SingleImport.java	{}
+Access Control	package: the library unit	LibTest.java	{}
+Access Control	package: the library unit	Vector.java	{"System.out.println": 0.0}
+Access Control	package: the library unit	QualifiedMyClass.java	{}
+Access Control	package: the library unit	Print.java	{"System.out.println": 0.0, "System.out.printf": 0.11125231196564687, "System.out.print": 0.03166424493347417}
+Access Control	package: the library unit	Range.java	{}
+Access Control	package: the library unit	MyClass.java	{}
+Access Control	package: the library unit	FullQualification.java	{}
+Access Control	package: the library unit	PrintTest.java	{}
+Access Control	package: the library unit	List.java	{"System.out.println": 0.0}
+Access Control	package: the library unit	ImportedMyClass.java	{}
+Inner Classes	Can inner classes be overridden?	BigEgg.java	{}
+Inner Classes	Can inner classes be overridden?	BigEgg2.java	{}
+Inner Classes	Inheriting from inner classes	InheritInner.java	{}
+Inner Classes	Creating inner classes	Parcel1.java	{"javax.print.attribute.standard.Destination.readLabel": 0.15852341951824228, "System.out.println": 0.0}
+Inner Classes	Creating inner classes	Parcel2.java	{"javax.print.attribute.standard.Destination.readLabel": 0.15852341951824228, "System.out.println": 0.0}
+Inner Classes	Local inner classes	LocalInnerClass.java	{}
+Inner Classes	Anonymous inner classes	Parcel10.java	{"System.out.println": 0.0, "java.lang.Math.round": 0.07926170975912114}
+Inner Classes	Anonymous inner classes	Parcel8.java	{}
+Inner Classes	Anonymous inner classes	Parcel7b.java	{}
+Inner Classes	Anonymous inner classes	AnonymousConstructor.java	{}
+Inner Classes	Anonymous inner classes	Games.java	{}
+Inner Classes	Anonymous inner classes	Parcel9.java	{}
+Inner Classes	Anonymous inner classes	Parcel7.java	{}
+Inner Classes	Anonymous inner classes	Wrapping.java	{}
+Inner Classes	Anonymous inner classes	Factories.java	{}
+Inner Classes	Nested classes	Parcel11.java	{}
+Inner Classes	Nested classes	ClassInInterface.java	{"System.out.println": 0.0}
+Inner Classes	Nested classes	MultiNestingAccess.java	{}
+Inner Classes	Nested classes	TestBed.java	{"System.out.println": 0.0}
+Inner Classes	The link to the outer class	Sequence.java	{"java.nio.channels.Selector.end": 0.07926170975912114, "java.nio.channels.Selector.current": 0.07926170975912114, "java.lang.Integer.toString": 0.12848896706578566, "javax.sound.midi.Sequence.add": 0.07926170975912114, "java.nio.channels.Selector.next": 0.07926170975912114, "javax.sound.midi.Sequence.selector": 0.07926170975912114, "System.out.print": 0.038700743807579534}
+Inner Classes	Inner classes and upcasting	Parcel5.java	{}
+Inner Classes	Inner classes and upcasting	Destination.java	{}
+Inner Classes	Inner classes and upcasting	TestParcel.java	{}
+Inner Classes	Inner classes and upcasting	Parcel6.java	{}
+Inner Classes	Using .this and .new	DotNew.java	{}
+Inner Classes	Using .this and .new	Parcel3.java	{}
+Inner Classes	Using .this and .new	DotThis.java	{"System.out.println": 0.0}
+Inner Classes	Why inner classes?	Controller.java	{"java.util.List.remove": 0.06424448353289283, "java.util.List.add": 0.01965289818748779, "System.out.println": 0.0, "java.util.List.size": 0.03857236573437634}
+Inner Classes	Why inner classes?	GreenhouseController.java	{}
+Inner Classes	Why inner classes?	MultiInterfaces.java	{}
+Inner Classes	Why inner classes?	Event.java	{"System.nanoTime": 0.09065003197200856}
+Inner Classes	Why inner classes?	Callbacks.java	{}
+Inner Classes	Why inner classes?	MultiImplementation.java	{}
+Generics	Wildcards	UnboundedWildcards1.java	{}
+Generics	Wildcards	UnboundedWildcards2.java	{}
+Generics	Wildcards	GenericReading.java	{"java.util.Arrays.asList": 0.0677330683206796}
+Generics	Wildcards	CovariantArrays.java	{"System.out.println": 0.0}
+Generics	Wildcards	NonCovariantGenerics.java	{}
+Generics	Wildcards	GenericWriting.java	{}
+Generics	Wildcards	Wildcards.java	{}
+Generics	Wildcards	SuperTypeWildcards.java	{}
+Generics	Wildcards	CompilerIntelligence.java	{"java.util.Arrays.asList": 0.0677330683206796, "java.util.List.contains": 0.00662061471522178, "java.util.List.indexOf": 0.0046708985939775405, "java.util.List.get": 0.01015996024810194}
+Generics	Wildcards	Holder.java	{"System.out.println": 0.0}
+Generics	Wildcards	CaptureConversion.java	{"System.out.println": 0.0}
+Generics	Exceptions	ThrowGenericException.java	{"System.out.println": 0.0}
+Generics	Generic methods	LimitsOfInference.java	{}
+Generics	Generic methods	SimplerPets.java	{}
+Generics	Generic methods	GenericVarargs.java	{"System.out.println": 0.0}
+Generics	Generic methods	BasicGeneratorDemo.java	{"System.out.println": 0.0}
+Generics	Generic methods	ExplicitTypeSpecification.java	{}
+Generics	Generic methods	Tuple.java	{}
+Generics	Generic methods	Sets.java	{"java.util.Set.removeAll": 0.01324122943044356}
+Generics	Generic methods	TupleTest2.java	{"System.out.println": 0.0}
+Generics	Generic methods	ContainerMethodDifferences.java	{"System.out.println": 0.0, "java.lang.reflect.Method.getName": 0.01986184414566534, "System.out.print": 0.029247126999621176, "java.util.Set.removeAll": 0.01324122943044356, "java.util.Set.add": 0.022090366151699622}
+Generics	Generic methods	Watercolors.java	{}
+Generics	Generic methods	New.java	{}
+Generics	Generic methods	Generators.java	{"System.out.println": 0.0, "System.out.print": 0.029247126999621176}
+Generics	Generic methods	WatercolorSets.java	{"java.util.EnumSet.range": 0.01324122943044356}
+Generics	Generic methods	CountedObject.java	{}
+Generics	Generic methods	GenericMethods.java	{"System.out.println": 0.0}
+Generics	Generic methods	BasicGenerator.java	{"java.lang.Class.newInstance": 0.00662061471522178}
+Generics	Dynamic type safety	CheckedList.java	{"java.util.List.add": 0.010126493340881114, "System.out.println": 0.0, "java.util.Collections.checkedList": 0.016336382927452448}
+Generics	Generic interfaces	Fibonacci.java	{"System.out.print": 0.029247126999621176}
+Generics	Generic interfaces	CoffeeGenerator.java	{"java.util.Random.nextInt": 0.0029642139609306474, "System.out.println": 0.0}
+Generics	Generic interfaces	Coffee.java	{}
+Generics	Generic interfaces	Cappuccino.java	{}
+Generics	Generic interfaces	Breve.java	{}
+Generics	Generic interfaces	Latte.java	{}
+Generics	Generic interfaces	Americano.java	{}
+Generics	Generic interfaces	IterableFibonacci.java	{"System.out.print": 0.029247126999621176}
+Generics	Generic interfaces	Mocha.java	{}
+Generics	Generic interfaces	Generator.java	{}
+Generics	Mixins	DynamicProxyMixin.java	{"java.lang.reflect.Method.invoke": 0.01324122943044356, "System.out.println": 0.0, "java.lang.reflect.Proxy.newProxyInstance": 0.046344303006552456, "java.util.Map.put": 0.01656777461377472, "java.util.Map.containsKey": 0.01986184414566534, "java.util.Map.get": 0.022090366151699622, "java.lang.reflect.Method.getName": 0.01986184414566534}
+Generics	Mixins	Mixins.java	{"System.out.println": 0.0}
+Generics	Mixins	Decoration.java	{}
+Generics	Latent typing	SimpleQueue.java	{"java.util.LinkedList.poll": 0.008168191463726224, "java.util.LinkedList.offer": 0.008168191463726224, "java.util.LinkedList.iterator": 0.008168191463726224}
+Generics	Latent typing	Performs.java	{}
+Generics	Latent typing	LatentReflection.java	{"java.lang.reflect.Method.invoke": 0.01324122943044356}
+Generics	Latent typing	Functional.java	{"java.util.Arrays.asList": 0.0677330683206796, "java.math.BigInteger.isProbablePrime": 0.008168191463726224, "java.util.Iterator.next": 0.007950029578840926, "java.util.Iterator.hasNext": 0.007950029578840926}
+Generics	Latent typing	SimpleDogsAndRobots.java	{}
+Generics	Latent typing	Apply.java	{"java.util.List.add": 0.010126493340881114}
+Generics	Latent typing	DogsAndRobots.java	{}
+Generics	Latent typing	Fill.java	{"System.out.println": 0.0}
+Generics	Latent typing	Fill2.java	{"java.util.Collection.add": 0.00662061471522178}
+Generics	Anonymous inner classes	BankTeller.java	{"java.util.List.size": 0.003975014789420463, "java.util.Random.nextInt": 0.0029642139609306474, "System.out.println": 0.0, "java.util.List.get": 0.01015996024810194}
+Generics	Simple generics	Holder2.java	{}
+Generics	Simple generics	ThreeTuple.java	{}
+Generics	Simple generics	FiveTuple.java	{}
+Generics	Simple generics	Holder3.java	{}
+Generics	Simple generics	Holder1.java	{}
+Generics	Simple generics	FourTuple.java	{}
+Generics	Simple generics	LinkedStack.java	{"org.w3c.dom.Node.end": 0.008168191463726224, "System.out.println": 0.0}
+Generics	Simple generics	TupleTest.java	{"System.out.println": 0.0}
+Generics	Simple generics	RandomList.java	{"java.util.ArrayList.add": 0.0046708985939775405, "java.util.ArrayList.get": 0.00662061471522178, "java.util.ArrayList.size": 0.00662061471522178, "java.util.Random.nextInt": 0.0029642139609306474, "System.out.print": 0.029247126999621176}
+Generics	Simple generics	TwoTuple.java	{}
+Generics	Building complex models	TupleList.java	{"System.out.println": 0.0}
+Generics	Building complex models	Store.java	{"java.util.Random.nextInt": 0.0029642139609306474, "System.out.println": 0.0, "java.util.Random.nextDouble": 0.0046708985939775405}
+Generics	The mystery of erasure	ListMaker.java	{}
+Generics	The mystery of erasure	ErasureAndInheritance.java	{}
+Generics	The mystery of erasure	HasF.java	{"System.out.println": 0.0}
+Generics	The mystery of erasure	LostInformation.java	{"java.util.Arrays.toString": 0.07155026620956834, "java.util.List.getClass": 0.008168191463726224, "java.util.Map.getClass": 0.008168191463726224, "System.out.println": 0.0}
+Generics	The mystery of erasure	GenericHolder.java	{}
+Generics	The mystery of erasure	SimpleHolder.java	{}
+Generics	The mystery of erasure	FilledListMaker.java	{"System.out.println": 0.0}
+Generics	The mystery of erasure	Manipulator2.java	{}
+Generics	The mystery of erasure	Manipulation.java	{}
+Generics	The mystery of erasure	ArrayMaker.java	{"java.util.Arrays.toString": 0.07155026620956834, "System.out.println": 0.0, "java.lang.reflect.Array.newInstance": 0.016336382927452448}
+Generics	The mystery of erasure	ErasedTypeEquivalence.java	{"System.out.println": 0.0}
+Generics	The mystery of erasure	Manipulator3.java	{}
+Generics	The mystery of erasure	ReturnGenericType.java	{}
+Generics	Self-bounded types	BasicHolder.java	{"System.out.println": 0.0}
+Generics	Self-bounded types	CuriouslyRecurringGeneric.java	{}
+Generics	Self-bounded types	SelfBoundingAndCovariantArguments.java	{}
+Generics	Self-bounded types	OrdinaryArguments.java	{"System.out.println": 0.0}
+Generics	Self-bounded types	NotSelfBounded.java	{}
+Generics	Self-bounded types	Unconstrained.java	{}
+Generics	Self-bounded types	GenericsAndReturnTypes.java	{}
+Generics	Self-bounded types	SelfBoundingMethods.java	{}
+Generics	Self-bounded types	CRGWithBasicHolder.java	{}
+Generics	Self-bounded types	CovariantReturnTypes.java	{}
+Generics	Self-bounded types	SelfBounding.java	{}
+Generics	Self-bounded types	PlainGenericInheritance.java	{"System.out.println": 0.0}
+Generics	Bounds	EpicBattle.java	{}
+Generics	Bounds	BasicBounds.java	{}
+Generics	Bounds	InheritBounds.java	{}
+Generics	Issues	ClassCasting.java	{"java.io.ObjectInputStream.readObject": 0.01324122943044356}
+Generics	Issues	ByteSet.java	{"java.util.Arrays.asList": 0.0677330683206796}
+Generics	Issues	ComparablePet.java	{}
+Generics	Issues	HijackedInterface.java	{}
+Generics	Issues	UseList.java	{}
+Generics	Issues	RestrictedComparablePets.java	{}
+Generics	Issues	ListOfInt.java	{"java.util.List.add": 0.010126493340881114, "System.out.print": 0.029247126999621176}
+Generics	Issues	GenericCast.java	{"System.out.print": 0.029247126999621176}
+Generics	Issues	NeedCasting.java	{"java.io.ObjectInputStream.readObject": 0.01324122943044356}
+Generics	Issues	PrimitiveGenericTest.java	{"System.out.println": 0.0}
+Generics	Issues	UseList2.java	{}
+Generics	Issues	MultipleInterfaceVariants.java	{}
+Generics	Compensating for erasure	Erased.java	{}
+Generics	Compensating for erasure	GenericArray2.java	{"System.out.println": 0.0, "System.out.print": 0.029247126999621176}
+Generics	Compensating for erasure	ArrayOfGenericReference.java	{}
+Generics	Compensating for erasure	CreatorGeneric.java	{"System.out.println": 0.0}
+Generics	Compensating for erasure	GenericArray.java	{}
+Generics	Compensating for erasure	InstantiateGenericType.java	{}
+Generics	Compensating for erasure	GenericArrayWithTypeToken.java	{"java.lang.reflect.Array.newInstance": 0.016336382927452448}
+Generics	Compensating for erasure	ClassTypeCapture.java	{"java.lang.Class.isInstance": 0.008168191463726224, "System.out.println": 0.0}
+Generics	Compensating for erasure	ListOfGenerics.java	{"java.util.List.add": 0.010126493340881114, "java.util.List.get": 0.01015996024810194}
+Generics	Compensating for erasure	FactoryConstraint.java	{}
+Generics	Compensating for erasure	ArrayOfGeneric.java	{"System.out.println": 0.0}
+Controlling Execution	Foreach syntax	ForEachInt.java	{}
+Controlling Execution	Foreach syntax	ForEachString.java	{"System.out.print": 0.09675185951894884}
+Controlling Execution	Foreach syntax	ForEachFloat.java	{"java.util.Random.nextFloat": 0.06798752397900643, "System.out.println": 0.0}
+Controlling Execution	Iteration	ListCharacters.java	{"System.out.println": 0.0, "java.lang.Character.isLowerCase": 0.1188925646386817}
+Controlling Execution	Iteration	WhileTest.java	{"java.lang.Math.random": 0.1188925646386817, "System.out.println": 0.0, "System.out.print": 0.09675185951894884}
+Controlling Execution	Iteration	CommaOperator.java	{"System.out.println": 0.0}
+Controlling Execution	return	IfElse2.java	{}
+Controlling Execution	break and continue	BreakAndContinue.java	{"System.out.println": 0.0, "System.out.print": 0.09675185951894884}
+Controlling Execution	The infamous “goto”	LabeledWhile.java	{}
+Controlling Execution	The infamous “goto”	LabeledFor.java	{}
+Controlling Execution	switch	VowelsAndConsonants.java	{"java.util.Random.nextInt": 0.010786445246719855}
+Controlling Execution	if-else	IfElse.java	{}
+Concurrency	New library components	ExchangerDemo.java	{"java.util.List.add": 0.018438819534978893, "java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962, "System.out.println": 0.0, "java.util.List.remove": 0.006697301372154851, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.concurrent.Exchanger.exchange": 0.008262803720062821}
+Concurrency	New library components	DelayQueueDemo.java	{"java.util.List.add": 0.018438819534978893, "java.util.concurrent.DelayQueue.take": 0.0041314018600314105, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.Random.nextInt": 0.008995645456723895, "java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962, "java.util.concurrent.DelayQueue.add": 0.0041314018600314105, "java.util.concurrent.DelayQueue.put": 0.0041314018600314105, "System.nanoTime": 0.03307501166546259}
+Concurrency	New library components	HorseRace.java	{"java.util.List.add": 0.018438819534978893, "java.util.concurrent.CyclicBarrier.await": 0.04544542046034552, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.Random.nextInt": 0.008995645456723895, "java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962}
+Concurrency	New library components	PriorityBlockingQueueDemo.java	{"java.util.concurrent.PriorityBlockingQueue.take": 0.0041314018600314105, "java.util.List.add": 0.018438819534978893, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.Random.nextInt": 0.008995645456723895, "java.util.Queue.add": 0.016525607440125642, "java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962}
+Concurrency	New library components	Fat.java	{"System.out.println": 0.0}
+Concurrency	New library components	CountDownLatchDemo.java	{"java.util.concurrent.CountDownLatch.await": 0.008262803720062821, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.Random.nextInt": 0.008995645456723895, "java.util.concurrent.CountDownLatch.countDown": 0.012394205580094231, "java.util.concurrent.ExecutorService.shutdown": 0.049576822320376926}
+Concurrency	New library components	GreenhouseScheduler.java	{"java.util.Random.nextFloat": 0.004725001666494655, "java.util.Calendar.getInstance": 0.0041314018600314105, "java.util.List.add": 0.018438819534978893, "System.out.println": 0.0, "java.util.Calendar.getTime": 0.0041314018600314105, "java.util.Calendar.get": 0.0041314018600314105, "java.util.Collections.synchronizedList": 0.010045952058232275, "java.util.concurrent.ScheduledThreadPoolExecutor.scheduleAtFixedRate": 0.0041314018600314105, "java.util.concurrent.ScheduledThreadPoolExecutor.schedule": 0.0041314018600314105, "java.util.concurrent.ScheduledThreadPoolExecutor.shutdownNow": 0.0041314018600314105, "java.util.Random.nextInt": 0.008995645456723895, "java.util.Calendar.clone": 0.0041314018600314105, "java.util.Calendar.set": 0.012394205580094231}
+Concurrency	New library components	SemaphoreDemo.java	{"java.util.List.add": 0.018438819534978893, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.Future.cancel": 0.012394205580094231, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.concurrent.ExecutorService.submit": 0.024788411160188463, "java.util.concurrent.ExecutorService.shutdown": 0.049576822320376926}
+Concurrency	New library components	Pool.java	{"java.util.List.indexOf": 0.0023625008332473275, "java.util.List.add": 0.018438819534978893, "java.util.List.get": 0.006851762123559094, "java.util.concurrent.Semaphore.release": 0.0041314018600314105, "java.util.concurrent.Semaphore.acquire": 0.0041314018600314105}
+Concurrency	Performance tuning	SynchronizationComparisons.java	{"java.util.concurrent.locks.Lock.lock": 0.049576822320376926, "java.util.concurrent.atomic.AtomicLong.get": 0.0041314018600314105, "java.util.concurrent.CyclicBarrier.await": 0.04544542046034552, "java.util.concurrent.Executors.newFixedThreadPool": 0.008262803720062821, "java.util.concurrent.atomic.AtomicLong.getAndAdd": 0.0041314018600314105, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.concurrent.atomic.AtomicInteger.set": 0.0041314018600314105, "java.util.Random.nextInt": 0.008995645456723895, "java.util.concurrent.locks.Lock.unlock": 0.04544542046034552, "java.util.concurrent.atomic.AtomicInteger.getAndIncrement": 0.0041314018600314105, "System.nanoTime": 0.03307501166546259}
+Concurrency	Performance tuning	ListComparisons.java	{"java.util.Collections.synchronizedList": 0.010045952058232275}
+Concurrency	Performance tuning	FastSimulation.java	{"java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.Random.nextInt": 0.008995645456723895, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477}
+Concurrency	Performance tuning	MapComparisons.java	{"java.util.Collections.synchronizedMap": 0.0033486506860774257}
+Concurrency	Performance tuning	SimpleMicroBenchmark.java	{"java.util.concurrent.locks.Lock.unlock": 0.04544542046034552, "java.util.concurrent.locks.Lock.lock": 0.049576822320376926, "System.out.printf": 0.016537505832731295, "System.nanoTime": 0.03307501166546259}
+Concurrency	Performance tuning	ReaderWriterList.java	{"java.util.concurrent.locks.ReentrantReadWriteLock.writeLock": 0.0041314018600314105, "java.util.concurrent.locks.Lock.lock": 0.049576822320376926, "java.util.concurrent.locks.ReentrantReadWriteLock.getReadLockCount": 0.008262803720062821, "java.util.Collections.nCopies": 0.0033486506860774257, "java.util.ArrayList.get": 0.0033486506860774257, "java.util.ArrayList.set": 0.0041314018600314105, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.concurrent.locks.ReentrantReadWriteLock.readLock": 0.0041314018600314105, "java.util.Random.nextInt": 0.008995645456723895, "java.util.concurrent.locks.Lock.unlock": 0.04544542046034552, "java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962}
+Concurrency	Performance tuning	Tester.java	{"System.out.println": 0.0, "System.out.printf": 0.016537505832731295, "java.util.concurrent.CountDownLatch.await": 0.008262803720062821, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.CountDownLatch.countDown": 0.012394205580094231, "System.nanoTime": 0.03307501166546259}
+Concurrency	Sharing resources	SynchronizedEvenGenerator.java	{"java.lang.Thread.yield": 0.008262803720062821}
+Concurrency	Sharing resources	CriticalSection.java	{"java.util.List.add": 0.018438819534978893, "System.out.println": 0.0, "java.util.Collections.synchronizedList": 0.010045952058232275, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "System.exit": 0.025694107963346605}
+Concurrency	Sharing resources	SerialNumberChecker.java	{"java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "System.exit": 0.025694107963346605, "System.out.println": 0.0, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477}
+Concurrency	Sharing resources	ThreadLocalVariableHolder.java	{"System.out.println": 0.0, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.Random.nextInt": 0.008995645456723895, "java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962}
+Concurrency	Sharing resources	SyncObject.java	{}
+Concurrency	Sharing resources	SerialNumberGenerator.java	{}
+Concurrency	Sharing resources	AtomicEvenGenerator.java	{"java.util.concurrent.atomic.AtomicInteger.addAndGet": 0.008262803720062821}
+Concurrency	Sharing resources	AtomicIntegerTest.java	{"System.out.println": 0.0, "java.util.concurrent.atomic.AtomicInteger.addAndGet": 0.008262803720062821, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.concurrent.atomic.AtomicInteger.get": 0.0041314018600314105, "System.exit": 0.025694107963346605, "System.err.println": 0.005586559779676932}
+Concurrency	Sharing resources	IntGenerator.java	{}
+Concurrency	Sharing resources	MutexEvenGenerator.java	{"java.util.concurrent.locks.Lock.unlock": 0.04544542046034552, "java.util.concurrent.locks.Lock.lock": 0.049576822320376926}
+Concurrency	Sharing resources	AttemptLocking.java	{"java.util.concurrent.locks.ReentrantLock.tryLock": 0.008262803720062821, "java.util.concurrent.locks.ReentrantLock.unlock": 0.008262803720062821, "System.out.println": 0.0}
+Concurrency	Sharing resources	AtomicityTest.java	{"java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "System.exit": 0.025694107963346605, "System.out.println": 0.0, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477}
+Concurrency	Sharing resources	Atomicity.java	{}
+Concurrency	Sharing resources	ExplicitCriticalSection.java	{"java.util.concurrent.locks.Lock.unlock": 0.04544542046034552, "java.util.concurrent.locks.Lock.lock": 0.049576822320376926}
+Concurrency	Sharing resources	EvenGenerator.java	{}
+Concurrency	Sharing resources	EvenChecker.java	{"java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "System.out.println": 0.0, "java.util.concurrent.ExecutorService.shutdown": 0.049576822320376926, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477}
+Concurrency	Deadlock	FixedDiningPhilosophers.java	{"System.out.println": 0.0, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "System.in.read": 0.049576822320376926, "java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962}
+Concurrency	Deadlock	DeadlockingDiningPhilosophers.java	{"System.out.println": 0.0, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "System.in.read": 0.049576822320376926, "java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962}
+Concurrency	Deadlock	Philosopher.java	{"java.util.Random.nextInt": 0.008995645456723895}
+Concurrency	Deadlock	Chopstick.java	{}
+Concurrency	Active objects	ActiveObjectDemo.java	{"java.util.concurrent.Executors.newSingleThreadExecutor": 0.008262803720062821, "java.util.List.add": 0.018438819534978893, "java.util.Random.nextInt": 0.008995645456723895, "java.util.concurrent.ExecutorService.submit": 0.024788411160188463, "java.util.List.remove": 0.006697301372154851, "java.util.concurrent.ExecutorService.shutdown": 0.049576822320376926, "java.util.List.size": 0.008042114863537925}
+Concurrency	Simulation	CarBuilder.java	{"java.util.Set.remove": 0.0041314018600314105, "java.util.concurrent.CyclicBarrier.await": 0.04544542046034552, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962, "java.util.Set.add": 0.002793279889838466}
+Concurrency	Simulation	RestaurantWithQueues.java	{"java.util.List.add": 0.018438819534978893, "java.util.List.get": 0.006851762123559094, "java.util.concurrent.SynchronousQueue.take": 0.008262803720062821, "java.util.concurrent.SynchronousQueue.put": 0.0041314018600314105, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.BlockingQueue.take": 0.008262803720062821, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "System.in.read": 0.049576822320376926, "java.util.Random.nextInt": 0.008995645456723895, "java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962, "java.util.List.size": 0.008042114863537925}
+Concurrency	Simulation	BankTellerSimulation.java	{"java.util.PriorityQueue.add": 0.006697301372154851, "System.out.println": 0.0, "java.util.Queue.remove": 0.0041314018600314105, "java.util.Queue.size": 0.0041314018600314105, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.PriorityQueue.size": 0.016525607440125642, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.PriorityQueue.poll": 0.0041314018600314105, "java.util.Random.nextInt": 0.008995645456723895, "java.util.PriorityQueue.offer": 0.0041314018600314105, "System.in.read": 0.049576822320376926, "java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962, "java.util.Queue.offer": 0.0041314018600314105, "System.out.print": 0.010758507931064582}
+Concurrency	Cooperation between tasks	NotifyVsNotifyAll.java	{"System.out.println": 0.0, "java.util.Timer.scheduleAtFixedRate": 0.0041314018600314105, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.Timer.cancel": 0.0041314018600314105, "java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962, "System.out.print": 0.010758507931064582}
+Concurrency	Cooperation between tasks	WaxOMatic.java	{"java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477}
+Concurrency	Cooperation between tasks	Restaurant.java	{"java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477}
+Concurrency	Cooperation between tasks	WaxOMatic2.java	{"java.util.concurrent.locks.Lock.lock": 0.049576822320376926, "java.util.concurrent.locks.Condition.signalAll": 0.008262803720062821, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.locks.Condition.await": 0.008262803720062821, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.concurrent.locks.Lock.unlock": 0.04544542046034552, "java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962, "java.util.concurrent.locks.Lock.newCondition": 0.0041314018600314105}
+Concurrency	Cooperation between tasks	PipedIO.java	{"java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.io.PipedReader.read": 0.0041314018600314105, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.Random.nextInt": 0.008995645456723895, "java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962, "java.io.PipedWriter.write": 0.0041314018600314105}
+Concurrency	Cooperation between tasks	TestBlockingQueues.java	{"java.util.concurrent.BlockingQueue.put": 0.0041314018600314105, "java.util.concurrent.BlockingQueue.take": 0.008262803720062821}
+Concurrency	Cooperation between tasks	ToastOMatic.java	{"java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.Random.nextInt": 0.008995645456723895, "java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962, "System.exit": 0.025694107963346605}
+Concurrency	Basic threading	MainThread.java	{}
+Concurrency	Basic threading	SimpleDaemons.java	{}
+Concurrency	Basic threading	LiftOff.java	{"java.lang.Thread.yield": 0.008262803720062821, "System.out.print": 0.010758507931064582}
+Concurrency	Basic threading	DaemonThreadFactory.java	{}
+Concurrency	Basic threading	FixedThreadPool.java	{"java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.concurrent.Executors.newFixedThreadPool": 0.008262803720062821, "java.util.concurrent.ExecutorService.shutdown": 0.049576822320376926}
+Concurrency	Basic threading	SingleThreadExecutor.java	{"java.util.concurrent.Executors.newSingleThreadExecutor": 0.008262803720062821, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.concurrent.ExecutorService.shutdown": 0.049576822320376926}
+Concurrency	Basic threading	SimplePriorities.java	{"java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "System.out.println": 0.0, "java.util.concurrent.ExecutorService.shutdown": 0.049576822320376926, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477}
+Concurrency	Basic threading	Daemons.java	{}
+Concurrency	Basic threading	CallableDemo.java	{"java.util.ArrayList.add": 0.0023625008332473275, "System.out.println": 0.0, "java.util.concurrent.Future.get": 0.0041314018600314105, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.ExecutorService.submit": 0.024788411160188463, "java.util.concurrent.ExecutorService.shutdown": 0.049576822320376926}
+Concurrency	Basic threading	CaptureUncaughtException.java	{"java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "System.out.println": 0.0, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477}
+Concurrency	Basic threading	ResponsiveUI.java	{"System.in.read": 0.049576822320376926, "System.out.println": 0.0}
+Concurrency	Basic threading	ExceptionThread.java	{"java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477}
+Concurrency	Basic threading	SettingDefaultHandler.java	{"java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477}
+Concurrency	Basic threading	DaemonFromFactory.java	{"java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477}
+Concurrency	Basic threading	DaemonThreadPoolExecutor.java	{}
+Concurrency	Basic threading	CachedThreadPool.java	{"java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.concurrent.ExecutorService.shutdown": 0.049576822320376926, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477}
+Concurrency	Basic threading	SelfManaged.java	{"java.lang.Thread.start": 0.008262803720062821, "java.lang.Thread.currentThread": 0.0041314018600314105, "System.out.print": 0.010758507931064582}
+Concurrency	Basic threading	SleepingTask.java	{"java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.concurrent.ExecutorService.shutdown": 0.049576822320376926, "System.err.println": 0.005586559779676932, "System.out.print": 0.010758507931064582}
+Concurrency	Basic threading	NaiveExceptionHandling.java	{"java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "System.out.println": 0.0, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477}
+Concurrency	Basic threading	DaemonsDontRunFinally.java	{}
+Concurrency	Basic threading	Joining.java	{}
+Concurrency	Basic threading	SimpleThread.java	{"java.lang.Integer.toString": 0.0033486506860774257, "System.out.print": 0.010758507931064582}
+Concurrency	Basic threading	BasicThreads.java	{"java.lang.Thread.start": 0.008262803720062821, "System.out.println": 0.0}
+Concurrency	Basic threading	ThreadVariations.java	{}
+Concurrency	Terminating tasks	Interrupting.java	{"java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.Future.cancel": 0.012394205580094231, "java.util.concurrent.ExecutorService.submit": 0.024788411160188463, "System.exit": 0.025694107963346605, "java.io.InputStream.read": 0.0041314018600314105}
+Concurrency	Terminating tasks	CloseResource.java	{"java.io.InputStream.close": 0.0041314018600314105, "System.in.close": 0.012394205580094231, "System.in.getClass": 0.012394205580094231, "System.in.getClass.getName": 0.0041314018600314105, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.io.InputStream.getClass": 0.0041314018600314105, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.concurrent.ExecutorService.shutdownNow": 0.08675943906065962}
+Concurrency	Terminating tasks	OrnamentalGarden.java	{"java.util.List.add": 0.018438819534978893, "java.util.concurrent.ExecutorService.awaitTermination": 0.0041314018600314105, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.util.Random.nextBoolean": 0.0033486506860774257, "java.util.concurrent.ExecutorService.shutdown": 0.049576822320376926}
+Concurrency	Terminating tasks	NIOInterruption.java	{"java.nio.channels.SocketChannel.read": 0.0041314018600314105, "java.nio.channels.SocketChannel.open": 0.016525607440125642, "java.util.concurrent.Executors.newCachedThreadPool": 0.21896429858166477, "java.util.concurrent.Future.cancel": 0.012394205580094231, "java.util.concurrent.ExecutorService.execute": 0.33464355066254425, "java.nio.ByteBuffer.allocate": 0.0033486506860774257, "java.nio.channels.SocketChannel.close": 0.0041314018600314105, "java.util.concurrent.ExecutorService.submit": 0.024788411160188463, "java.util.concurrent.ExecutorService.shutdown": 0.049576822320376926}
+Concurrency	Terminating tasks	InterruptingIdiom.java	{"System.exit": 0.025694107963346605}
+Concurrency	Terminating tasks	Interrupting2.java	{"java.util.concurrent.locks.Lock.lock": 0.049576822320376926, "System.out.println": 0.0, "java.util.concurrent.locks.Lock.lockInterruptibly": 0.0041314018600314105}
+Concurrency	Terminating tasks	MultiLock.java	{}
+Polymorphism	Constructors and polymorphism	Sandwich.java	{}
+Polymorphism	Constructors and polymorphism	PolyConstructors.java	{}
+Polymorphism	Constructors and polymorphism	ReferenceCounting.java	{}
+Polymorphism	Constructors and polymorphism	Frog.java	{}
+Polymorphism	Upcasting revisited	Wind.java	{"System.out.println": 0.0}
+Polymorphism	Upcasting revisited	Instrument.java	{}
+Polymorphism	Upcasting revisited	Note.java	{}
+Polymorphism	Upcasting revisited	Music2.java	{}
+Polymorphism	Upcasting revisited	Music.java	{}
+Polymorphism	Covariant return types	CovariantReturn.java	{"System.out.println": 0.0}
+Polymorphism	The twist	PrivateOverride.java	{}
+Polymorphism	The twist	StaticPolymorphism.java	{"System.out.println": 0.0}
+Polymorphism	The twist	Shapes.java	{}
+Polymorphism	The twist	Circle.java	{}
+Polymorphism	The twist	FieldAccess.java	{"System.out.println": 0.0}
+Polymorphism	The twist	Music3.java	{}
+Polymorphism	The twist	RandomShapeGenerator.java	{"java.util.Random.nextInt": 0.017650546767359766}
+Polymorphism	The twist	Triangle.java	{}
+Polymorphism	The twist	Shape.java	{}
+Polymorphism	The twist	Square.java	{}
+Polymorphism	Designing with inheritance	Transmogrify.java	{}
+Polymorphism	Designing with inheritance	RTTI.java	{}
+Arrays	Arrays and generics	ArrayOfGenericType.java	{}
+Arrays	Arrays and generics	ParameterizedArrayType.java	{}
+Arrays	Arrays and generics	ArrayOfGenerics.java	{}
+Arrays	Why arrays are special	ContainerComparison.java	{"java.util.Arrays.asList": 0.007023508139848834, "java.util.Arrays.toString": 0.48088239602883437, "java.util.List.add": 0.0014000745410611354, "java.util.List.get": 0.0023411693799496114}
+Arrays	Returning an array	IceCream.java	{"java.util.Arrays.toString": 0.48088239602883437, "java.util.Random.nextInt": 0.0066597049808243955, "System.out.println": 0.0}
+Arrays	Creating test data	Generated.java	{}
+Arrays	Creating test data	PrimitiveConversionDemonstration.java	{"java.util.Arrays.toString": 0.48088239602883437, "System.out.println": 0.0}
+Arrays	Creating test data	CountingGenerator.java	{}
+Arrays	Creating test data	RandomGeneratorsTest.java	{}
+Arrays	Creating test data	FillingArrays.java	{"java.util.Arrays.toString": 0.48088239602883437, "java.util.Arrays.fill": 0.5759544819963579}
+Arrays	Creating test data	GeneratorsTest.java	{"System.out.println": 0.0, "System.out.printf": 0.009686876767457381, "System.out.print": 0.0009190150244543952}
+Arrays	Creating test data	RandomGenerator.java	{"java.util.Random.nextFloat": 0.003228958922485793, "java.util.Random.nextInt": 0.0066597049808243955, "java.util.Random.nextDouble": 0.006457917844971586, "java.util.Random.nextBoolean": 0.004576783787303711}
+Arrays	Creating test data	TestArrayGeneration.java	{"java.util.Arrays.toString": 0.48088239602883437}
+Arrays	Creating test data	TestGenerated.java	{"java.util.Arrays.toString": 0.48088239602883437, "System.out.println": 0.0}
+Arrays	Creating test data	ConvertTo.java	{}
+Arrays	Arrays are first-class objects	ArrayOptions.java	{"java.util.Arrays.toString": 0.48088239602883437}
+Arrays	Multidimensional arrays	AutoboxingArrays.java	{"System.out.println": 0.0, "java.util.Arrays.deepToString": 0.09599241366605964}
+Arrays	Multidimensional arrays	RaggedArray.java	{"java.util.Random.nextInt": 0.0066597049808243955, "java.util.Arrays.deepToString": 0.09599241366605964, "System.out.println": 0.0}
+Arrays	Multidimensional arrays	MultidimensionalObjectArrays.java	{"System.out.println": 0.0, "java.util.Arrays.deepToString": 0.09599241366605964}
+Arrays	Multidimensional arrays	MultidimensionalPrimitiveArray.java	{"System.out.println": 0.0, "java.util.Arrays.deepToString": 0.09599241366605964}
+Arrays	Multidimensional arrays	AssemblingMultidimensionalArrays.java	{"System.out.println": 0.0, "java.util.Arrays.deepToString": 0.09599241366605964}
+Arrays	Multidimensional arrays	MultiDimWrapperArray.java	{"System.out.println": 0.0, "java.util.Arrays.deepToString": 0.09599241366605964}
+Arrays	Multidimensional arrays	ThreeDWithNew.java	{"System.out.println": 0.0, "java.util.Arrays.deepToString": 0.09599241366605964}
+Arrays	Arrays utilities	CopyingArrays.java	{"java.util.Arrays.toString": 0.48088239602883437, "System.arraycopy": 0.022883918936518553, "java.util.Arrays.fill": 0.5759544819963579}
+Arrays	Arrays utilities	AlphabeticSearch.java	{"java.util.Arrays.toString": 0.48088239602883437, "System.out.println": 0.0, "java.util.Arrays.sort": 0.04576783787303711, "java.util.Arrays.binarySearch": 0.022586450274366975}
+Arrays	Arrays utilities	CompType.java	{"java.util.Arrays.toString": 0.48088239602883437, "java.util.Random.nextInt": 0.0066597049808243955, "java.util.Arrays.sort": 0.04576783787303711}
+Arrays	Arrays utilities	ComparatorTest.java	{"java.util.Arrays.toString": 0.48088239602883437, "java.util.Arrays.sort": 0.04576783787303711}
+Arrays	Arrays utilities	StringSorting.java	{"java.util.Arrays.toString": 0.48088239602883437, "java.util.Arrays.sort": 0.04576783787303711, "java.util.Collections.reverseOrder": 0.011293225137183487}
+Arrays	Arrays utilities	Reverse.java	{"java.util.Arrays.toString": 0.48088239602883437, "java.util.Arrays.sort": 0.04576783787303711, "java.util.Collections.reverseOrder": 0.011293225137183487}
+Arrays	Arrays utilities	ArraySearching.java	{"java.util.Arrays.toString": 0.48088239602883437, "java.util.Arrays.sort": 0.04576783787303711, "java.util.Arrays.binarySearch": 0.022586450274366975}
+Arrays	Arrays utilities	ComparingArrays.java	{"java.util.Arrays.fill": 0.5759544819963579, "java.util.Arrays.equals": 0.022586450274366975}

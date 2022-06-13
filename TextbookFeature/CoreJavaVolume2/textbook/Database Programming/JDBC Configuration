@@ -1,0 +1,62 @@
+  291   Table 5.5 Common SQL Data Types Data Types   Description   INTEGER or INT   Typically, a 32-bit integer   SMALLINT   Typically, a 16-bit integer   NUMERIC(m,n), DECIMAL(m,n) or DEC(m,n)   Fixed-point decimal number with m total digits and n digits after the decimal point   FLOAT(n)   A floating-point number with n binary digits of precision   REAL   Typically, a 32-bit floating-point number   DOUBLE   Typically, a 64-bit floating-point number   CHARACTER(n) or CHAR(n)   Fixed-length string of length n   VARCHAR(n)   Variable-length strings of maximum length n   BOOLEAN   A Boolean value   DATE   Calendar date, implementation-dependent   TIME   Time of day, implementation-dependent   TIMESTAMP   Date and time of day, implementation-dependent   BLOB   A binary large object   CLOB   A character large object   5.3 JDBC Configuration Of course, you need a database program for which a JDBC driver is available. 
+  There are many excellent choices, such as IBM DB2, Microsoft SQL Server, MySQL, Oracle, and PostgreSQL. 
+  You must also create a database for your experimental use. We assume you name it COREJAVA. Create a new database, or have your database administrator create one with the appropriate permissions. You need to be able to create, update, and drop tables in the database. 
+  If you have never installed a client/server database before, you might find that setting up the database is somewhat complex and that diagnosing the cause for failure can be difficult. It might be best to seek expert help if your setup is not working correctly. 
+  If this is your first experience with databases, we recommend that you use the Apache Derby database, which is available from http://db.apache.org/derby and also included with some versions of the JDK. 
+  From the Library of Hristo Dimov Hristov   292   Chapter 5   Database Programming   NOTE: The version of Apache Derby that is included with the JDK is officially called JavaDB. We don’t think that’s particularly helpful, and we will call it Derby in this chapter. 
+  You need to gather a number of items before you can write your first database program. The following sections cover these items. 
+5.3.1 Database URLs
+  When connecting to a database, you must use various database-specific parameters such as host names, port numbers, and database names. 
+  JDBC uses a syntax similar to that of ordinary URLs to describe data sources. 
+  Here are examples of the syntax: jdbc:derby://localhost:1527/COREJAVA;create=true jdbc:postgresql:COREJAVA   These JDBC URLs specify a Derby database and a PostgreSQL database named COREJAVA. 
+  The general syntax is jdbc:subprotocol:other stuff   where a subprotocol selects the specific driver for connecting to the database. 
+  The format for the other stuff parameter depends on the subprotocol used. You will need to look up your vendor’s documentation for the specific format. 
+5.3.2 Driver JAR Files
+  You need to obtain the JAR file in which the driver for your database is located. 
+  If you use Derby, you need the file derbyclient.jar. With another database, you need to locate the appropriate driver. For example, the PostgreSQL drivers are available at http://jdbc.postgresql.org. 
+  Include the driver JAR file on the class path when running a program that accesses the database. (You don’t need the JAR file for compiling.) When you launch programs from the command line, simply use the command java -classpath driverPath:. ProgramName   On Windows, use a semicolon to separate the current directory (denoted by the . character) from the driver JAR location. 
+  From the Library of Hristo Dimov Hristov   5.3 JDBC Configuration   293 5.3.3 Starting the Database
+  The database server needs to be started before you can connect to it. The details depend on your database. 
+  With the Derby database, follow these steps: 1. 
+  2. 
+  3. 
+  Open a command shell and change to a directory that will hold the database files. 
+  Locate the file derbyrun.jar. With some versions of the JDK, it is contained in the jdk/db/lib directory. If it’s not there, install Apache Derby and locate the JAR file in the installation directory. We will denote the directory containing lib/derbyrun.jar with derby . 
+  Run the command java -jar derby/lib/derbyrun.jar server start   4. 
+  Double-check that the database is working correctly. Create a file ij.properties that contains these lines: ij.driver=org.apache.derby.jdbc.ClientDriver ij.protocol=jdbc:derby://localhost:1527/ ij.database=COREJAVA;create=true   From another command shell, run Derby’s interactive scripting tool (called ij) by executing java -jar derby/lib/derbyrun.jar ij -p ij.properties   Now you can issue SQL commands such as CREATE TABLE Greetings (Message CHAR(20)); 
+  INSERT INTO Greetings VALUES ('Hello, World!'); 
+  SELECT * FROM Greetings; 
+  DROP TABLE Greetings; 
+  Note that each command must be terminated by a semicolon. To exit, type EXIT; 
+5.
+   
+  When you are done using the database, stop the server with the command java -jar derby/lib/derbyrun.jar server shutdown   If you use another database, you need to consult the documentation to find out how to start and stop your database server, and how to connect to it and issue SQL commands. 
+  From the Library of Hristo Dimov Hristov   294   Chapter 5   Database Programming   5.3.4 Registering the Driver Class Many JDBC JAR files (such as the Derby driver included with Java SE 8) automatically register the driver class. In that case, you can skip the manual registration step that we describe in this section. A JAR file can automatically register the driver class if it contains a file META-INF/services/java.sql.Driver. You can simply unzip your driver’s JAR file to check. 
+  NOTE: This registration mechanism uses a little-known part of the JAR specification; see http://docs.oracle.com/javase/8/docs/technotes/guides/jar/ jar.html#Service%20Provider. Automatic registration is a requirement for a JDBC4-compliant driver. 
+  If your driver’s JAR file doesn’t support automatic registration, you need to find out the name of the JDBC driver classes used by your vendor. Typical driver names are org.apache.derby.jdbc.ClientDriver org.postgresql.Driver   There are two ways to register the driver with the DriverManager. One way is to load the driver class in your Java program. For example, Class.forName("org.postgresql.Driver"); // force loading of driver class   This statement causes the driver class to be loaded, thereby executing a static initializer that registers the driver. 
+  Alternatively, you can set the jdbc.drivers property. You can specify the property with a command-line argument, such as java -Djdbc.drivers=org.postgresql.Driver ProgramName   Or, your application can set the system property with a call such as System.setProperty("jdbc.drivers", "org.postgresql.Driver"); 
+  You can also supply multiple drivers; separate them with colons, for example org.postgresql.Driver:org.apache.derby.jdbc.ClientDriver 5.3.5 Connecting to the Database
+  In your Java program, open a database connection like this: String url = "jdbc:postgresql:COREJAVA"; 
+  String username = "dbuser"; 
+  From the Library of Hristo Dimov Hristov   5.3 JDBC Configuration   295   String password = "secret"; 
+  Connection conn = DriverManager.getConnection(url, username, password); 
+  The driver manager iterates through the registered drivers to find a driver that can use the subprotocol specified in the database URL. 
+  The getConnection method returns a Connection object. In the following sections, you will see how to use the Connection object to execute SQL statements. 
+  To connect to the database, you will need to have a user name and password for your database. 
+  NOTE: By default, Derby lets you connect with any user name, and it does not check passwords. A separate set of tables is generated for each user. The default user name is app. 
+  The test program in Listing 5.1 puts these steps to work. It loads connection parameters from a file named database.properties and connects to the database. The database.properties file supplied with the sample code contains connection information for the Derby database. If you use a different database, put your database-specific connection information into that file. Here is an example for connecting to a PostgreSQL database: jdbc.drivers=org.postgresql.Driver jdbc.url=jdbc:postgresql:COREJAVA jdbc.username=dbuser jdbc.password=secret   After connecting to the database, the test program executes the following SQL statements: CREATE TABLE Greetings (Message CHAR(20)) INSERT INTO Greetings VALUES ('Hello, World!') SELECT * FROM Greetings   The result of the SELECT statement is printed, and you should see an output of Hello, World! 
+  Then the table is removed by executing the statement DROP TABLE Greetings   To run this test, start your database, as described previously, and launch the program as java -classpath .:driverJAR test.TestDB   From the Library of Hristo Dimov Hristov   296   Chapter 5   Database Programming   (As always, Windows users need to use ; instead of : to separate the path elements.)   TIP: One way to debug JDBC-related problems is to enable JDBC tracing. 
+  Call the DriverManager.setLogWriter method to send trace messages to a PrintWriter. 
+  The trace output contains a detailed listing of the JDBC activity. Most JDBC driver implementations provide additional mechanisms for tracing. For example, with Derby, you can add a traceFile option to the JDBC URL: jdbc:derby://localhost:1527/COREJAVA;create=true;traceFile=trace.out. 
+  Listing 5.1 1   test/TestDB.java   package test; 
+  2 3 4 5 6   import java.nio.file.*; 
+  import java.sql.*; 
+  import java.io.*; 
+  import java.util.*; 
+  7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26   /** * This program tests that the database and the JDBC driver are correctly configured. 
+  * @version 1.02 2012-06-05 * @author Cay Horstmann */ public class TestDB { public static void main(String args[]) throws IOException { try { runTest(); 
+  } 
+  catch (SQLException ex) { for (Throwable t : ex) t.printStackTrace(); 
+  } 
+  } 
+  27 28 29 30 31 32 33   /** * Runs a test by creating a table, adding a value, showing the table contents, and removing * the table. 

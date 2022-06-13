@@ -1,0 +1,14 @@
+  In general, arrays and generics do not mix well. You cannot instantiate arrays of parameterized types: 
+  Peel<Banana>[] peels = new Peel<Banana> [10]; // Illegal  Erasure removes the parameter type information, and arrays must know the exact type that they hold, in order to enforce type safety. 
+  However, you can parameterize the type of the array itself: 
+  Note the convenience of using a parameterized method instead of a parameterized class: You don’t have to instantiate a class with a parameter for each different type you need to apply it to, and you can make it static. Of course, you can’t always choose to use a parameterized method instead of a parameterized class, but it can be preferable. 
+  As it turns out, it’s not precisely correct to say that you cannot create arrays of generic types. True, the compiler won’t let you instantiate an array of a generic type. However, it will let you create a reference to such an array. For example: 
+  List<String>[] ls; 
+  This passes through the compiler without complaint. And although you cannot create an actual array object that holds generics, you can create an array of the non-generified type and cast it: 
+  Once you have a reference to a List<String>[], you can see that you get some compile-time checking. The problem is that arrays are covariant, so a List<String>[] is also an Object[], and you can use this to assign an ArrayList<Integer> into your array, with no error at either compile time or run time. 
+  If you know you’re not going to upcast and your needs are relatively simple, however, it is possible to create an array of generics, which will provide basic compile-time type checking. However, a generic container will virtually always be a better choice than an array of generics. 
+  In general you’ll find that generics are effective at the boundaries of a class or method. In the interiors, erasure usually makes generics unusable. So you cannot, for example, create an array of a generic type: 
+  Erasure gets in the way again—this example attempts to create arrays of types that have been erased, and are thus unknown types. Notice that you can create an array of Object, and cast it, but without the @SuppressWarnings annotation you get an "unchecked" warning at compile time because the array doesn’t really hold or dynamically check for type T. That is, if I create a String[], Java will enforce at both compile time and run time that I can only place String objects in that array. However, if I create an Object[], I can put anything into that array except primitive types. 
+  Exercise 8: (1) Demonstrate the assertions in the previous paragraph. 
+  Exercise 9: (3) Create the classes necessary for the Peel<Banana> example and show that the compiler doesn’t accept it. Fix the problem using an ArrayList. 
+  Exercise 10: (2) Modify ArrayOfGenerics .Java to use containers instead of arrays. Show that you can eliminate the compile-time warnings. 

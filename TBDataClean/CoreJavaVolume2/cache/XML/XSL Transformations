@@ -1,0 +1,762 @@
+The XSL Transformations (XSLT) mechanism allows you to specify rules for
+transforming XML documents into other formats, such as plain text, XHTML, or
+any other XML format. XSLT is commonly used to translate from one machinereadable XML format to another, or to translate XML into a presentation format
+for human consumption.
+You need to provide an XSLT stylesheet that describes the conversion of XML
+documents into some other format. An XSLT processor reads an XML document
+and the stylesheet and produces the desired output (see Figure 3.7).
+The XSLT specification is quite complex, and entire books have been written on
+the subject. We can’t possibly discuss all the features of XSLT, so we will just
+work through a representative example. You can find more information in the
+book Essential XML by Don Box et al. The XSLT specification is available at
+www.w3.org/TR/xslt.
+Suppose we want to transform XML files with employee records into HTML
+documents. Consider this input file:
+<staff>
+<employee>
+<name>Carl Cracker</name>
+
+From the Library of Hristo Dimov Hristov
+
+3.8 XSL Transformations
+
+223
+
+Figure 3.7 Applying XSL transformations
+<salary>75000</salary>
+<hiredate year="1987" month="12" day="15"/>
+</employee>
+<employee>
+<name>Harry Hacker</name>
+<salary>50000</salary>
+<hiredate year="1989" month="10" day="1"/>
+</employee>
+<employee>
+<name>Tony Tester</name>
+<salary>40000</salary>
+<hiredate year="1990" month="3" day="15"/>
+</employee>
+</staff>
+
+The desired output is an HTML table:
+<table border="1">
+<tr>
+<td>Carl Cracker</td><td>$75000.0</td><td>1987-12-15</td>
+</tr>
+<tr>
+<td>Harry Hacker</td><td>$50000.0</td><td>1989-10-1</td>
+</tr>
+<tr>
+<td>Tony Tester</td><td>$40000.0</td><td>1990-3-15</td>
+</tr>
+</table>
+
+From the Library of Hristo Dimov Hristov
+
+224
+
+Chapter 3
+
+XML
+
+A stylesheet with transformation templates has this form:
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<xsl:stylesheet
+xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+version="1.0">
+<xsl:output method="html"/>
+template1
+template2
+...
+</xsl:stylesheet>
+
+In our example, the xsl:output element specifies the method as HTML. Other valid
+method settings are xml and text.
+Here is a typical template:
+<xsl:template match="/staff/employee">
+<tr><xsl:apply-templates/></tr>
+</xsl:template>
+
+The value of the match attribute is an XPath expression. The template states:
+Whenever you see a node in the XPath set /staff/employee, do the following:
+1.
+2.
+3.
+
+Emit the string <tr>.
+Keep applying templates as you process its children.
+Emit the string </tr> after you are done with all children.
+
+In other words, this template generates the HTML table row markers around
+every employee record.
+The XSLT processor starts processing by examining the root element. Whenever
+a node matches one of the templates, it applies the template. (If multiple templates
+match, the best matching one is used; see the specification at www.w3.org/TR/xslt for
+the gory details.) If no template matches, the processor carries out a default action.
+For text nodes, the default is to include the contents in the output. For elements,
+the default action is to create no output but to keep processing the children.
+Here is a template for transforming name nodes in an employee file:
+<xsl:template match="/staff/employee/name">
+<td><xsl:apply-templates/></td>
+</xsl:template>
+
+As you can see, the template produces the <td>. . .</td> delimiters, and it asks the
+processor to recursively visit the children of the name element. There is just one
+child—the text node. When the processor visits that node, it emits the text contents
+(provided, of course, that there is no other matching template).
+
+From the Library of Hristo Dimov Hristov
+
+3.8 XSL Transformations
+
+225
+
+You have to work a little harder if you want to copy attribute values into the
+output. Here is an example:
+<xsl:template match="/staff/employee/hiredate">
+<td><xsl:value-of select="@year"/>-<xsl:value-of
+select="@month"/>-<xsl:value-of select="@day"/></td>
+</xsl:template>
+
+When processing a hiredate node, this template emits
+1.
+2.
+3.
+4.
+5.
+6.
+7.
+
+The string <td>
+The value of the year attribute
+A hyphen
+The value of the month attribute
+A hyphen
+The value of the day attribute
+The string </td>
+
+The xsl:value-of statement computes the string value of a node set. The node set is
+specified by the XPath value of the select attribute. In this case, the path is relative
+to the currently processed node. The node set is converted to a string by concatenation of the string values of all nodes. The string value of an attribute node is
+its value. The string value of a text node is its contents. The string value of an element node is the concatenation of the string values of its child nodes (but not
+its attributes).
+Listing 3.13 contains the stylesheet for turning an XML file with employee records
+into an HTML table.
+Listing 3.14 shows a different set of transformations. The input is the same XML
+file, and the output is plain text in the familiar property file format:
+employee.1.name=Carl Cracker
+employee.1.salary=75000.0
+employee.1.hiredate=1987-12-15
+employee.2.name=Harry Hacker
+employee.2.salary=50000.0
+employee.2.hiredate=1989-10-1
+employee.3.name=Tony Tester
+employee.3.salary=40000.0
+employee.3.hiredate=1990-3-15
+
+That example uses the position() function which yields the position of the current
+node as seen from its parent. We thus get an entirely different output simply by
+switching the stylesheet. This means you can safely use XML to describe your
+data; if some applications need the data in another format, just use XSLT to
+generate the alternative format.
+
+From the Library of Hristo Dimov Hristov
+
+226
+
+Chapter 3
+
+XML
+
+It is simple to generate XSL transformations in the Java platform. Set up a transformer factory for each stylesheet. Then, get a transformer object and tell it to
+transform a source to a result:
+File styleSheet = new File(filename);
+StreamSource styleSource = new StreamSource(styleSheet);
+Transformer t = TransformerFactory.newInstance().newTransformer(styleSource);
+t.transform(source, result);
+
+The parameters of the transform method are objects of classes that implement the
+Source and Result interfaces. Several classes implement the Source interface:
+DOMSource
+SAXSource
+StAXSource
+StreamSource
+
+You can construct a StreamSource from a file, stream, reader, or URL, and a DOMSource
+from the node of a DOM tree. For example, in the preceding section, we invoked
+the identity transformation as
+t.transform(new DOMSource(doc), result);
+
+In our example program, we do something slightly more interesting. Instead of
+starting out with an existing XML file, we produce a SAX XML reader that gives
+the illusion of parsing an XML file by emitting appropriate SAX events. Actually,
+our XML reader reads a flat file, as described in Chapter 2. The input file looks
+like this:
+Carl Cracker|75000.0|1987|12|15
+Harry Hacker|50000.0|1989|10|1
+Tony Tester|40000.0|1990|3|15
+
+Our XML reader generates SAX events as it processes the input. Here is a part of
+the parse method of the EmployeeReader class that implements the XMLReader interface:
+AttributesImpl attributes = new AttributesImpl();
+handler.startDocument();
+handler.startElement("", "staff", "staff", attributes);
+while ((line = in.readLine()) != null)
+{
+handler.startElement("", "employee", "employee", attributes);
+StringTokenizer t = new StringTokenizer(line, "|");
+handler.startElement("", "name", "name", attributes);
+String s = t.nextToken();
+handler.characters(s.toCharArray(), 0, s.length());
+handler.endElement("", "name", "name");
+...
+handler.endElement("", "employee", "employee");
+}
+
+From the Library of Hristo Dimov Hristov
+
+3.8 XSL Transformations
+
+227
+
+handler.endElement("", rootElement, rootElement);
+handler.endDocument();
+
+The SAXSource for the transformer is constructed from the XML reader:
+t.transform(new SAXSource(new EmployeeReader(),
+new InputSource(new FileInputStream(filename))), result);
+
+This is an ingenious trick to convert non-XML legacy data into XML. Of course,
+most XSLT applications will already have XML input data, and you can simply
+invoke the transform method on a StreamSource:
+t.transform(new StreamSource(file), result);
+
+The transformation result is an object of a class that implements the Result interface.
+The Java library supplies three classes:
+DOMResult
+SAXResult
+StreamResult
+
+To store the result in a DOM tree, use a DocumentBuilder to generate a new document
+node and wrap it into a DOMResult:
+Document doc = builder.newDocument();
+t.transform(source, new DOMResult(doc));
+
+To save the output in a file, use a StreamResult:
+t.transform(source, new StreamResult(file));
+
+Listing 3.15 contains the complete source code.
+
+Listing 3.13
+1
+
+transform/makehtml.xsl
+
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+2
+3
+4
+5
+
+<xsl:stylesheet
+xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+version="1.0">
+
+6
+7
+
+<xsl:output method="html"/>
+
+8
+9
+10
+11
+
+<xsl:template match="/staff">
+<table border="1"><xsl:apply-templates/></table>
+</xsl:template>
+
+12
+13
+14
+15
+
+<xsl:template match="/staff/employee">
+<tr><xsl:apply-templates/></tr>
+</xsl:template>
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+228
+
+Chapter 3
+
+XML
+
+Listing 3.13 (Continued)
+16
+17
+18
+19
+
+<xsl:template match="/staff/employee/name">
+<td><xsl:apply-templates/></td>
+</xsl:template>
+
+20
+21
+22
+23
+
+<xsl:template match="/staff/employee/salary">
+<td>$<xsl:apply-templates/></td>
+</xsl:template>
+
+24
+25
+26
+27
+28
+
+<xsl:template match="/staff/employee/hiredate">
+<td><xsl:value-of select="@year"/>-<xsl:value-of
+select="@month"/>-<xsl:value-of select="@day"/></td>
+</xsl:template>
+
+29
+30
+
+</xsl:stylesheet>
+
+Listing 3.14
+1
+
+transform/makeprop.xsl
+
+<?xml version="1.0"?>
+
+2
+3
+4
+5
+
+<xsl:stylesheet
+xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+version="1.0">
+
+6
+7
+
+<xsl:output method="text" omit-xml-declaration="yes"/>
+
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+
+<xsl:template match="/staff/employee">
+employee.<xsl:value-of select="position()"
+/>.name=<xsl:value-of select="name/text()"/>
+employee.<xsl:value-of select="position()"
+/>.salary=<xsl:value-of select="salary/text()"/>
+employee.<xsl:value-of select="position()"
+/>.hiredate=<xsl:value-of select="hiredate/@year"
+/>-<xsl:value-of select="hiredate/@month"
+/>-<xsl:value-of select="hiredate/@day"/>
+</xsl:template>
+
+19
+20
+
+</xsl:stylesheet>
+
+Listing 3.15
+1
+
+transform/TransformTest.java
+
+package transform;
+
+2
+3
+4
+5
+
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
+
+From the Library of Hristo Dimov Hristov
+
+3.8 XSL Transformations
+
+6
+7
+8
+9
+10
+
+229
+
+import javax.xml.transform.*;
+import javax.xml.transform.sax.*;
+import javax.xml.transform.stream.*;
+import org.xml.sax.*;
+import org.xml.sax.helpers.*;
+
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+
+/**
+* This program demonstrates XSL transformations. It applies a transformation to a set of employee
+* records. The records are stored in the file employee.dat and turned into XML format. Specify
+* the stylesheet on the command line, e.g.
+* java transform.TransformTest transform/makeprop.xsl
+* @version 1.03 2016-04-27
+* @author Cay Horstmann
+*/
+public class TransformTest
+{
+public static void main(String[] args) throws Exception
+{
+Path path;
+if (args.length > 0) path = Paths.get(args[0]);
+else path = Paths.get("transform", "makehtml.xsl");
+try (InputStream styleIn = Files.newInputStream(path))
+{
+StreamSource styleSource = new StreamSource(styleIn);
+
+30
+
+Transformer t = TransformerFactory.newInstance().newTransformer(styleSource);
+t.setOutputProperty(OutputKeys.INDENT, "yes");
+t.setOutputProperty(OutputKeys.METHOD, "xml");
+t.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+
+31
+32
+33
+34
+35
+
+try (InputStream docIn = Files.newInputStream(Paths.get("transform", "employee.dat")))
+{
+t.transform(new SAXSource(new EmployeeReader(), new InputSource(docIn)),
+new StreamResult(System.out));
+}
+
+36
+37
+38
+39
+40
+
+}
+
+41
+
+}
+
+42
+43
+
+}
+
+44
+45
+46
+47
+48
+49
+50
+51
+
+/**
+* This class reads the flat file employee.dat and reports SAX parser events to act as if it was
+* parsing an XML file.
+*/
+class EmployeeReader implements XMLReader
+{
+private ContentHandler handler;
+
+52
+53
+54
+
+public void parse(InputSource source) throws IOException, SAXException
+{
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+230
+
+Chapter 3
+
+XML
+
+Listing 3.15 (Continued)
+InputStream stream = source.getByteStream();
+BufferedReader in = new BufferedReader(new InputStreamReader(stream));
+String rootElement = "staff";
+AttributesImpl atts = new AttributesImpl();
+
+55
+56
+57
+58
+59
+
+if (handler == null) throw new SAXException("No content handler");
+
+60
+61
+
+handler.startDocument();
+handler.startElement("", rootElement, rootElement, atts);
+String line;
+while ((line = in.readLine()) != null)
+{
+handler.startElement("", "employee", "employee", atts);
+StringTokenizer t = new StringTokenizer(line, "|");
+
+62
+63
+64
+65
+66
+67
+68
+69
+
+handler.startElement("", "name", "name", atts);
+String s = t.nextToken();
+handler.characters(s.toCharArray(), 0, s.length());
+handler.endElement("", "name", "name");
+
+70
+71
+72
+73
+74
+
+handler.startElement("", "salary", "salary", atts);
+s = t.nextToken();
+handler.characters(s.toCharArray(), 0, s.length());
+handler.endElement("", "salary", "salary");
+
+75
+76
+77
+78
+79
+
+atts.addAttribute("", "year", "year", "CDATA", t.nextToken());
+atts.addAttribute("", "month", "month", "CDATA", t.nextToken());
+atts.addAttribute("", "day", "day", "CDATA", t.nextToken());
+handler.startElement("", "hiredate", "hiredate", atts);
+handler.endElement("", "hiredate", "hiredate");
+atts.clear();
+
+80
+81
+82
+83
+84
+85
+86
+
+handler.endElement("", "employee", "employee");
+
+87
+
+}
+
+88
+89
+
+handler.endElement("", rootElement, rootElement);
+handler.endDocument();
+
+90
+91
+92
+
+}
+
+93
+94
+95
+96
+97
+
+public void setContentHandler(ContentHandler newValue)
+{
+handler = newValue;
+}
+
+98
+
+From the Library of Hristo Dimov Hristov
+
+3.8 XSL Transformations
+
+231
+
+public ContentHandler getContentHandler()
+{
+return handler;
+}
+
+99
+100
+101
+102
+103
+
+// the following methods are just do-nothing implementations
+public void parse(String systemId) throws IOException, SAXException {}
+public void setErrorHandler(ErrorHandler handler) {}
+public ErrorHandler getErrorHandler() { return null; }
+public void setDTDHandler(DTDHandler handler) {}
+public DTDHandler getDTDHandler() { return null; }
+public void setEntityResolver(EntityResolver resolver) {}
+public EntityResolver getEntityResolver() { return null; }
+public void setProperty(String name, Object value) {}
+public Object getProperty(String name) { return null; }
+public void setFeature(String name, boolean value) {}
+public boolean getFeature(String name) { return false; }
+
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+
+}
+
+javax.xml.transform.TransformerFactory 1.4
+
+• Transformer newTransformer(Source styleSheet)
+returns an instance of the Transformer class that reads a stylesheet from the given
+source.
+
+javax.xml.transform.stream.StreamSource 1.4
+
+•
+•
+•
+•
+
+StreamSource(File f)
+StreamSource(InputStream in)
+StreamSource(Reader in)
+StreamSource(String systemID)
+
+constructs a stream source from a file, stream, reader, or system ID (usually a relative
+or absolute URL).
+
+javax.xml.transform.sax.SAXSource 1.4
+
+• SAXSource(XMLReader reader, InputSource source)
+constructs a SAX source that obtains data from the given input source and uses the
+given reader to parse the input.
+
+From the Library of Hristo Dimov Hristov
+
+232
+
+Chapter 3
+
+XML
+
+org.xml.sax.XMLReader 1.4
+
+• void setContentHandler(ContentHandler handler)
+sets the handler that is notified of parse events as the input is parsed.
+• void parse(InputSource source)
+parses the input from the given input source and sends parse events to the content
+handler.
+
+javax.xml.transform.dom.DOMResult 1.4
+
+• DOMResult(Node n)
+constructs a source from the given node. Usually, n is a new document node.
+
+org.xml.sax.helpers.AttributesImpl 1.4
+
+• void addAttribute(String uri, String lname, String qname, String type, String value)
+adds an attribute to this attribute collection.
+Parameters:
+
+uri
+
+The URI of the namespace
+
+lname
+
+The local name without prefix
+
+qname
+
+The qualified name with prefix
+
+type
+
+The type, one of "CDATA", "ID", "IDREF", "IDREFS", "NMTOKEN",
+"NMTOKENS", "ENTITY", "ENTITIES", or "NOTATION"
+
+value
+
+The attribute value
+
+• void clear()
+removes all attributes from this attribute collection.
+
+This example concludes our discussion of XML support in the Java library. You
+should now have a good perspective on the major strengths of XML—in particular,
+for automated parsing and validation and as a powerful transformation mechanism. Of course, all this technology is only going to work for you if you design
+your XML formats well. You need to make sure that the formats are rich enough
+to express all your business needs, that they are stable over time, and that your
+business partners are willing to accept your XML documents. Those issues can
+be far more challenging than dealing with parsers, DTDs, or transformations.
+In the next chapter, we will discuss network programming on the Java platform,
+starting with the basics of network sockets and moving on to higher-level protocols
+for e-mail and the World Wide Web.
+
+From the Library of Hristo Dimov Hristov
+

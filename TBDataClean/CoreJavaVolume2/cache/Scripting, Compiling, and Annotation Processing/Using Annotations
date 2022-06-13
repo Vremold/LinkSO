@@ -1,0 +1,510 @@
+
+455
+
+8.3 Using Annotations
+Annotations are tags that you insert into your source code so that some tool can
+process them. The tools can operate on the source level, or they can process class
+files into which the compiler has placed annotations.
+Annotations do not change the way in which your programs are compiled. The
+Java compiler generates the same virtual machine instructions with or without
+the annotations.
+To benefit from annotations, you need to select a processing tool. Use annotations
+that your processing tool understands, then apply the processing tool to your code.
+There is a wide range of uses for annotations, and that generality can be confusing
+at first. Here are some uses for annotations:
+• Automatic generation of auxiliary files, such as deployment descriptors or
+bean information classes
+• Automatic generation of code for testing, logging, transaction semantics,
+and so on
+
+8.3.1 An Introduction into Annotations
+We’ll start our discussion of annotations with the basic concepts and put them
+to use in a concrete example: We will mark methods as event listeners for AWT
+components, and show you an annotation processor that analyzes the annotations
+and hooks up the listeners. We’ll then discuss the syntax rules in detail and finish
+the chapter with two advanced examples of annotation processing. One of them
+processes source-level annotations, the other uses the Apache Bytecode Engineering Library to process class files, injecting additional bytecodes into annotated
+methods.
+Here is an example of a simple annotation:
+public class MyClass
+{
+...
+@Test public void checkRandomInsertions()
+}
+
+The annotation @Test annotates the checkRandomInsertions method.
+In Java, an annotation is used like a modifier and is placed before the annotated
+item without a semicolon. (A modifier is a keyword such as public or static.) The
+name of each annotation is preceded by an @ symbol, similar to Javadoc comments.
+
+From the Library of Hristo Dimov Hristov
+
+456
+
+Chapter 8
+
+Scripting, Compiling, and Annotation Processing
+
+However, Javadoc comments occur inside /** . . . */ delimiters, whereas
+annotations are part of the code.
+By itself, the @Test annotation does not do anything. It needs a tool to be useful.
+For example, the JUnit 4 testing tool (available at http://junit.org) calls all methods
+that are labeled @Test when testing a class. Another tool might remove all test
+methods from a class file so they are not shipped with the program after it has
+been tested.
+Annotations can be defined to have elements, such as
+@Test(timeout="10000")
+
+These elements can be processed by the tools that read the annotations. Other
+forms of elements are possible; we’ll discuss them later in this chapter.
+Besides methods, you can annotate classes, fields, and local variables—an annotation can be anywhere you could put a modifier such as public or static. In addition,
+as you will see in Section 8.4, “Annotation Syntax,” on p. 462, you can annotate
+packages, parameter variables, type parameters, and type uses.
+Each annotation must be defined by an annotation interface. The methods of the
+interface correspond to the elements of the annotation. For example, the JUnit
+Test annotation is defined by the following interface:
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface Test
+{
+long timeout() default 0L;
+...
+}
+
+The @interface declaration creates an actual Java interface. Tools that process annotations receive objects that implement the annotation interface. A tool would call
+the timeout method to retrieve the timeout element of a particular Test annotation.
+The Target and Retention annotations are meta-annotations. They annotate the Test
+annotation, marking it as an annotation that can be applied to methods only and
+is retained when the class file is loaded into the virtual machine. We’ll discuss
+these in detail in Section 8.5.3, “Meta-Annotations,” on p. 472.
+You have now seen the basic concepts of program metadata and annotations. In
+the next section, we’ll walk through a concrete example of annotation processing.
+
+From the Library of Hristo Dimov Hristov
+
+8.3 Using Annotations
+
+457
+
+8.3.2 An Example: Annotating Event Handlers
+One of the more boring tasks in user interface programming is the wiring of
+listeners to event sources. Many listeners are of the form
+myButton.addActionListener(() -> doSomething());
+
+In this section, we’ll design an annotation to reverse the wiring. The annotation,
+defined in Listing 8.11, is used as follows:
+@ActionListenerFor(source="myButton") void doSomething() { . . . }
+
+The programmer no longer has to make calls to addActionListener. Instead, each
+method is tagged with an annotation. Listing 8.10 shows the ButtonFrame class from
+Volume I, Chapter 11, reimplemented with these annotations.
+We also need to define an annotation interface. The code is in Listing 8.11.
+Of course, the annotations don’t do anything by themselves. They sit in the source
+file. The compiler places them in the class file, and the virtual machine loads them.
+We now need a mechanism to analyze them and install action listeners. That is
+the job of the ActionListenerInstaller class. The ButtonFrame constructor calls
+ActionListenerInstaller.processAnnotations(this);
+
+The static processAnnotations method enumerates all methods of the object it received.
+For each method, it gets the ActionListenerFor annotation object and processes it.
+Class<?> cl = obj.getClass();
+for (Method m : cl.getDeclaredMethods())
+{
+ActionListenerFor a = m.getAnnotation(ActionListenerFor.class);
+if (a != null) . . .
+}
+
+Here, we use the getAnnotation method defined in the AnnotatedElement interface. The
+classes Method, Constructor, Field, Class, and Package implement this interface.
+The name of the source field is stored in the annotation object. We retrieve it by
+calling the source method, and then look up the matching field.
+String fieldName = a.source();
+Field f = cl.getDeclaredField(fieldName);
+
+This shows a limitation of our annotation. The source element must be the name
+of a field. It cannot be a local variable.
+
+From the Library of Hristo Dimov Hristov
+
+458
+
+Chapter 8
+
+Scripting, Compiling, and Annotation Processing
+
+The remainder of the code is rather technical. For each annotated method, we
+construct a proxy object, implementing the ActionListener interface, with an
+actionPerformed method that calls the annotated method. (For more information about
+proxies, see Volume I, Chapter 6.) The details are not important. The key
+observation is that the functionality of the annotations was established by the
+processAnnotations method.
+Figure 8.1 shows how annotations are handled in this example.
+
+Figure 8.1 Processing annotations at runtime
+In this example, the annotations were processed at runtime. It is also possible to
+process them at the source level: A source code generator would then produce
+the code for adding the listeners. Alternatively, the annotations can be processed
+at the bytecode level: A bytecode editor could inject the calls to addActionListener into
+the frame constructor. This sounds complex, but libraries are available to make
+this task relatively straightforward. You can see an example in Section 8.7,
+“Bytecode Engineering,” on p. 481.
+Our example was not intended as a serious tool for user interface programmers.
+A utility method for adding a listener could be just as convenient for the programmer as the annotation. (In fact, the java.beans.EventHandler class tries to do just that.
+You could make the class truly useful by supplying a method that adds the event
+handler instead of just constructing it.)
+However, this example shows the mechanics of annotating a program and of
+analyzing the annotations. Having seen a concrete example, you are now more
+prepared (we hope) for the following sections that describe the annotation syntax
+in complete detail.
+
+From the Library of Hristo Dimov Hristov
+
+8.3 Using Annotations
+
+Listing 8.9
+1
+
+459
+
+runtimeAnnotations/ActionListenerInstaller.java
+
+package runtimeAnnotations;
+
+2
+3
+4
+
+import java.awt.event.*;
+import java.lang.reflect.*;
+
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+
+/**
+* @version 1.00 2004-08-17
+* @author Cay Horstmann
+*/
+public class ActionListenerInstaller
+{
+/**
+* Processes all ActionListenerFor annotations in the given object.
+* @param obj an object whose methods may have ActionListenerFor annotations
+*/
+public static void processAnnotations(Object obj)
+{
+try
+{
+Class<?> cl = obj.getClass();
+for (Method m : cl.getDeclaredMethods())
+{
+ActionListenerFor a = m.getAnnotation(ActionListenerFor.class);
+if (a != null)
+{
+Field f = cl.getDeclaredField(a.source());
+f.setAccessible(true);
+addListener(f.get(obj), obj, m);
+}
+}
+}
+catch (ReflectiveOperationException e)
+{
+e.printStackTrace();
+}
+}
+
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+
+/**
+* Adds an action listener that calls a given method.
+* @param source the event source to which an action listener is added
+* @param param the implicit parameter of the method that the listener calls
+* @param m the method that the listener calls
+*/
+public static void addListener(Object source, final Object param, final Method m)
+throws ReflectiveOperationException
+{
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+460
+
+Chapter 8
+
+Scripting, Compiling, and Annotation Processing
+
+Listing 8.9 (Continued)
+InvocationHandler handler = new InvocationHandler()
+{
+public Object invoke(Object proxy, Method mm, Object[] args) throws Throwable
+{
+return m.invoke(param);
+}
+};
+
+47
+48
+49
+50
+51
+52
+53
+54
+
+Object listener = Proxy.newProxyInstance(null,
+new Class[] { java.awt.event.ActionListener.class }, handler);
+Method adder = source.getClass().getMethod("addActionListener", ActionListener.class);
+adder.invoke(source, listener);
+
+55
+56
+57
+58
+
+}
+
+59
+60
+
+}
+
+Listing 8.10
+1
+
+buttons3/ButtonFrame.java
+
+package buttons3;
+
+2
+3
+4
+5
+
+import java.awt.*;
+import javax.swing.*;
+import runtimeAnnotations.*;
+
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+
+/**
+* A frame with a button panel.
+* @version 1.00 2004-08-17
+* @author Cay Horstmann
+*/
+public class ButtonFrame extends JFrame
+{
+private static final int DEFAULT_WIDTH = 300;
+private static final int DEFAULT_HEIGHT = 200;
+
+16
+17
+18
+19
+20
+
+private JPanel panel;
+private JButton yellowButton;
+private JButton blueButton;
+private JButton redButton;
+
+21
+22
+23
+24
+
+public ButtonFrame()
+{
+setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+
+25
+26
+27
+
+panel = new JPanel();
+add(panel);
+
+28
+
+From the Library of Hristo Dimov Hristov
+
+8.3 Using Annotations
+
+461
+
+yellowButton = new JButton("Yellow");
+blueButton = new JButton("Blue");
+redButton = new JButton("Red");
+
+29
+30
+31
+32
+
+panel.add(yellowButton);
+panel.add(blueButton);
+panel.add(redButton);
+
+33
+34
+35
+36
+
+ActionListenerInstaller.processAnnotations(this);
+
+37
+
+}
+
+38
+39
+
+@ActionListenerFor(source = "yellowButton")
+public void yellowBackground()
+{
+panel.setBackground(Color.YELLOW);
+}
+
+40
+41
+42
+43
+44
+45
+
+@ActionListenerFor(source = "blueButton")
+public void blueBackground()
+{
+panel.setBackground(Color.BLUE);
+}
+
+46
+47
+48
+49
+50
+51
+
+@ActionListenerFor(source = "redButton")
+public void redBackground()
+{
+panel.setBackground(Color.RED);
+}
+
+52
+53
+54
+55
+56
+57
+
+}
+
+Listing 8.11
+1
+
+runtimeAnnotations/ActionListenerFor.java
+
+package runtimeAnnotations;
+
+2
+3
+
+import java.lang.annotation.*;
+
+4
+5
+6
+7
+8
+
+/**
+* @version 1.00 2004-08-17
+* @author Cay Horstmann
+*/
+
+9
+10
+11
+12
+13
+14
+15
+
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface ActionListenerFor
+{
+String source();
+}
+
+From the Library of Hristo Dimov Hristov
+
+462
+
+Chapter 8
+
+Scripting, Compiling, and Annotation Processing
+
+java.lang.reflect.AnnotatedElement 5.0
+
+• boolean isAnnotationPresent(Class<? extends Annotation> annotationType)
+returns true if this item has an annotation of the given type.
+• <T extends Annotation> T getAnnotation(Class<T> annotationType)
+gets the annotation of the given type, or null if this item has no such annotation.
+• <T extends Annotation> T[] getAnnotationsByType(Class<T> annotationType) 8
+gets all annotations of a repeatable annotation type (see Section 8.5.3, “Meta-Annotations,” on p. 472), or an array of length 0.
+• Annotation[] getAnnotations()
+gets all annotations present for this item, including inherited annotations. If no
+annotations are present, an array of length 0 is returned.
+• Annotation[] getDeclaredAnnotations()
+gets all annotations declared for this item, excluding inherited annotations. If no
+annotations are present, an array of length 0 is returned.
+

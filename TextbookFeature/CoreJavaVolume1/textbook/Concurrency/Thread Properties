@@ -1,0 +1,75 @@
+  In the following sections, we discuss miscellaneous properties of threads: the interrupted status, daemon threads, handlers for uncaught exceptions, as well as some legacy features that you should not use. 
+12.3.1 Interrupting Threads
+  A thread terminates when its run method returns—by executing a return statement, after executing the last statement in the method body, or if an exception occurs that is not caught in the method. In the initial release of Java, there also was a stop method that another thread could call to terminate a thread. However, that method is now deprecated. We discuss the reason in Section 12.4.13, "Why the stop and suspend Methods Are Deprecated," on p. 779. 
+  Other than with the deprecated stop method, there is no way to force a thread to terminate. However, the interrupt method can be used to request termination of a thread. 
+  When the interrupt method is called on a thread, the interrupted status of the thread is set. This is a boolean flag that is present in every thread. Each thread should occasionally check whether it has been interrupted. 
+  To find out whether the interrupted status was set, first call the static Thread.currentThread method to get the current thread, and then call the isInterrupted method: while (!Thread.currentThread().isInterrupted() && more work to do) { do more work } 
+  However, if a thread is blocked, it cannot check the interrupted status. This is where the InterruptedException comes in. When the interrupt method is called on a thread that blocks on a call such as sleep or wait, the blocking call is terminated by an InterruptedException. (There are blocking I/O calls that cannot be interrupted; you should consider interruptible alternatives. See Chapters 2 and 4 of Volume II for details.)   There is no language requirement that a thread which is interrupted should terminate. Interrupting a thread simply grabs its attention. The interrupted thread can decide how to react to the interruption. Some threads are so important that they should handle the exception and continue. But quite commonly, a thread will simply want to interpret an interruption as a request for termination. The run method of such a thread has the following form: Runnable r = () -> { try { . . . 
+  while (!Thread.currentThread().isInterrupted() && more work to do { do more work } 
+  } 
+  catch(InterruptedException e) { // thread was interrupted during sleep or wait } 
+  finally { cleanup, if required } 
+  // exiting the run method terminates the thread }; 
+  The isInterrupted check is neither necessary nor useful if you call the sleep method (or another interruptible method) after every work iteration. 
+  If you call the sleep method when the interrupted status is set, it doesn’t sleep. Instead, it clears the status (!) and throws an InterruptedException. Therefore, if your loop calls sleep, don’t check the interrupted status. Instead, catch the Runnable r = () -> { try { . . . 
+  while (more work to do) { do more work Thread.sleep(delay); 
+  } 
+  } 
+  catch(InterruptedException e) { // thread was interrupted during sleep } 
+  finally { cleanup, if required } 
+  // exiting the run method terminates the thread }; 
+  Note There are two very similar methods, interrupted and isInterrupted. The interrupted method is a static method that checks whether the current thread has been interrupted. 
+  Furthermore, calling the interrupted method clears the interrupted status of the thread. On the other hand, the isInterrupted method is an instance method that you can use to check whether any thread has been interrupted. Calling it does not change the interrupted status. 
+  You’ll find lots of published code in which the InterruptedException is squelched at a low level, like this: void mySubTask() { . . . 
+  try { sleep(delay); } 
+  catch (InterruptedException e) {} // don't ignore! 
+  . . . 
+  } 
+  Don’t do that! If you can’t think of anything good to do in the catch clause, you still have two reasonable choices: In the catch clause, call Thread.currentThread().interrupt() to set the interrupted status. Then the caller can test it. 
+  void mySubTask() { . . . 
+  try { sleep(delay); } 
+  catch (InterruptedException e) { Thread.currentThread().interrupt() . . . 
+  } 
+  Or, even better, tag your method with throws InterruptedException and drop the try block. Then the caller (or, ultimately, the run method) can catch it. 
+  void mySubTask() throws InterruptedException { . . . 
+  sleep(delay); 
+  . . . 
+  } 
+  java.lang.Thread 1.0 void interrupt() sends an interrupt request to a thread. The interrupted status of the thread is set to true. If the thread is currently blocked by a call to sleep, then an InterruptedException is thrown. 
+  static boolean interrupted() tests whether the current thread (that is, the thread that is executing this instruction) has been interrupted. Note that this is a static method. The call has a side effect—it resets the interrupted status of the current thread to false. 
+  boolean isInterrupted() tests whether a thread has been interrupted. Unlike the static interrupted method, this call does not change the interrupted status of the thread. 
+  static Thread currentThread() returns the Thread object representing the currently executing thread. 
+12.3.2 Daemon Threads
+  You can turn a thread into a daemon thread by calling t.setDaemon(true); 
+  There is nothing demonic about such a thread. A daemon is simply a thread that has no other role in life than to serve others. Examples are timer threads that send regular "timer ticks" to other threads or threads that clean up stale cache entries. When only daemon threads remain, the virtual machine exits. 
+  There is no point in keeping the program running if all remaining threads are daemons. 
+  java.lang.Thread 1.0 void setDaemon(boolean isDaemon) marks this thread as a daemon thread or a user thread. This method must be called before the thread is started. 
+12.3.3 Thread Names
+  By default, threads have catchy names such as Thread-2. You can set any name with the setName method: var t = new Thread(runnable); 
+  t.setName("Web crawler"); 
+  That can be useful in thread dumps. 
+12.3.4 Handlers for Uncaught Exceptions
+  The run method of a thread cannot throw any checked exceptions, but it can be terminated by an unchecked exception. In that case, the thread dies. 
+  However, there is no catch clause to which the exception can be propagated. Instead, just before the thread dies, the exception is passed to a handler for uncaught exceptions. 
+  The handler must belong to a class that implements the   Thread.UncaughtExceptionHandler interface. That interface has a single method, void uncaughtException(Thread t, Throwable e)   You can install a handler into any thread with the setUncaughtExceptionHandler method. You can also install a default handler for all threads with the static method setDefaultUncaughtExceptionHandler of the Thread class. A replacement handler might use the logging API to send reports of uncaught exceptions into a log file. 
+  If you don’t install a default handler, the default handler is null. However, if you don’t install a handler for an individual thread, the handler is the thread’s ThreadGroup object. 
+  Note A thread group is a collection of threads that can be managed together. By default, all threads that you create belong to the same thread group, but it is possible to establish other groupings. Since there are now better features for operating on collections of threads, we recommend that you do not use thread groups in your programs. 
+  The ThreadGroup class implements the Thread.UncaughtExceptionHandler interface. Its uncaughtException method takes the following action: 1. If the thread group has a parent, then the uncaughtException method of the parent group is called. 
+  2. Otherwise, if the Thread.getDefaultUncaughtExceptionHandler method returns a non-null handler, it is called. 
+  3. Otherwise, if the Throwable is an instance of ThreadDeath, nothing happens. 
+  4. Otherwise, the name of the thread and the stack trace of the Throwable are printed on System.err. 
+  That is the stack trace that you have undoubtedly seen many times in your programs. 
+  java.lang.Thread 1.0   static void setDefaultUncaughtExceptionHandler(Thread.UncaughtExcepti handler) 5 static Thread.UncaughtExceptionHandler getDefaultUncaughtExceptionHandler() 5 sets or gets the default handler for uncaught exceptions. 
+  void setUncaughtExceptionHandler(Thread.UncaughtExceptionHandl handler) 5 Thread.UncaughtExceptionHandler getUncaughtExceptionHandler() 5 sets or gets the handler for uncaught exceptions. If no handler is installed, the thread group object is the handler. 
+  java.lang.Thread.UncaughtExceptionHandler 5 void uncaughtException(Thread t, Throwable e) defined to log a custom report when a thread is terminated with an uncaught exception. 
+  java.lang.ThreadGroup 1.0 void uncaughtException(Thread t, Throwable e) calls this method of the parent thread group if there is a parent, or calls   the default handler of the Thread class if there is a default handler, or otherwise prints a stack trace to the standard error stream. (However, if e is a ThreadDeath object, the stack trace is suppressed. 
+  ThreadDeath objects are generated by the deprecated stop method.) 12.3.5 Thread Priorities
+  In the Java programming language, every thread has a priority. By default, a thread inherits the priority of the thread that constructed it. You can increase or decrease the priority of any thread with the setPriority method. You can set the priority to any value between MIN_PRIORITY (defined as 1 in the Thread class) and MAX_PRIORITY (defined as 10). 
+  NORM_PRIORITY is defined as 5. 
+  Whenever the thread scheduler has a chance to pick a new thread, it prefers threads with higher priority. However, thread priorities are highly systemdependent. When the virtual machine relies on the thread implementation of the host platform, the Java thread priorities are mapped to the priority levels of the host platform, which may have more or fewer thread priority levels. 
+  For example, Windows has seven priority levels. Some of the Java priorities will map to the same operating system level. In the Oracle JVM for Linux, thread priorities are ignored altogether—all threads have the same priority. 
+  Thread priorities may have been useful in early versions of Java that didn’t use operating systems threads. You should not use them nowadays. 
+  java.lang.Thread 1.0 void setPriority(int newPriority) sets the priority of this thread. The priority must be between Thread.MIN_PRIORITY and Thread.MAX_PRIORITY. Use Thread.NORM_PRIORITY for normal priority. 
+  static int MIN_PRIORITY is the minimum priority that a Thread can have. The minimum   priority value is 1. 
+  static int NORM_PRIORITY is the default priority of a Thread. The default priority is 5. 
+  static int MAX_PRIORITY is the maximum priority that a Thread can have. The maximum priority value is 10. 

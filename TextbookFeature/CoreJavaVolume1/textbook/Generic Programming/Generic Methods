@@ -1,0 +1,15 @@
+  In the preceding section, you have seen how to define a generic class. You can also define a single method with type parameters. 
+  class ArrayAlg { public static <T> T getMiddle(T... a) { return a[a.length / 2]; 
+  } 
+  } 
+  This method is defined inside an ordinary class, not inside a generic class. 
+  However, it is a generic method, as you can see from the angle brackets and the type variable. Note that the type variables are inserted after the modifiers (public static, in our case) and before the return type. 
+  You can define generic methods both inside ordinary classes and inside generic classes. 
+  When you call a generic method, you can place the actual types, enclosed in angle brackets, before the method name: String middle = ArrayAlg.<String>getMiddle("John", "Q.", "Public"); 
+  In this case (and indeed in most cases), you can omit the <String> type parameter from the method call. The compiler has enough information to infer the method that you want. It matches the type of the arguments against the generic type T... and deduces that T must be String. That is, you can simply call String middle = ArrayAlg.getMiddle("John", "Q.", "Public"); 
+  In almost all cases, type inference for generic methods works smoothly. 
+  Occasionally, the compiler gets it wrong, and you’ll need to decipher an error report. Consider this example:   double middle = ArrayAlg.getMiddle(3.14, 1729, 0); 
+  The error message complains, in cryptic terms that vary from one compiler version to another, that there are two ways of interpreting this code, both equally valid. In a nutshell, the compiler autoboxed the parameters into a Double and two Integer objects, and then it tried to find a common supertype of these classes. It actually found two: Number and the Comparable interface, which is itself a generic type. In this case, the remedy is to write all parameters as double values. 
+  Tip Peter von der Ahé recommends this trick if you want to see which type the compiler infers for a generic method call: Purposefully introduce an error and study the resulting error message. For example, consider the call ArrayAlg.getMiddle("Hello", 0, null). Assign the result to a JButton, which can’t possibly be right. You will get an error report: found: java.lang.Object&java.io.Serializable&java.lang.Comparable<? 
+  extends java.lang.Object&java.io.Serializable&java.lang.Comparable<? 
+  >>   In plain English, you can assign the result to Object, Serializable,or Comparable. 

@@ -1,0 +1,48 @@
+  You can group a set of statements to form a transaction. The transaction can be committed when all has gone well. Or, if an error has occurred in one of them, it can be rolled back as if none of the statements had been issued. 
+  The major reason for grouping statements into transactions is database integrity. 
+  For example, suppose we want to transfer money from one bank account to another. Then, it is important that we simultaneously debit one account and credit another. If the system fails after debiting the first account but before crediting the other account, the debit needs to be undone. 
+  If you group update statements into a transaction, the transaction either succeeds in its entirety and can be committed, or it fails somewhere in the middle. In that case, you can carry out a rollback and the database automatically undoes the effect of all updates that occurred since the last committed transaction. 
+5.9.1 Programming Transactions with JDBC
+  By default, a database connection is in autocommit mode, and each SQL statement is committed to the database as soon as it is executed. Once a statement is committed, you cannot roll it back. Turn off this default so you can use transactions: conn.setAutoCommit(false); 
+  Create a statement object in the normal way: Statement stat = conn.createStatement(); 
+  Call executeUpdate any number of times: stat.executeUpdate(command1); 
+  stat.executeUpdate(command2); 
+  stat.executeUpdate(command3); 
+  ... 
+  If all statements have been executed without error, call the commit method: conn.commit(); 
+  However, if an error occurred, call conn.rollback(); 
+  Then, all statements since the last commit are automatically reversed. You typically issue a rollback when your transaction was interrupted by a SQLException. 
+  From the Library of Hristo Dimov Hristov   5.9 Transactions   345 5.9.2 Save Points
+  With some databases and drivers, you can gain finer-grained control over the rollback process by using save points. Creating a save point marks a point to which you can later return without having to abandon the entire transaction. For example, Statement stat = conn.createStatement(); // start transaction; rollback() goes here stat.executeUpdate(command1); 
+  Savepoint svpt = conn.setSavepoint(); // set savepoint; rollback(svpt) goes here stat.executeUpdate(command2); 
+  if (. . .) conn.rollback(svpt); // undo effect of command2 ... 
+  conn.commit(); 
+  When you no longer need a save point, you should release it: conn.releaseSavepoint(svpt); 
+5.9.3 Batch Updates
+  Suppose a program needs to execute many INSERT statements to populate a database table. You can improve the performance of the program by using a batch update. 
+  In a batch update, a sequence of statements is collected and submitted as a batch. 
+  NOTE: Use the supportsBatchUpdates method of the DatabaseMetaData interface to find out if your database supports this feature. 
+  The statements in a batch can be actions such as INSERT, UPDATE, or DELETE as well as data definition statements such as CREATE TABLE or DROP TABLE. An exception is thrown if you add a SELECT statement to a batch. (Conceptually, a SELECT statement makes no sense in a batch because it returns a result set without updating the database.) To execute a batch, first create a Statement object in the usual way: Statement stat = conn.createStatement(); 
+  Now, instead of calling executeUpdate, call the addBatch method: String command = "CREATE TABLE . . ." 
+  stat.addBatch(command); 
+  while (. . .) { command = "INSERT INTO . . . VALUES (" + . . . + ")"; 
+  stat.addBatch(command); 
+  } 
+  From the Library of Hristo Dimov Hristov   346   Chapter 5   Database Programming   Finally, submit the entire batch: int[] counts = stat.executeBatch(); 
+  The call to executeBatch returns an array of the row counts for all submitted statements. 
+  For proper error handling in batch mode, treat the batch execution as a single transaction. If a batch fails in the middle, you want to roll back to the state before the beginning of the batch. 
+  First, turn the autocommit mode off, then collect the batch, execute it, commit it, and finally restore the original autocommit mode: boolean autoCommit = conn.getAutoCommit(); 
+  conn.setAutoCommit(false); 
+  Statement stat = conn.getStatement(); 
+  ... 
+  // keep calling stat.addBatch(. . .); 
+  ... 
+  stat.executeBatch(); 
+  conn.commit(); 
+  conn.setAutoCommit(autoCommit); 
+  java.sql.Connection 1.1   • boolean getAutoCommit() • void setAutoCommit(boolean b) gets or sets the autocommit mode of this connection to b. If autocommit is true, all statements are committed as soon as their execution is completed. 
+  • void commit() commits all statements that were issued since the last commit. 
+  • void rollback() undoes the effect of all statements that were issued since the last commit. 
+  • Savepoint setSavepoint() 1.4 • Savepoint setSavepoint(String name) 1.4 sets an unnamed or named save point. 
+  • void rollback(Savepoint svpt) 1.4 rolls back until the given save point. 
+  • void releaseSavepoint(Savepoint svpt) 1.4 releases the given save point. 

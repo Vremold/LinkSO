@@ -1,0 +1,401 @@
+When you look at an application that is adapted to an international market, the
+most obvious difference you notice is the language. This observation is actually
+a bit too limiting for true internationalization, since countries can share a common
+language, but you might still need to do some work to make computer users of
+both countries happy. As Oscar Wilde famously said: “We have really everything
+in common with America nowadays, except, of course, language.”
+In all cases, menus, button labels, and program messages will need to be translated
+to the local language. They might also need to be rendered in a different script.
+There are many more subtle differences; for example, numbers are formatted
+quite differently in English and in German. The number
+123,456.78
+should be displayed as
+123.456,78
+for a German user—that is, the roles of the decimal point and the decimal comma
+separator are reversed. There are similar variations in the display of dates. In the
+United States, dates are somewhat irrationally displayed as month/day/year.
+Germany uses the more sensible order of day/month/year, whereas in China,
+the usage is year/month/day. Thus, the date
+3/22/61
+should be presented as
+22.03.1961
+
+From the Library of Hristo Dimov Hristov
+
+7.1 Locales
+
+373
+
+to a German user. Of course, if the month names are written out explicitly, the
+difference in languages becomes apparent. The English
+March 22, 1961
+should be presented as
+22. März 1961
+in German, or
+1961
+
+3
+
+22
+
+in Chinese.
+There are several formatter classes that take these differences into account. To
+control the formatting, use the Locale class. A locale is made up of up to five
+components:
+1.
+2.
+
+3.
+
+4.
+
+5.
+
+A language, specified by two or three lowercase letters, such as en (English),
+de (German), or zh (Chinese). Table 7.1 shows common codes.
+Optionally, a script, specified by four letters with an initial uppercase, such
+as Latn (Latin), Cyrl (Cyrillic), or Hant (traditional Chinese characters). This can
+be useful because some languages, such as Serbian, are written in Latin or
+Cyrillic, and some Chinese readers prefer the traditional over the simplified
+characters.
+Optionally, a country or region, specified by two uppercase letters or three
+digits, such as US (United States) or CH (Switzerland). Table 7.2 shows common
+codes.
+Optionally, a variant, specifying miscellaneous features such as dialects or
+spelling rules. Variants are rarely used nowadays. There used to be a
+“Nynorsk” variant of Norwegian, but it is now expressed with a different
+language code, nn. What used to be variants for the Japanese imperial calendar
+and Thai numerals are now expressed as extensions (see the next item).
+Optionally, an extension. Extensions describe local preferences for calendars
+(such as the Japanese calendar), numbers (Thai instead of Western digits),
+and so on. The Unicode standard specifies some of these extensions. Extensions start with u- and a two-letter code specifying whether the extension
+deals with the calendar (ca), numbers (nu), and so on. For example, the extension u-nu-thai denotes the use of Thai numerals. Other extensions are entirely
+arbitrary and start with x-, such as x-java.
+
+Rules for locales are formulated in the “Best Current Practices” memo BCP 47 of
+the Internet Engineering Task Force (http://tools.ietf.org/html/bcp47). You can find a
+more accessible summary at www.w3.org/International/articles/language-tags.
+
+From the Library of Hristo Dimov Hristov
+
+374
+
+Chapter 7
+
+Internationalization
+
+Table 7.1 Common ISO 639-1 Language Codes
+Language
+
+Code
+
+Language
+
+Code
+
+Chinese
+
+zh
+
+Italian
+
+it
+
+Danish
+
+da
+
+Japanese
+
+ja
+
+Dutch
+
+nl
+
+Korean
+
+ko
+
+English
+
+en
+
+Norwegian
+
+no
+
+French
+
+fr
+
+Portuguese
+
+pt
+
+Finnish
+
+fi
+
+Spanish
+
+es
+
+German
+
+de
+
+Swedish
+
+sv
+
+Greek
+
+el
+
+Turkish
+
+tr
+
+Table 7.2 Common ISO 3166-1 Country Codes
+Country
+
+Code
+
+Country
+
+Code
+
+Austria
+
+AT
+
+Japan
+
+JP
+
+Belgium
+
+BE
+
+Korea
+
+KR
+
+Canada
+
+CA
+
+The Netherlands
+
+NL
+
+China
+
+CN
+
+Norway
+
+NO
+
+Denmark
+
+DK
+
+Portugal
+
+PT
+
+Finland
+
+FI
+
+Spain
+
+ES
+
+Germany
+
+DE
+
+Sweden
+
+SE
+
+Great Britain
+
+GB
+
+Switzerland
+
+CH
+
+Greece
+
+GR
+
+Taiwan
+
+TW
+
+Ireland
+
+IE
+
+Turkey
+
+TR
+
+Italy
+
+IT
+
+United States
+
+US
+
+The codes for languages and countries seem a bit random because some of them
+are derived from local languages. German in German is Deutsch, Chinese in
+Chinese is zhongwen: hence de and zh. And Switzerland is CH, deriving from the
+Latin term Confoederatio Helvetica for the Swiss confederation.
+
+From the Library of Hristo Dimov Hristov
+
+7.1 Locales
+
+375
+
+Locales are described by tags—hyphenated strings of locale elements such as
+en-US.
+In Germany, you would use a locale de-DE. Switzerland has four official languages
+(German, French, Italian, and Rhaeto-Romance). A German speaker in Switzerland
+would want to use a locale de-CH. This locale uses the rules for the German
+language, but currency values are expressed in Swiss francs, not euros.
+If you only specify the language, say, de, then the locale cannot be used for
+country-specific issues such as currencies.
+You can construct a Locale object from a tag string like this:
+Locale usEnglish = Locale.forLanguageTag("en-US");
+
+The toLanguageTag method yields the language tag for a given locale. For example,
+Locale.US.toLanguageTag() is the string "en-US"
+For your convenience, there are predefined locale objects for various countries:
+Locale.CANADA
+Locale.CANADA_FRENCH
+Locale.CHINA
+Locale.FRANCE
+Locale.GERMANY
+Locale.ITALY
+Locale.JAPAN
+Locale.KOREA
+Locale.PRC
+Locale.TAIWAN
+Locale.UK
+Locale.US
+
+A number of predefined locales specify just a language without a location:
+Locale.CHINESE
+Locale.ENGLISH
+Locale.FRENCH
+Locale.GERMAN
+Locale.ITALIAN
+Locale.JAPANESE
+Locale.KOREAN
+Locale.SIMPLIFIED_CHINESE
+Locale.TRADITIONAL_CHINESE
+
+Finally, the static getAvailableLocales method returns an array of all locales known
+to the virtual machine.
+
+From the Library of Hristo Dimov Hristov
+
+376
+
+Chapter 7
+
+Internationalization
+
+Besides constructing a locale or using a predefined one, you have two other
+methods for obtaining a locale object.
+The static getDefault method of the Locale class initially gets the default locale as
+stored by the local operating system. You can change the default Java locale by
+calling setDefault; however, that change only affects your program, not the operating
+system.
+All locale-dependent utility classes can return an array of the locales they support.
+For example,
+Locale[] supportedLocales = NumberFormat.getAvailableLocales();
+
+returns all locales that the NumberFormat class can handle.
+TIP: If you want to test a locale that just has language and country settings, you
+can supply them on the command line when you launch your program. For
+example, here we set the default locale to de-CH:
+java -Duser.language=de -Duser.region=CH MyProgram
+
+Once you have a locale, what can you do with it? Not much, as it turns out. The
+only useful methods in the Locale class are those for identifying the language and
+country codes. The most important one is getDisplayName. It returns a string describing
+the locale. This string does not contain the cryptic two-letter codes, but is in a
+form that can be presented to a user, such as
+German (Switzerland)
+
+Actually, there is a problem here. The display name is issued in the default locale.
+That might not be appropriate. If your user already selected German as the preferred language, you probably want to present the string in German. You can do
+just that by giving the German locale as a parameter. The code
+Locale loc = new Locale("de", "CH");
+System.out.println(loc.getDisplayName(Locale.GERMAN));
+
+prints
+Deutsch (Schweiz)
+
+This example shows why you need Locale objects. You feed them to locale-aware
+methods that produce text that is presented to users in different locations. You
+will see many examples of this in the following sections.
+
+From the Library of Hristo Dimov Hristov
+
+7.1 Locales
+
+377
+
+java.util.Locale 1.1
+
+• Locale(String language)
+• Locale(String language, String country)
+• Locale(String language, String country, String variant)
+constructs a locale with the given language, country, and variant. Don’t use variants
+in new code—use the IETF BCP 47 language tags instead.
+• static Locale forLanguageTag(String languageTag) 7
+constructs a locale corresponding to the given language tag.
+• static Locale getDefault()
+returns the default locale.
+• static void setDefault(Locale loc)
+sets the default locale.
+• String getDisplayName()
+returns a name describing the locale, expressed in the current locale.
+• String getDisplayName(Locale loc)
+returns a name describing the locale, expressed in the given locale.
+• String getLanguage()
+returns the language code, a lowercase two-letter ISO 639 code.
+• String getDisplayLanguage()
+returns the name of the language, expressed in the current locale.
+• String getDisplayLanguage(Locale loc)
+returns the name of the language, expressed in the given locale.
+• String getCountry()
+returns the country code as an uppercase two-letter ISO 3166 code.
+• String getDisplayCountry()
+returns the name of the country, expressed in the current locale.
+• String getDisplayCountry(Locale loc)
+returns the name of the country, expressed in the given locale.
+• String toLanguageTag() 7
+returns the IETF BCP 47 language tag for this locale, e.g., "de-CH".
+• String toString()
+returns a description of the locale, with the language and country separated by
+underscores (e.g., "de_CH"). Use this method only for debugging.
+
+From the Library of Hristo Dimov Hristov
+
+378
+
+Chapter 7
+
+Internationalization
+

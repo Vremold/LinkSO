@@ -1,0 +1,5 @@
+  Generics can also be used with inner classes and anonymous inner classes. Here’s an example that implements the Generator interface using anonymous inner classes: 
+  Both Customer and Teller have private constructors, thereby forcing you to use Generator objects. Customer has a generator( ) method that produces a new Generator<Customer> object each time you call it. You may not need multiple Generator objects, and Teller creates a single public generator object. You can see both of these approaches used in the fill( ) methods in main( ). 
+  Since both the generator( ) method in Customer and the Generator object in Teller are static, they cannot be part of an interface, so there is no way to "generify" this particular idiom. Despite that, it works reasonably well with the fill( ) method. 
+  We’ll look at other versions of this queuing problem in the Concurrency chapter. 
+  Exercise 18: (3) Following the form of BankTeller.java, create an example where BigFish eat LittleFish in the Ocean. 

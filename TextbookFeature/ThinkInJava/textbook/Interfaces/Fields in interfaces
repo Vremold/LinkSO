@@ -1,0 +1,8 @@
+  Because any fields you put into an interface are automatically static and final, the interface is a convenient tool for creating groups of constant values. Before Java SE5, this was the only way to produce the same effect as an enum in C or C++. So you will see pre-Java SE5 code like this: 
+  Notice the Java style of using all uppercase letters (with underscores to separate multiple words in a single identifier) for static finals that have constant initializers. The fields in an interface are automatically public, so that is not explicitly specified. 
+  With Java SE5, you now have the much more powerful and flexible enum keyword, so it rarely makes sense to use interfaces for constants anymore. However, you will probably run across the old idiom on many occasions when reading legacy code (the supplements for this book at www.MindView.net contain a complete description of the pre-Java SE5 approach to producing enumerated types using interfaces). You can find more details about using enums in the Enumerated Types chapter. 
+  Exercise 17: (2) Prove that the fields in an interface are implicitly static and final. 
+Initializing fields in interfaces
+  Fields defined in interfaces cannot be "blank finals," but they can be initialized with non- constant expressions. For example: 
+  Since the fields are static, they are initialized when the class is first loaded, which happens when any of the fields are accessed for the first time. Here’s a simple test: 
+  The fields, of course, are not part of the interface. The values are stored in the static storage area for that interface. 

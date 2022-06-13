@@ -1,0 +1,6 @@
+  The previous chapter was written primarily to show you how to use the event model in Java.
+  In the process, you took the first steps toward learning how to build a graphical user interface. This chapter shows you the most important tools you’ll need to build more full- featured GUIs.
+  We start out with a tour of the architectural underpinnings of Swing. Knowing what goes on "under the hood" is important in understanding how to use some of the more advanced components effectively. We then show you the most common user interface components in Swing, such as text fields, radio buttons, and menus. Next, you will learn how to use layout managers to arrange these components. Finally, you’ll see how to implement dialog boxes in Swing.
+  This chapter covers the basic Swing components such as text components, buttons, and
+  sliders. These are the essential user interface components that you will need most frequently.
+  We will cover advanced Swing components in Volume II.

@@ -1,0 +1,13 @@
+  The basic mathematical operators are the same as the ones available in most programming languages: addition (+), subtraction (-), division (/), multiplication (*) and modulus (%, which produces the remainder from integer division). Integer division truncates, rather than rounds, the result. 
+  Java also uses the shorthand notation from C/C++ that performs an operation and an assignment at the same time. This is denoted by an operator followed by an equal sign, and is consistent with all the operators in the language (whenever it makes sense). For example, to add 4 to the variable x and assign the result to x, use: x += 4. 
+  This example shows the use of the mathematical operators: 
+  To generate numbers, the program first creates a Random object. If you create a Random object with no arguments, Java uses the current time as a seed for the random number generator, and will thus produce different output for each execution of the program. However, in the examples in this book, it is important that the output shown at the end of the examples be as consistent as possible, so that this output can be verified with external tools. By providing a seed (an initialization value for the random number generator that will always produce the same sequence for a particular seed value) when creating the Random object, the same random numbers will be generated each time the program is executed, so the output is verifiable.1 To generate more varying output, feel free to remove the seed in the examples in the book. 
+  The program generates a number of different types of random numbers with the Random object simply by calling the methods nextInt( ) and nextFloat( ) (you can also call nextLong( ) or nextDouble( )). The argument to nextInt( ) sets the upper bound on the generated number. The lower bound is zero, which we don’t want because of the possibility of a divide-by-zero, so the result is offset by one. 
+  Exercise 4: (2) Write a program that calculates velocity using a constant distance and a constant time. 
+Unary minus and plus operators
+  The unary minus (-) and unary plus (+) are the same operators as binary minus and plus. The compiler figures out which use is intended by the way you write the expression. For instance, the statement     x = -a; 
+  has an obvious meaning. The compiler is able to figure out: 
+  x = a * -b; 
+  but the reader might get confused, so it is sometimes clearer to say: 
+  x = a * (-b); 
+  Unary minus inverts the sign on the data. Unary plus provides symmetry with unary minus, although it doesn’t have any effect. 

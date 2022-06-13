@@ -1,0 +1,90 @@
+  13   The findFirst returns the first value in a nonempty collection. It is often useful when combined with filter. For example, here we find the first word that starts with the letter Q, if it exists: Optional<String> startsWithQ = words.filter(s -> s.startsWith("Q")).findFirst(); 
+  If you are OK with any match, not just the first one, use the findAny method. This is effective when you parallelize the stream, since the stream can report any match it finds instead of being constrained to the first one. 
+  Optional<String> startsWithQ = words.parallel().filter(s -> s.startsWith("Q")).findAny(); 
+  If you just want to know if there is a match, use anyMatch. That method takes a predicate argument, so you won’t need to use filter. 
+  boolean aWordStartsWithQ = words.parallel().anyMatch(s -> s.startsWith("Q")); 
+  There are methods allMatch and noneMatch that return true if all or no elements match a predicate. These methods also benefit from being run in parallel. 
+  java.util.stream.Stream 8   • Optional<T> max(Comparator<? super T> comparator) • Optional<T> min(Comparator<? super T> comparator) yields a maximum or minimum element of this stream, using the ordering defined by the given comparator, or an empty Optional if this stream is empty. These are terminal operations. 
+  • Optional<T> findFirst() • Optional<T> findAny() yields the first, or any, element of this stream, or an empty Optional if this stream is empty. These are terminal operations. 
+  • boolean anyMatch(Predicate<? super T> predicate) • boolean allMatch(Predicate<? super T> predicate) • boolean noneMatch(Predicate<? super T> predicate) returns true if any, all, or none of the elements of this stream match the given predicate. These are terminal operations. 
+  1.7 The Optional Type An Optional<T> object is a wrapper for either an object of type T or no object. In the former case, we say that the value is present. The Optional<T> type is intended as a   From the Library of Hristo Dimov Hristov   14   Chapter 1   The Java SE 8 Stream Library   safer alternative for a reference of type T that either refers to an object or is null. 
+  However, it is only safer if you use it right. The next section shows you how. 
+1.7.1 How to Work with Optional Values
+  The key to using Optional effectively is to use a method that either produces an alternative if the value is not present, or consumes the value only if it is present. 
+  Let us look at the first strategy. Often, there is a default that you want to use when there was no match, perhaps the empty string: String result = optionalString.orElse(""); 
+  // The wrapped string, or "" if none   You can also invoke code to compute the default: String result = optionalString.orElseGet(() -> Locale.getDefault().getDisplayName()); 
+  // The function is only called when needed   Or you can throw an exception if there is no value: String result = optionalString.orElseThrow(IllegalStateException::new); 
+  // Supply a method that yields an exception object   You have just seen how to produce an alternative if no value is present. The other strategy for working with optional values is to consume the value only if it is present. 
+  The ifPresent method accepts a function. If the optional value exists, it is passed to that function. Otherwise, nothing happens. 
+  optionalValue.ifPresent(v -> Process v); 
+  For example, if you want to add the value to a set if it is present, call optionalValue.ifPresent(v -> results.add(v)); 
+  or simply optionalValue.ifPresent(results::add); 
+  When calling ifPresent, no value is returned from the function. If you want to process the function result, use map instead: Optional<Boolean> added = optionalValue.map(results::add); 
+  Now added has one of three values: true or false wrapped into an Optional, if optionalValue was present, or an empty Optional otherwise. 
+  From the Library of Hristo Dimov Hristov   1.7 The Optional Type   15   NOTE: This map method is the analog of the map method of the Stream interface that you have seen in Section 1.3, “The filter, map, and flatMap Methods,” on p. 9. Simply imagine an optional value as a stream of size zero or one. The result also has size zero or one, and in the latter case, the function has been applied. 
+  java.util.Optional 8   • T orElse(T other) yields the value of this Optional, or other if this Optional is empty. 
+  • T orElseGet(Supplier<? extends T> other) yields the value of this Optional, or the result of invoking other if this Optional is empty. 
+  • <X extends Throwable> T orElseThrow(Supplier<? extends X> exceptionSupplier) yields the value of this Optional, or throws the result of invoking exceptionSupplier if this Optional is empty. 
+  • void ifPresent(Consumer<? super T> consumer) if this Optional is nonempty, passes its value to consumer. 
+  • <U> Optional<U> map(Function<? super T,? extends U> mapper) yields the result of passing the value of this Optional to mapper, provided this Optional is nonempty and the result is not null, or an empty Optional otherwise. 
+1.7.2 How Not to Work with Optional Values
+  If you don’t use Optional values correctly, you get no benefit over the “something or null” approach of the past. 
+  The get method gets the wrapped element of an Optional value if it exists, or throws a NoSuchElementException if it doesn’t. Therefore, Optional<T> optionalValue = . . .; 
+  optionalValue.get().someMethod(); 
+  is no safer than T value = . . .; 
+  value.someMethod(); 
+  The isPresent method reports whether an Optional<T> object has a value. But if (optionalValue.isPresent()) optionalValue.get().someMethod(); 
+  is no easier than if (value != null) value.someMethod(); 
+  From the Library of Hristo Dimov Hristov   16   Chapter 1   The Java SE 8 Stream Library   java.util.Optional 8   • T get() yields the value of this Optional, or throws a NoSuchElementException if it is empty. 
+  • boolean isPresent() returns true if this Optional is not empty. 
+1.7.3 Creating Optional Values
+  So far, we have discussed how to consume an Optional object someone else created. 
+  If you want to write a method that creates an Optional object, there are several static methods for that purpose, including Optional.of(result) and Optional.empty(). For example, public static Optional<Double> inverse(Double x) { return x == 0 ? Optional.empty() : Optional.of(1 / x); 
+  } 
+  The ofNullable method is intended as a bridge from possibly null values to optional values. Optional.ofNullable(obj) returns Optional.of(obj) if obj is not null and Optional.empty() otherwise. 
+  java.util.Optional 8   • static <T> Optional<T> of(T value) • static <T> Optional<T> ofNullable(T value) yields an Optional with the given value. If value is null, the first method throws a NullPointerException and the second method yields an empty Optional. 
+  • static <T> Optional<T> empty() yields an empty Optional. 
+1.7.4 Composing Optional Value Functions with flatMap
+  Suppose you have a method f yielding an Optional<T>, and the target type T has a method g yielding an Optional<U>. If they were normal methods, you could compose them by calling s.f().g(). But that composition doesn’t work since s.f() has type Optional<T>, not T. Instead, call Optional<U> result = s.f().flatMap(T::g); 
+  From the Library of Hristo Dimov Hristov   1.7 The Optional Type   17   If s.f() is present, then g is applied to it. Otherwise, an empty Optional<U> is returned. 
+  Clearly, you can repeat that process if you have more methods or lambdas that yield Optional values. You can then build a pipeline of steps, simply by chaining calls to flatMap, that will succeed only when all steps do. 
+  For example, consider the safe inverse method of the preceding section. Suppose we also have a safe square root: public static Optional<Double> squareRoot(Double x) { return x < 0 ? Optional.empty() : Optional.of(Math.sqrt(x)); 
+  } 
+  Then you can compute the square root of the inverse as Optional<Double> result = inverse(x).flatMap(MyMath::squareRoot); 
+  or, if you prefer, Optional<Double> result = Optional.of(-4.0).flatMap(MyMath::inverse).flatMap(MyMath::squareRoot); 
+  If either the inverse method or the squareRoot returns Optional.empty(), the result is empty. 
+  NOTE: You have already seen a flatMap method in the Stream interface (see Section 1.3, “The filter, map, and flatMap Methods,” on p. 9). That method was used to compose two methods that yield streams, by flattening out the resulting stream of streams. The Optional.flatMap method works in the same way if you interpret an optional value as a stream of size zero or one. 
+  The example program in Listing 1.3 demonstrates the Optional API. 
+  Listing 1.3 1   optional/OptionalTest.java   package optional; 
+  2 3 4 5 6   import java.io.*; 
+  import java.nio.charset.*; 
+  import java.nio.file.*; 
+  import java.util.*; 
+  7 8 9 10 11   public class OptionalTest { public static void main(String[] args) throws IOException { (Continues)   From the Library of Hristo Dimov Hristov   18   Chapter 1   The Java SE 8 Stream Library   Listing 1.3 (Continued) String contents = new String(Files.readAllBytes( Paths.get("../gutenberg/alice30.txt")), StandardCharsets.UTF_8); 
+  List<String> wordList = Arrays.asList(contents.split("\\PL+")); 
+  12 13 14 15   Optional<String> optionalValue = wordList.stream() .filter(s -> s.contains("fred")) .findFirst(); 
+  System.out.println(optionalValue.orElse("No word") + " contains fred"); 
+  16 17 18 19 20   Optional<String> optionalString = Optional.empty(); 
+  String result = optionalString.orElse("N/A"); 
+  System.out.println("result: " + result); 
+  result = optionalString.orElseGet(() -> Locale.getDefault().getDisplayName()); 
+  System.out.println("result: " + result); 
+  try { result = optionalString.orElseThrow(IllegalStateException::new); 
+  System.out.println("result: " + result); 
+  } 
+  catch (Throwable t) { t.printStackTrace(); 
+  } 
+  21 22 23 24 25 26 27 28 29 30 31 32 33 34 35   optionalValue = wordList.stream() .filter(s -> s.contains("red")) .findFirst(); 
+  optionalValue.ifPresent(s -> System.out.println(s + " contains red")); 
+  36 37 38 39 40   Set<String> results = new HashSet<>(); 
+  optionalValue.ifPresent(results::add); 
+  Optional<Boolean> added = optionalValue.map(results::add); 
+  System.out.println(added); 
+  41 42 43 44 45   System.out.println(inverse(4.0).flatMap(OptionalTest::squareRoot)); 
+  System.out.println(inverse(-1.0).flatMap(OptionalTest::squareRoot)); 
+  System.out.println(inverse(0.0).flatMap(OptionalTest::squareRoot)); 
+  Optional<Double> result2 = Optional.of(-4.0) .flatMap(OptionalTest::inverse).flatMap(OptionalTest::squareRoot); 
+  System.out.println(result2); 
+  46 47 48 49 50 51 52   } 
+  53 54 55 56 57   public static Optional<Double> inverse(Double x) { return x == 0 ? Optional.empty() : Optional.of(1 / x); 
+  } 

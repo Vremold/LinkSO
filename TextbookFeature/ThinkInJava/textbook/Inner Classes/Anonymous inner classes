@@ -1,0 +1,26 @@
+  The next example looks a little odd: 
+  The contents( ) method combines the creation of the return value with the definition of the class that represents that return value! In addition, the class is anonymous; it has no name. To make matters a bit worse, it looks like you’re starting out to create a Contents object, But then, before you get to the semicolon, you say, "But wait, I think I’ll slip in a class definition." 
+  What this strange syntax means is "Create an object of an anonymous class that’s inherited from Contents." The reference returned by the new expression is automatically upcast to a Contents reference. The anonymous inner-class syntax is a shorthand for: 
+  In the anonymous inner class, Contents is created by using a default constructor. 
+  The following code shows what to do if your base class needs a constructor with an argument: 
+  That is, you simply pass the appropriate argument to the base-class constructor, seen here as the x passed in new Wrapping(x). Although it’s an ordinary class with an implementation, Wrapping is also being used as a common "interface" to its derived classes: 
+  You’ll notice that Wrapping has a constructor that requires an argument, to make things a bit more interesting. 
+  The semicolon at the end of the anonymous inner class doesn’t mark the end of the class body. Instead, it marks the end of the expression that happens to contain the anonymous class. Thus, it’s identical to the use of the semicolon everywhere else. 
+  You can also perform initialization when you define fields in an anonymous class: 
+  If you’re defining an anonymous inner class and want to use an object that’s defined outside the anonymous inner class, the compiler requires that the argument reference be final, as you see in the argument to destination( ). If you forget, you’ll get a compile-time error message. 
+  As long as you’re simply assigning a field, the approach in this example is fine. But what if you need to perform some constructor-like activity? You can’t have a named constructor in an anonymous class (since there’s no name!), but with instance initialization, you can, in effect, create a constructor for an anonymous inner class, like this: 
+  In this case, the variable i did nor have to be final. While i is passed to the base constructor of the anonymous class, it is never directly used inside the anonymous class. 
+  Here’s the "parcel" theme with instance initialization. Note that the arguments to destination( ) must be final since they are used within the anonymous class: 
+  Inside the instance initializer you can see code that couldn’t be executed as part of a field initializer (that is, the if statement). So in effect, an instance initializer is the constructor for an anonymous inner class. Of course, it’s limited; you can’t overload instance initializers, so you can have only one of these constructors. 
+  Anonymous inner classes are somewhat limited compared to regular inheritance, because they can either extend a class or implement an interface, but not both. And if you do implement an interface, you can only implement one. 
+  Exercise 12: (1) Repeat Exercise 7 using an anonymous inner class. 
+  Exercise 13: (1) Repeat Exercise 9 using an anonymous inner class. 
+  Exercise 14: (1) Modify interfaces/HorrorShow.java to implement DangerousMonster and Vampire using anonymous classes. 
+  Exercise 15: (2) Create a class with a non-default constructor (one with arguments) and no default constructor (no "no-arg" constructor). Create a second class that has a method that returns a reference to an object of the first class. Create the object that you return by making an anonymous inner class that inherits from the first class. 
+Factory Method revisited
+  Look at how much nicer the interfaces/Factories.java example comes out when you use anonymous inner classes: 
+  Now the constructors for Implementation1 and Implementation2 can be private, and there’s no need to create a named class as the factory. In addition, you often only need a single factory object, and so here it has been created as a static field in the Service implementation. The resulting syntax is more meaningful, as well. 
+  The interfaces/Games.java example can also be improved with anonymous inner classes: 
+  Remember the advice given at the end of the last chapter: Prefer classes to interfaces. If your design demands an interface, you’ll know it. Otherwise, don’t put it in until you are forced to. 
+  Exercise 16: (1) Modify the solution to Exercise 18 from the Interfaces chapter to use anonymous inner classes. 
+  Exercise 17: (1) Modify the solution to Exercise 19 from the Interfaces chapter to use anonymous inner classes. 

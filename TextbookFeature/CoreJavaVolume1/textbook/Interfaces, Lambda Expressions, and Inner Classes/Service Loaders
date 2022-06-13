@@ -1,0 +1,37 @@
+  Sometimes, you develop an application with a service architecture. There are platforms that encourage this approach, such as OSGi (http://osgi.org), which are used in development environments, application servers, and other complex applications. Such platforms go well beyond the scope of this book, but the JDK also offers a simple mechanism for loading services, which we describe here. This mechanism is well   supported by the Java Platform Module System—see Chapter 9 of Volume II. 
+  Often, when providing a service, a program wants to give the service designer some freedom of how to implement the service’s features. It can also be desirable to have multiple implementations to choose from. The ServiceLoader class makes it easy to load services that conform to a common interface. 
+  Define an interface (or, if you prefer, a superclass) with the methods that each instance of the service should provide. For example, suppose your service provides encryption. 
+  package serviceLoader; 
+  public interface Cipher { byte[] encrypt(byte[] source, byte[] key); 
+  byte[] decrypt(byte[] source, byte[] key); 
+  int strength(); 
+  } 
+  The service provider supplies one or more classes that implement this service, for example package serviceLoader.impl; 
+  public class CaesarCipher implements Cipher { public byte[] encrypt(byte[] source, byte[] key) { var result = new byte[source.length]; 
+  for (int i = 0; i < source.length; i++) result[i] = (byte)(source[i] + key[0]); 
+  return result; 
+  } 
+  public byte[] decrypt(byte[] source, byte[] key) { return encrypt(source, new byte[] { (byte) -key[0] }); 
+  } 
+  public int strength() { return 1; } 
+  } 
+  The implementing classes can be in any package, not necessarily the same package as the service interface. Each of them must have a no-argument constructor. 
+  Now add the names of the classes to a UTF-8 encoded text file in a file in the META-INF/services directory whose name matches the fully qualified class name. In our example, the file METAINF/services/serviceLoader.Cipher would contain the line serviceLoader.impl.CaesarCipher   In this example, we provide a single implementing class. You could also provide multiple classes and later pick among them. 
+  With this preparation done, the program initializes a service loader as follows: public static ServiceLoader<Cipher> cipherLoader = ServiceLoader.load(Cipher.class); 
+  This should be done just once in the program. 
+  The iterator method of the service loader returns an iterator through all provided implementations of the service. (See Chapter 9 for more information about iterators.) It is easiest to use an enhanced for loop to traverse them. In the loop, pick an appropriate object to carry out the service. 
+  public static Cipher getCipher(int minStrength) { for (Cipher cipher : cipherLoader) // implicitly calls cipherLoader.iterato { if (cipher.strength() >= minStrength) return cipher; 
+  } 
+  return null; 
+  } 
+  Alternatively, you can use streams (see Chapter 1 of Volume II) to locate the desired service. The stream method yields a stream of ServiceLoader.Provider instances. That interface has methods type and get for getting the provider class and the provider instance. If you select a provider by type, then you just call type and no service instances are unnecessarily instantiated. 
+  public static Optional<Cipher> getCipher2(int minStrength) { return cipherLoader.stream() .filter(descr > descr.type() == serviceLoader.impl.CaesarCipher.class) .findFirst() .map(ServiceLoader.Provider::get); 
+  } 
+  Finally, if you are willing to take any service instance, simply call findFirst: Optional<Cipher> cipher = cipherLoader.findFirst(); 
+  The Optional class is explained in Chapter 1 of Volume II. 
+  java.util.ServiceLoader<S> 1.6 static <S> ServiceLoader<S> load(Class<S> service) creates a service loader for loading the classes that implement the given service interface. 
+  Iterator<S> iterator() yields an iterator that lazily loads the service classes. That is, a class is loaded whenever the iterator advances. 
+  Stream<ServiceLoader.Provider<S>> stream() 9 returns a stream of provider descriptors, so that a provider of a desired class can be loaded lazily. 
+  Optional<S> findFirst() 9 finds the first available service provider, if any. 
+  java.util.ServiceLoader.Provider<S> 9 Class<? extends S> type() gets the type of this provider. 
+  S get() gets an instance of this provider. 

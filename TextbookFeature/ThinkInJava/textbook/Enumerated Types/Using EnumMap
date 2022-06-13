@@ -1,0 +1,7 @@
+  An EnumMap is a specialized Map that requires that its keys be from a single enum. Because of the constraints on an enum, an EnumMap can be implemented internally as an array. Thus they are extremely fast, so you can freely use EnumMaps for enum-based lookups. 
+  You can only call put( ) for keys that are in your enum, but other than that it’s like using an ordinary Map. 
+  Here’s an example that demonstrates the use of the Command design pattern. This pattern starts with an interface containing (typically) a single method, and creates multiple implementations with different behavior for that method. You install Command objects, and your program calls them when necessary: 
+  Just as with EnumSet, the order of elements in the EnumMap is determined by their order of definition in the enum. 
+  The last part of main( ) shows that there is always a key entry for each of the enums, but the value is null unless you have called put( ) for that key. 
+  One advantage of EnumMap over constant-specific methods (described next) is that an EnumMap allows you to change the value objects, whereas you’ll see that constant-specific methods are fixed at compile time. 
+  As you’ll see later in the chapter, EnumMaps can be used to perform multiple dispatching for situations where you have multiple types of enums interacting with each other. 

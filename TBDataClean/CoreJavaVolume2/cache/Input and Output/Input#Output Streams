@@ -1,0 +1,464 @@
+In the Java API, an object from which we can read a sequence of bytes is called
+an input stream. An object to which we can write a sequence of bytes is called an
+output stream. These sources and destinations of byte sequences can be—and often
+are—files, but they can also be network connections and even blocks of memory.
+The abstract classes InputStream and OutputStream form the basis for a hierarchy of
+input/output (I/O) classes.
+
+NOTE: These input/output streams are unrelated to the streams that you saw
+in the preceding chapter. For clarity, we will use the terms input stream, output
+stream, or input/output stream whenever we discuss streams that are used for
+input and output.
+
+Byte-oriented input/output streams are inconvenient for processing information
+stored in Unicode (recall that Unicode uses multiple bytes per character). Therefore, a separate hierarchy provides classes for processing Unicode characters that
+inherit from the abstract Reader and Writer classes. These classes have read and write
+operations that are based on two-byte char values (that is, UTF-16 code units)
+rather than byte values.
+
+2.1.1 Reading and Writing Bytes
+The InputStream class has an abstract method:
+abstract int read()
+
+This method reads one byte and returns the byte that was read, or -1 if it encounters the end of the input source. The designer of a concrete input stream class
+overrides this method to provide useful functionality. For example, in the
+FileInputStream class, this method reads one byte from a file. System.in is a predefined
+object of a subclass of InputStream that allows you to read information from “standard
+input,” that is, the console or a redirected file.
+The InputStream class also has nonabstract methods to read an array of bytes or to
+skip a number of bytes. These methods call the abstract read method, so subclasses
+need to override only one method.
+Similarly, the OutputStream class defines the abstract method
+abstract void write(int b)
+
+which writes one byte to an output location.
+
+From the Library of Hristo Dimov Hristov
+
+2.1 Input/Output Streams
+
+49
+
+Both the read and write methods block until the byte is actually read or written. This
+means that if the input stream cannot immediately be accessed (usually because
+of a busy network connection), the current thread blocks. This gives other threads
+the chance to do useful work while the method is waiting for the input stream to
+become available again.
+The available method lets you check the number of bytes that are currently available
+for reading. This means a fragment like the following is unlikely to block:
+int bytesAvailable = in.available();
+if (bytesAvailable > 0)
+{
+byte[] data = new byte[bytesAvailable];
+in.read(data);
+}
+
+When you have finished reading or writing to an input/output stream, close it
+by calling the close method. This call frees up the operating system resources that
+are in limited supply. If an application opens too many input/output streams
+without closing them, system resources can become depleted. Closing an output
+stream also flushes the buffer used for the output stream: Any bytes that were
+temporarily placed in a buffer so that they could be delivered as a larger packet
+are sent off. In particular, if you do not close a file, the last packet of bytes might
+never be delivered. You can also manually flush the output with the flush method.
+Even if an input/output stream class provides concrete methods to work with
+the raw read and write functions, application programmers rarely use them. The
+data that you are interested in probably contain numbers, strings, and objects,
+not raw bytes.
+Instead of working with bytes, you can use one of many input/output stream
+classes derived from the basic InputStream and OutputStream classes.
+java.io.InputStream 1.0
+
+• abstract int read()
+reads a byte of data and returns the byte read; returns -1 at the end of the input
+stream.
+• int read(byte[] b)
+reads into an array of bytes and returns the actual number of bytes read, or -1 at
+the end of the input stream; this method reads at most b.length bytes.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+50
+
+Chapter 2
+
+Input and Output
+
+java.io.InputStream 1.0 (Continued)
+
+• int read(byte[] b, int off, int len)
+reads into an array of bytes and returns the actual number of bytes read, or -1 at
+the end of the input stream.
+Parameters:
+
+b
+
+The array into which the data is read
+
+off
+
+The offset into b where the first bytes should be placed
+
+len
+
+The maximum number of bytes to read
+
+• long skip(long n)
+skips n bytes in the input stream, returns the actual number of bytes skipped (which
+may be less than n if the end of the input stream was encountered).
+• int available()
+returns the number of bytes available, without blocking (recall that blocking means
+that the current thread loses its turn).
+• void close()
+closes the input stream.
+• void mark(int readlimit)
+puts a marker at the current position in the input stream (not all streams support
+this feature). If more than readlimit bytes have been read from the input stream, the
+stream is allowed to forget the marker.
+• void reset()
+returns to the last marker. Subsequent calls to read reread the bytes. If there is no
+current marker, the input stream is not reset.
+• boolean markSupported()
+returns true if the input stream supports marking.
+
+java.io.OutputStream 1.0
+
+• abstract void write(int n)
+writes a byte of data.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+2.1 Input/Output Streams
+
+51
+
+java.io.OutputStream 1.0 (Continued)
+
+• void write(byte[] b)
+• void write(byte[] b, int off, int len)
+writes all bytes or a range of bytes in the array b.
+Parameters:
+
+b
+
+The array from which to write the data
+
+off
+
+The offset into b to the first byte that will be written
+
+len
+
+The number of bytes to write
+
+• void close()
+flushes and closes the output stream.
+• void flush()
+flushes the output stream—that is, sends any buffered data to its destination.
+
+2.1.2 The Complete Stream Zoo
+Unlike C, which gets by just fine with a single type FILE*, Java has a whole zoo of
+more than 60 (!) different input/output stream types (see Figures 2.1 and 2.2).
+Let’s divide the animals in the input/output stream zoo by how they are used.
+There are separate hierarchies for classes that process bytes and characters. As
+you saw, the InputStream and OutputStream classes let you read and write individual
+bytes and arrays of bytes. These classes form the basis of the hierarchy shown in
+Figure 2.1. To read and write strings and numbers, you need more capable subclasses. For example, DataInputStream and DataOutputStream let you read and write all the
+primitive Java types in binary format. Finally, there are input/output streams
+that do useful stuff; for example, the ZipInputStream and ZipOutputStream let you read
+and write files in the familiar ZIP compression format.
+For Unicode text, on the other hand, you can use subclasses of the abstract classes
+Reader and Writer (see Figure 2.2). The basic methods of the Reader and Writer classes
+are similar to those of InputStream and OutputStream.
+abstract int read()
+abstract void write(int c)
+
+The read method returns either a UTF-16 code unit (as an integer between 0 and
+65535) or -1 when you have reached the end of the file. The write method is called
+with a Unicode code unit. (See Volume I, Chapter 3 for a discussion of Unicode
+code units.)
+
+From the Library of Hristo Dimov Hristov
+
+52
+
+Chapter 2
+
+Input and Output
+
+Figure 2.1 Input and output stream hierarchy
+There are four additional interfaces: Closeable, Flushable, Readable, and Appendable (see
+Figure 2.3). The first two interfaces are very simple, with methods
+void close() throws IOException
+
+and
+void flush()
+
+respectively. The classes InputStream, OutputStream, Reader, and Writer all implement the
+Closeable interface.
+
+From the Library of Hristo Dimov Hristov
+
+2.1 Input/Output Streams
+
+53
+
+Figure 2.2 Reader and writer hierarchy
+NOTE: The java.io.Closeable interface extends the java.lang.AutoCloseable interface.
+Therefore, you can use the try-with-resources statement with any Closeable. Why
+have two interfaces? The close method of the Closeable interface only throws an
+IOException, whereas the AutoCloseable.close method may throw any exception.
+OutputStream and Writer implement the Flushable interface.
+
+The Readable interface has a single method
+int read(CharBuffer cb)
+
+The CharBuffer class has methods for sequential and random read/write access. It
+represents an in-memory buffer or a memory-mapped file. (See Section 2.6.2,
+“The Buffer Data Structure,” on p. 124 for details.)
+
+From the Library of Hristo Dimov Hristov
+
+54
+
+Chapter 2
+
+Input and Output
+
+Figure 2.3 The Closeable, Flushable, Readable, and Appendable interfaces
+The Appendable interface has two methods for appending single characters and
+character sequences:
+Appendable append(char c)
+Appendable append(CharSequence s)
+
+The CharSequence interface describes basic properties of a sequence of char values. It
+is implemented by String, CharBuffer, StringBuilder, and StringBuffer.
+Of the input/output stream classes, only Writer implements Appendable.
+java.io.Closeable 5.0
+
+• void close()
+closes this Closeable. This method may throw an IOException.
+
+From the Library of Hristo Dimov Hristov
+
+2.1 Input/Output Streams
+
+55
+
+java.io.Flushable 5.0
+
+• void flush()
+flushes this Flushable.
+
+java.lang.Readable 5.0
+
+• int read(CharBuffer cb)
+attempts to read as many char values into cb as it can hold. Returns the number of
+values read, or -1 if no further values are available from this Readable.
+
+java.lang.Appendable 5.0
+
+• Appendable append(char c)
+• Appendable append(CharSequence cs)
+appends the given code unit, or all code units in the given sequence, to this Appendable;
+returns this.
+
+java.lang.CharSequence 1.4
+
+• char charAt(int index)
+returns the code unit at the given index.
+• int length()
+returns the number of code units in this sequence.
+• CharSequence subSequence(int startIndex, int endIndex)
+returns a CharSequence consisting of the code units stored from index startIndex to
+endIndex - 1.
+• String toString()
+returns a string consisting of the code units of this sequence.
+
+2.1.3 Combining Input/Output Stream Filters
+FileInputStream and FileOutputStream give you input and output streams attached to a
+
+disk file. You need to pass the file name or full path name of the file to the
+constructor. For example,
+
+From the Library of Hristo Dimov Hristov
+
+56
+
+Chapter 2
+
+Input and Output
+
+FileInputStream fin = new FileInputStream("employee.dat");
+
+looks in the user directory for a file named employee.dat.
+TIP: All the classes in java.io interpret relative path names as starting from the
+user’s working directory. You can get this directory by a call to
+System.getProperty("user.dir").
+
+CAUTION: Since the backslash character is the escape character in Java strings,
+be sure to use \\ for Windows-style path names (for example, C:\\Windows\\win.ini).
+In Windows, you can also use a single forward slash (C:/Windows/win.ini) because
+most Windows file-handling system calls will interpret forward slashes as file
+separators. However, this is not recommended—the behavior of the Windows
+system functions is subject to change. Instead, for portable programs, use the
+file separator character for the platform on which your program runs. It is available
+as the constant string java.io.File.separator.
+
+Like the abstract InputStream and OutputStream classes, these classes only support
+reading and writing at the byte level. That is, we can only read bytes and byte
+arrays from the object fin.
+byte b = (byte) fin.read();
+
+As you will see in the next section, if we just had a DataInputStream, we could read
+numeric types:
+DataInputStream din = . . .;
+double x = din.readDouble();
+
+But just as the FileInputStream has no methods to read numeric types, the DataInputStream
+has no method to get data from a file.
+Java uses a clever mechanism to separate two kinds of responsibilities. Some input
+streams (such as the FileInputStream and the input stream returned by the openStream
+method of the URL class) can retrieve bytes from files and other more exotic locations. Other input streams (such as the DataInputStream) can assemble bytes into more
+useful data types. The Java programmer has to combine the two. For example, to
+be able to read numbers from a file, first create a FileInputStream and then pass it to
+the constructor of a DataInputStream.
+FileInputStream fin = new FileInputStream("employee.dat");
+DataInputStream din = new DataInputStream(fin);
+double x = din.readDouble();
+
+From the Library of Hristo Dimov Hristov
+
+2.1 Input/Output Streams
+
+57
+
+If you look at Figure 2.1 again, you can see the classes FilterInputStream and
+FilterOutputStream. The subclasses of these classes are used to add capabilities to
+input/output streams that process bytes.
+You can add multiple capabilities by nesting the filters. For example, by default,
+input streams are not buffered. That is, every call to read asks the operating system
+to dole out yet another byte. It is more efficient to request blocks of data instead
+and store them in a buffer. If you want buffering and the data input methods for
+a file, you need to use the following rather monstrous sequence of constructors:
+DataInputStream din = new DataInputStream(
+new BufferedInputStream(
+new FileInputStream("employee.dat")));
+
+Notice that we put the DataInputStream last in the chain of constructors because we
+want to use the DataInputStream methods, and we want them to use the buffered read
+method.
+Sometimes you’ll need to keep track of the intermediate input streams when
+chaining them together. For example, when reading input, you often need to peek
+at the next byte to see if it is the value that you expect. Java provides the
+PushbackInputStream for this purpose.
+PushbackInputStream pbin = new PushbackInputStream(
+new BufferedInputStream(
+new FileInputStream("employee.dat")));
+
+Now you can speculatively read the next byte
+int b = pbin.read();
+
+and throw it back if it isn’t what you wanted.
+if (b != '<') pbin.unread(b);
+
+However, reading and unreading are the only methods that apply to a pushback
+input stream. If you want to look ahead and also read numbers, then you need
+both a pushback input stream and a data input stream reference.
+DataInputStream din = new DataInputStream(
+pbin = new PushbackInputStream(
+new BufferedInputStream(
+new FileInputStream("employee.dat"))));
+
+Of course, in the input/output libraries of other programming languages, niceties
+such as buffering and lookahead are automatically taken care of, so it is a bit of
+a hassle to resort, in Java, to combining stream filters. However, the ability to mix
+and match filter classes to construct truly useful sequences of input/output
+streams does give you an immense amount of flexibility. For example, you can
+
+From the Library of Hristo Dimov Hristov
+
+58
+
+Chapter 2
+
+Input and Output
+
+read numbers from a compressed ZIP file by using the following sequence of input
+streams (see Figure 2.4):
+ZipInputStream zin = new ZipInputStream(new FileInputStream("employee.zip"));
+DataInputStream din = new DataInputStream(zin);
+
+Figure 2.4 A sequence of filtered input streams
+(See Section 2.3.3, “ZIP Archives,” on p. 77 for more on Java’s handling of ZIP
+files.)
+java.io.FileInputStream 1.0
+
+• FileInputStream(String name)
+• FileInputStream(File file)
+creates a new file input stream using the file whose path name is specified by the
+name string or the file object. (The File class is described at the end of this chapter.)
+Path names that are not absolute are resolved relative to the working directory that
+was set when the VM started.
+
+From the Library of Hristo Dimov Hristov
+
+2.1 Input/Output Streams
+
+59
+
+java.io.FileOutputStream 1.0
+
+•
+•
+•
+•
+
+FileOutputStream(String name)
+FileOutputStream(String name, boolean append)
+FileOutputStream(File file)
+FileOutputStream(File file, boolean append)
+
+creates a new file output stream specified by the name string or the file object. (The
+File class is described at the end of this chapter.) If the append parameter is true, an
+existing file with the same name will not be deleted and data will be added at the
+end of the file. Otherwise, this method deletes any existing file with the same name.
+
+java.io.BufferedInputStream 1.0
+
+• BufferedInputStream(InputStream in)
+creates a buffered input stream. A buffered input stream reads bytes from a stream
+without causing a device access every time. When the buffer is empty, a new block
+of data is read into the buffer.
+
+java.io.BufferedOutputStream 1.0
+
+• BufferedOutputStream(OutputStream out)
+creates a buffered output stream. A buffered output stream collects bytes to be
+written without causing a device access every time.When the buffer fills up or when
+the stream is flushed, the data are written.
+
+java.io.PushbackInputStream 1.0
+
+• PushbackInputStream(InputStream in)
+• PushbackInputStream(InputStream in, int size)
+constructs an input stream with one-byte lookahead or a pushback buffer of specified
+size.
+• void unread(int b)
+pushes back a byte, which is retrieved again by the next call to read.
+Parameters:
+
+b
+
+The byte to be read again
+
+From the Library of Hristo Dimov Hristov
+
+60
+
+Chapter 2
+
+Input and Output
+

@@ -1,0 +1,722 @@
+
+297
+
+try (Connection conn = getConnection();
+Statement stat = conn.createStatement())
+{
+stat.executeUpdate("CREATE TABLE Greetings (Message CHAR(20))");
+stat.executeUpdate("INSERT INTO Greetings VALUES ('Hello, World!')");
+
+34
+35
+36
+37
+38
+39
+
+try (ResultSet result = stat.executeQuery("SELECT * FROM Greetings"))
+{
+if (result.next())
+System.out.println(result.getString(1));
+}
+stat.executeUpdate("DROP TABLE Greetings");
+
+40
+41
+42
+43
+44
+45
+
+}
+
+46
+
+}
+
+47
+48
+
+/**
+* Gets a connection from the properties specified in the file database.properties.
+* @return the database connection
+*/
+public static Connection getConnection() throws SQLException, IOException
+{
+Properties props = new Properties();
+try (InputStream in = Files.newInputStream(Paths.get("database.properties")))
+{
+props.load(in);
+}
+String drivers = props.getProperty("jdbc.drivers");
+if (drivers != null) System.setProperty("jdbc.drivers", drivers);
+String url = props.getProperty("jdbc.url");
+String username = props.getProperty("jdbc.username");
+String password = props.getProperty("jdbc.password");
+
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+
+return DriverManager.getConnection(url, username, password);
+
+66
+
+}
+
+67
+68
+
+}
+
+java.sql.DriverManager 1.1
+
+• static Connection getConnection(String url, String user, String password)
+establishes a connection to the given database and returns a Connection object.
+
+5.4 Working with JDBC Statements
+In the following sections, you will see how to use the JDBC Statement to execute
+SQL statements, obtain results, and deal with errors. Then we show you a simple
+program for populating a database.
+
+From the Library of Hristo Dimov Hristov
+
+298
+
+Chapter 5
+
+Database Programming
+
+5.4.1 Executing SQL Statements
+To execute a SQL statement, you first create a Statement object. To create
+statement objects, use the Connection object that you obtained from the call to
+DriverManager.getConnection.
+Statement stat = conn.createStatement();
+
+Next, place the statement that you want to execute into a string, for example
+String command = "UPDATE Books"
++ " SET Price = Price - 5.00"
++ " WHERE Title NOT LIKE '%Introduction%'";
+
+Then call the executeUpdate method of the Statement interface:
+stat.executeUpdate(command);
+
+The executeUpdate method returns a count of the rows that were affected by the SQL
+statement, or zero for statements that do not return a row count. For example,
+the call to executeUpdate in the preceding example returns the number of rows where
+the price was lowered by $5.00.
+The executeUpdate method can execute actions such as INSERT, UPDATE, and DELETE, as well
+as data definition statements such as CREATE TABLE and DROP TABLE. However, you need
+to use the executeQuery method to execute SELECT queries. There is also a catch-all
+execute statement to execute arbitrary SQL statements. It’s commonly used only
+for queries that a user supplies interactively.
+When you execute a query, you are interested in the result. The executeQuery object
+returns an object of type ResultSet that you can use to walk through the result one
+row at a time.
+ResultSet rs = stat.executeQuery("SELECT * FROM Books");
+
+The basic loop for analyzing a result set looks like this:
+while (rs.next())
+{
+look at a row of the result set
+}
+
+CAUTION: The iteration protocol of the ResultSet interface is subtly different from
+the protocol of the java.util.Iterator interface. Here, the iterator is initialized to a
+position before the first row. You must call the next method once to move the
+iterator to the first row. Also, there is no hasNext method; keep calling next until it
+returns false.
+
+From the Library of Hristo Dimov Hristov
+
+5.4 Working with JDBC Statements
+
+299
+
+The order of the rows in a result set is completely arbitrary. Unless you specifically
+ordered the result with an ORDER BY clause, you should not attach any significance
+to the row order.
+When inspecting an individual row, you will want to know the contents of the
+fields. A large number of accessor methods give you this information.
+String isbn = rs.getString(1);
+double price = rs.getDouble("Price");
+
+There are accessors for various types, such as getString and getDouble. Each accessor
+has two forms: One takes a numeric argument and the other takes a string argument. When you supply a numeric argument, you refer to the column with that
+number. For example, rs.getString(1) returns the value of the first column in the
+current row.
+
+CAUTION: Unlike array indexes, database column numbers start at 1.
+
+When you supply a string argument, you refer to the column in the result
+set with that name. For example, rs.getDouble("Price") returns the value of the
+column with label Price. Using the numeric argument is a bit more efficient, but
+the string arguments make the code easier to read and maintain.
+Each get method makes reasonable type conversions when the type of the method
+doesn’t match the type of the column. For example, the call rs.getString("Price")
+converts the floating-point value of the Price column to a string.
+java.sql.Connection 1.1
+
+• Statement createStatement()
+creates a Statement object that can be used to execute SQL queries and updates
+without parameters.
+• void close()
+immediately closes the current connection and the JDBC resources that it created.
+
+From the Library of Hristo Dimov Hristov
+
+300
+
+Chapter 5
+
+Database Programming
+
+java.sql.Statement 1.1
+
+• ResultSet executeQuery(String sqlQuery)
+executes the SQL statement given in the string and returns a ResultSet object to view
+the query result.
+• int executeUpdate(String sqlStatement)
+• long executeLargeUpdate(String sqlStatement) 8
+executes the SQL INSERT, UPDATE, or DELETE statement specified by the string. Also
+executes Data Definition Language (DDL) statements such as CREATE TABLE. Returns
+the number of rows affected, or 0 for a statement without an update count.
+• boolean execute(String sqlStatement)
+executes the SQL statement specified by the string. Multiple result sets and update
+counts may be produced. Returns true if the first result is a result set, false otherwise.
+Call getResultSet or getUpdateCount to retrieve the first result. See Section 5.5.4, “Multiple
+Results,” on p. 319 for details on processing multiple results.
+• ResultSet getResultSet()
+returns the result set of the preceding query statement, or null if the preceding
+statement did not have a result set. Call this method only once per executed
+statement.
+• int getUpdateCount()
+• long getLargeUpdateCount() 8
+returns the number of rows affected by the preceding update statement, or -1 if the
+preceding statement was a statement without an update count. Call this method
+only once per executed statement.
+• void close()
+closes this statement object and its associated result set.
+• boolean isClosed() 6
+returns true if this statement is closed.
+• void closeOnCompletion() 7
+causes this statement to be closed once all of its result sets have been closed.
+
+java.sql.ResultSet 1.1
+
+• boolean next()
+makes the current row in the result set move forward by one. Returns false after the
+last row. Note that you must call this method to advance to the first row.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+5.4 Working with JDBC Statements
+
+301
+
+java.sql.ResultSet 1.1 (Continued)
+
+• Xxx getXxx(int columnNumber)
+• Xxx getXxx(String columnLabel)
+( Xxx is a type such as int, double, String, Date, etc.)
+•
+•
+•
+•
+
+<T> T getObject(int columnIndex, Class<T> type) 7
+<T> T getObject(String columnLabel, Class<T> type) 7
+void updateObject(int columnIndex, Object x, SQLType targetSqlType) 8
+void updateObject(String columnLabel, Object x, SQLType targetSqlType) 8
+
+returns or updates the value of the column with the given column index or label,
+converted to the specified type. The column label is the label specified in the SQL
+AS clause or the column name if AS is not used.
+• int findColumn(String columnName)
+gives the column index associated with a column name.
+• void close()
+immediately closes the current result set.
+• boolean isClosed() 6
+returns true if this statement is closed.
+
+5.4.2 Managing Connections, Statements, and Result Sets
+Every Connection object can create one or more Statement objects. You can use the same
+Statement object for multiple unrelated commands and queries. However, a statement
+has at most one open result set. If you issue multiple queries whose results you
+analyze concurrently, you need multiple Statement objects.
+Be forewarned, though, that at least one commonly used database (Microsoft SQL
+Server) has a JDBC driver that allows only one active statement at a time. Use the
+getMaxStatements method of the DatabaseMetaData interface to find out the number of
+concurrently open statements that your JDBC driver supports.
+This sounds restrictive, but in practice, you should probably not fuss with multiple
+concurrent result sets. If the result sets are related, you should be able to issue a
+combined query and analyze a single result. It is much more efficient to let the
+database combine queries than it is for a Java program to iterate through multiple
+result sets.
+When you are done using a ResultSet, Statement, or Connection, you should call the close
+method immediately. These objects use large data structures that draw on the
+finite resources of the database server.
+
+From the Library of Hristo Dimov Hristov
+
+302
+
+Chapter 5
+
+Database Programming
+
+The close method of a Statement object automatically closes the associated result set
+if the statement has an open result set. Similarly, the close method of the Connection
+class closes all statements of the connection.
+Conversely, as of Java SE 7, you can call the closeOnCompletion method on a Statement,
+and it will close automatically as soon as all its result sets have closed.
+If your connections are short-lived, you don’t have to worry about closing statements and result sets. To make absolutely sure that a connection object cannot
+possibly remain open, use a try-with-resources statement:
+try (Connection conn = . . .)
+{
+Statement stat = conn.createStatement();
+ResultSet result = stat.executeQuery(queryString);
+process query result
+}
+
+TIP: Use the try-with-resources block just to close the connection, and use a
+separate try/catch block to handle exceptions. Separating the try blocks makes
+your code easier to read and maintain.
+
+5.4.3 Analyzing SQL Exceptions
+Each SQLException has a chain of SQLException objects that are retrieved with the
+getNextException method. This exception chain is in addition to the “cause” chain of
+Throwable objects that every exception has. (See Volume I, Chapter 11 for details
+about Java exceptions.) One would need two nested loops to fully enumerate all
+these exceptions. Fortunately, Java SE 6 enhanced the SQLException class to implement
+the Iterable<Throwable> interface. The iterator() method yields an Iterator<Throwable> that
+iterates through both chains: starts by going through the cause chain of the first
+SQLException, then moves on to the next SQLException, and so on. You can simply use
+an enhanced for loop:
+for (Throwable t : sqlException)
+{
+do something with t
+}
+
+You can call getSQLState and getErrorCode on a SQLException to analyze it further. The first
+method yields a string that is standardized by either X/Open or SQL:2003. (Call
+the getSQLStateType method of the DatabaseMetaData interface to find out which standard
+is used by your driver.) The error code is vendor-specific.
+
+From the Library of Hristo Dimov Hristov
+
+5.4 Working with JDBC Statements
+
+303
+
+The SQL exceptions are organized into an inheritance tree (shown in Figure 5.5).
+This allows you to catch specific error types in a vendor-independent way.
+
+Figure 5.5 SQL exception types
+In addition, the database driver can report nonfatal conditions as warnings. You
+can retrieve warnings from connections, statements, and result sets. The SQLWarning
+class is a subclass of SQLException (even though a SQLWarning is not thrown as an exception). Call getSQLState and getErrorCode to get further information about the warnings.
+Similar to SQL exceptions, warnings are chained. To retrieve all warnings, use
+this loop:
+SQLWarning w = stat.getWarning();
+while (w != null)
+{
+do something with w
+w = w.nextWarning();
+}
+
+The DataTruncation subclass of SQLWarning is used when data are read from the database
+and unexpectedly truncated. If data truncation happens in an update statement,
+a DataTruncation is thrown as an exception.
+
+From the Library of Hristo Dimov Hristov
+
+304
+
+Chapter 5
+
+Database Programming
+
+java.sql.SQLException 1.1
+
+• SQLException getNextException()
+gets the next SQL exception chained to this one, or null at the end of the chain.
+• Iterator<Throwable> iterator() 6
+gets an iterator that yields the chained SQL exceptions and their causes.
+• String getSQLState()
+gets the “SQL state”—a standardized error code.
+• int getErrorCode()
+gets the vendor-specific error code.
+
+java.sql.SQLWarning 1.1
+
+• SQLWarning getNextWarning()
+returns the next warning chained to this one, or null at the end of the chain.
+
+java.sql.Connection 1.1
+java.sql.Statement 1.1
+java.sql.ResultSet 1.1
+
+• SQLWarning getWarnings()
+returns the first of the pending warnings, or null if no warnings are pending.
+
+java.sql.DataTruncation 1.1
+
+• boolean getParameter()
+returns true if the data truncation applies to a parameter, false if it applies to a
+column.
+• int getIndex()
+returns the index of the truncated parameter or column.
+• int getDataSize()
+returns the number of bytes that should have been transferred, or -1 if the value is
+unknown.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+5.4 Working with JDBC Statements
+
+305
+
+java.sql.DataTruncation 1.1 (Continued)
+
+• int getTransferSize()
+returns the number of bytes that were actually transferred, or -1 if the value is
+unknown.
+
+5.4.4 Populating a Database
+We are now ready to write our first real JDBC program. Of course it would be
+nice to try some of the fancy queries that we discussed earlier, but we have a
+problem: Right now, there are no data in the database. We need to populate the
+database, and there is a simple way of doing that with a set of SQL instructions
+to create tables and insert data into them. Most database programs can process
+a set of SQL instructions from a text file, but there are pesky differences about
+statement terminators and other syntactical issues.
+For that reason, we will use JDBC to create a simple program that reads a file
+with SQL instructions, one instruction per line, and executes them.
+Specifically, the program reads data from a text file in a format such as
+CREATE TABLE Publishers (Publisher_Id CHAR(6), Name CHAR(30), URL CHAR(80));
+INSERT INTO Publishers VALUES ('0201', 'Addison-Wesley', 'www.aw-bc.com');
+INSERT INTO Publishers VALUES ('0471', 'John Wiley & Sons', 'www.wiley.com');
+...
+
+Listing 5.2 contains the code for the program that reads the SQL statement file
+and executes the statements. You don’t have to read through the code; we merely
+provide the program so that you can populate your database and run the examples
+in the remainder of this chapter.
+Make sure that your database server is running, and run the program as follows:
+java -classpath
+java -classpath
+java -classpath
+java -classpath
+
+driverPath:. exec.ExecSQL Books.sql
+driverPath:. exec.ExecSQL Authors.sql
+driverPath:. exec.ExecSQL Publishers.sql
+driverPath:. exec.ExecSQL BooksAuthors.sql
+
+Before running the program, check that the file database.properties is set up properly
+for your environment (see Section 5.3.5, “Connecting to the Database,” on p. 294).
+
+From the Library of Hristo Dimov Hristov
+
+306
+
+Chapter 5
+
+Database Programming
+
+NOTE: Your database may also have a utility to read SQL files directly. For
+example, with Derby, you can run
+java -jar derby/lib/derbyrun.jar ij -p ij.properties Books.sql
+
+(The ij.properties file is described in Section 5.3.3, “Starting the Database,” on
+p. 293.)
+In the data format for the ExecSQL command, we allow an optional semicolon at
+the end of each line because most database utilities expect this format.
+
+The following steps briefly describe the ExecSQL program:
+1.
+
+2.
+3.
+
+4.
+
+5.
+6.
+
+Connect to the database. The getConnection method reads the properties in the
+file database.properties and adds the jdbc.drivers property to the system properties.
+The driver manager uses the jdbc.drivers property to load the appropriate
+database driver. The getConnection method uses the jdbc.url, jdbc.username, and
+jdbc.password properties to open the database connection.
+Open the file with the SQL statements. If no file name was supplied, prompt
+the user to enter the statements on the console.
+Execute each statement with the generic execute method. If it returns true, the
+statement had a result set. The four SQL files that we provide for the book
+database all end in a SELECT * statement so that you can see that the data were
+successfully inserted.
+If there was a result set, print out the result. Since this is a generic result set,
+we need to use metadata to find out how many columns the result has. For
+more information, see Section 5.8, “Metadata,” on p. 333.
+If there is any SQL exception, print the exception and any chained exceptions
+that may be contained in it.
+Close the connection to the database.
+
+Listing 5.2 shows the code for the program.
+
+Listing 5.2
+1
+
+exec/ExecSQL.java
+
+package exec;
+
+2
+3
+4
+5
+6
+
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
+import java.sql.*;
+
+From the Library of Hristo Dimov Hristov
+
+5.4 Working with JDBC Statements
+
+307
+
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+
+/**
+* Executes all SQL statements in a file. Call this program as <br>
+* java -classpath driverPath:. ExecSQL commandFile
+*
+* @version 1.32 2016-04-27
+* @author Cay Horstmann
+*/
+class ExecSQL
+{
+public static void main(String args[]) throws IOException
+{
+try (Scanner in = args.length == 0 ? new Scanner(System.in)
+: new Scanner(Paths.get(args[0]), "UTF-8"))
+{
+try (Connection conn = getConnection();
+Statement stat = conn.createStatement())
+{
+while (true)
+{
+if (args.length == 0) System.out.println("Enter command or EXIT to exit:");
+
+28
+29
+
+if (!in.hasNextLine()) return;
+
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+
+String line = in.nextLine().trim();
+if (line.equalsIgnoreCase("EXIT")) return;
+if (line.endsWith(";")) // remove trailing semicolon
+{
+line = line.substring(0, line.length() - 1);
+}
+try
+{
+boolean isResult = stat.execute(line);
+if (isResult)
+{
+try (ResultSet rs = stat.getResultSet())
+{
+showResultSet(rs);
+}
+}
+else
+{
+int updateCount = stat.getUpdateCount();
+System.out.println(updateCount + " rows updated");
+}
+}
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+308
+
+Chapter 5
+
+Database Programming
+
+Listing 5.2 (Continued)
+catch (SQLException ex)
+{
+for (Throwable e : ex)
+e.printStackTrace();
+}
+
+53
+54
+55
+56
+57
+
+}
+
+58
+
+}
+
+59
+
+}
+catch (SQLException e)
+{
+for (Throwable t : e)
+t.printStackTrace();
+}
+
+60
+61
+62
+63
+64
+65
+66
+
+}
+
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+
+/**
+* Gets a connection from the properties specified in the file database.properties.
+* @return the database connection
+*/
+public static Connection getConnection() throws SQLException, IOException
+{
+Properties props = new Properties();
+try (InputStream in = Files.newInputStream(Paths.get("database.properties")))
+{
+props.load(in);
+}
+
+79
+
+String drivers = props.getProperty("jdbc.drivers");
+if (drivers != null) System.setProperty("jdbc.drivers", drivers);
+
+80
+81
+82
+
+String url = props.getProperty("jdbc.url");
+String username = props.getProperty("jdbc.username");
+String password = props.getProperty("jdbc.password");
+
+83
+84
+85
+86
+
+return DriverManager.getConnection(url, username, password);
+
+87
+88
+
+}
+
+89
+90
+91
+92
+93
+94
+95
+96
+97
+
+/**
+* Prints a result set.
+* @param result the result set to be printed
+*/
+public static void showResultSet(ResultSet result) throws SQLException
+{
+ResultSetMetaData metaData = result.getMetaData();
+int columnCount = metaData.getColumnCount();
+
+98
+
+From the Library of Hristo Dimov Hristov
+

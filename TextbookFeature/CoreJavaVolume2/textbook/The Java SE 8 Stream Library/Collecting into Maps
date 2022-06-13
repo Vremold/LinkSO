@@ -1,0 +1,58 @@
+  Suppose you have a Stream<Person> and want to collect the elements into a map so that later you can look up people by their IDs. The Collectors.toMap method has two function arguments that produce the map’s keys and values. For example, Map<Integer, String> idToName = people.collect( Collectors.toMap(Person::getId, Person::getName)); 
+  In the common case when the values should be the actual elements, use Function.identity() for the second function. 
+  Map<Integer, Person> idToPerson = people.collect( Collectors.toMap(Person::getId, Function.identity())); 
+  If there is more than one element with the same key, there is a conflict, and the collector will throw an IllegalStateException. You can override that behavior by supplying a third function argument that resolves the conflict and determines the value for the key, given the existing and the new value. Your function could return the existing value, the new value, or a combination of them. 
+  Here, we construct a map that contains, for each language in the available locales, its name in your default locale (such as "German") as key, and its localized name (such as "Deutsch") as value. 
+  Stream<Locale> locales = Stream.of(Locale.getAvailableLocales()); 
+  Map<String, String> languageNames = locales.collect( Collectors.toMap( Locale::getDisplayLanguage, l -> l.getDisplayLanguage(l), (existingValue, newValue) -> existingValue)); 
+  We don’t care that the same language might occur twice (for example, German in Germany and in Switzerland), so we just keep the first entry. 
+  NOTE: In this chapter, we use the Locale class as a source of an interesting data set. See Chapter 7 for more information on locales. 
+  Now, suppose we want to know all languages in a given country. Then we need a Map<String, Set<String>>. For example, the value for "Switzerland" is the set [French, German, Italian]. At first, we store a singleton set for each language. Whenever a new language is found for a given country, we form the union of the existing and the new set. 
+  Map<String, Set<String>> countryLanguageSets = locales.collect( Collectors.toMap(   From the Library of Hristo Dimov Hristov   1.9 Collecting into Maps   25   Locale::getDisplayCountry, l -> Collections.singleton(l.getDisplayLanguage()), (a, b) -> { // Union of a and b Set<String> union = new HashSet<>(a); 
+  union.addAll(b); 
+  return union; 
+  })); 
+  You will see a simpler way of obtaining this map in the next section. 
+  If you want a TreeMap, supply the constructor as the fourth argument. You must provide a merge function. Here is one of the examples from the beginning of the section, now yielding a TreeMap: Map<Integer, Person> idToPerson = people.collect( Collectors.toMap( Person::getId, Function.identity(), (existingValue, newValue) -> { throw new IllegalStateException(); }, TreeMap::new)); 
+  NOTE: For each of the toMap methods, there is an equivalent toConcurrentMap method that yields a concurrent map. A single concurrent map is used in the parallel collection process. When used with a parallel stream, a shared map is more efficient than merging maps. Note that elements are no longer collected in stream order, but that doesn’t usually make a difference. 
+  The example program in Listing 1.5 gives examples of collecting stream results into maps. 
+  Listing 1.5 1   collecting/CollectingIntoMaps.java   package collecting; 
+  2 3 4 5 6   import java.io.*; 
+  import java.util.*; 
+  import java.util.function.*; 
+  import java.util.stream.*; 
+  7 8 9 10 11 12 13   public class CollectingIntoMaps { public static class Person { private int id; 
+  private String name; 
+  (Continues)   From the Library of Hristo Dimov Hristov   26   Chapter 1   The Java SE 8 Stream Library   Listing 1.5 (Continued) 14   public Person(int id, String name) { this.id = id; 
+  this.name = name; 
+  } 
+  15 16 17 18 19 20   public int getId() { return id; 
+  } 
+  21 22 23 24 25   public String getName() { return name; 
+  } 
+  26 27 28 29 30   public String toString() { return getClass().getName() + "[id=" + id + ",name=" + name + "]"; 
+  } 
+  31 32 33 34 35   } 
+  36 37 38 39 40 41   public static Stream<Person> people() { return Stream.of(new Person(1001, "Peter"), new Person(1002, "Paul"), new Person(1003, "Mary")); 
+  } 
+  42 43 44 45 46 47   public static void main(String[] args) throws IOException { Map<Integer, String> idToName = people().collect( Collectors.toMap(Person::getId, Person::getName)); 
+  System.out.println("idToName: " + idToName); 
+  48 49 50 51 52   Map<Integer, Person> idToPerson = people().collect( Collectors.toMap(Person::getId, Function.identity())); 
+  System.out.println("idToPerson: " + idToPerson.getClass().getName() + idToPerson); 
+  53 54 55 56 57 58 59 60   idToPerson = people().collect( Collectors.toMap(Person::getId, Function.identity(), ( existingValue, newValue) -> { throw new IllegalStateException(); 
+  }, TreeMap::new)); 
+  System.out.println("idToPerson: " + idToPerson.getClass().getName() + idToPerson); 
+  61   From the Library of Hristo Dimov Hristov   1.9 Collecting into Maps   27   Stream<Locale> locales = Stream.of(Locale.getAvailableLocales()); 
+  Map<String, String> languageNames = locales.collect( Collectors.toMap( Locale::getDisplayLanguage, l -> l.getDisplayLanguage(l), (existingValue, newValue) -> existingValue)); 
+  System.out.println("languageNames: " + languageNames); 
+  62 63 64 65 66 67 68 69   locales = Stream.of(Locale.getAvailableLocales()); 
+  Map<String, Set<String>> countryLanguageSets = locales.collect( Collectors.toMap( Locale::getDisplayCountry, l -> Collections.singleton(l.getDisplayLanguage()), (a, b) -> { // union of a and b Set<String> union = new HashSet<>(a); 
+  union.addAll(b); 
+  return union; 
+  })); 
+  System.out.println("countryLanguageSets: " + countryLanguageSets); 
+  70 71 72 73 74 75 76 77 78 79 80   } 
+  81 82   } 
+  java.util.stream.Collectors 8   • static<T,K,U>Collector<T,?,Map<K,U>>toMap(Function<?superT,?extendsK>keyMapper,Function<? 
+  super T,? extends U> valueMapper)   • static<T,K,U>Collector<T,?,Map<K,U>>toMap(Function<?superT,?extendsK>keyMapper,Function<? 
+  super T,? extends U> valueMapper, BinaryOperator<U> mergeFunction)   • static <T,K,U,M extends Map<K,U>> Collector<T,?,M> toMap(Function<? super T,? extends K> keyMapper, Function<? super T,? extends U> valueMapper, BinaryOperator<U> mergeFunction, Supplier<M> mapSupplier) • static <T,K,U> Collector<T,?,ConcurrentMap<K,U>> toConcurrentMap(Function<? super T,? extends K> keyMapper, Function<? super T,? extends U> valueMapper) • static <T,K,U> Collector<T,?,ConcurrentMap<K,U>> toConcurrentMap(Function<? super T,? extends K> keyMapper, Function<? super T,? extends U> valueMapper, BinaryOperator<U> mergeFunction) • static <T,K,U,M extends ConcurrentMap<K,U>> Collector<T,?,M> toConcurrentMap(Function<? super T,? extends K> keyMapper, Function<? super T,? extends U> valueMapper, BinaryOperator<U> mergeFunction, Supplier<M> mapSupplier)   yields a collector that produces a map or concurrent map.The keyMapper and valueMapper functions are applied to each collected element, yielding a key/value entry of the resulting map. By default, an IllegalStateException is thrown when two elements give rise to the same key.You can instead supply a mergeFunction that merges values with the same key. By default, the result is a HashMap or ConcurrentHashMap. You can instead supply a mapSupplier that yields the desired map instance. 

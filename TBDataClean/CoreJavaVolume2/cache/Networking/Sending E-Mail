@@ -1,0 +1,269 @@
+
+277
+
+java.net.HttpURLConnection 1.0
+
+• InputStream getErrorStream()
+returns a stream from which you can read web server error messages.
+
+java.net.URLEncoder 1.0
+
+• static String encode(String s, String encoding) 1.4
+returns the URL-encoded form of the string s, using the given character encoding
+scheme. (The recommended scheme is "UTF-8".) In URL encoding, the characters
+'A'–'Z', 'a'–'z', '0'–'9', '-', '_', '.', and '~' are left unchanged. Space is encoded
+into '+', and all other characters are encoded into sequences of encoded bytes of
+the form "%XY", where 0xXY is the hexadecimal value of the byte.
+
+java.net.URLDecoder 1.2
+
+• static string decode(String s, String encoding) 1.4
+returns the decoding of the URL encoded string s under the given character encoding
+scheme.
+
+4.5 Sending E-Mail
+In the past, it was simple to write a program that sends e-mail by making a
+socket connection to port 25, the SMTP port. The Simple Mail Transport Protocol
+(SMTP) describes the format for e-mail messages. Once you are connected to the
+server, send a mail header (in the SMTP format, which is easy to generate),
+followed by the mail message.
+Here are the details:
+1.
+
+Open a socket to your host.
+Socket s = new Socket("mail.yourserver.com", 25); // 25 is SMTP
+PrintWriter out = new PrintWriter(s.getOutputStream(), "UTF-8");
+
+2.
+
+Send the following information to the print stream:
+HELO sending host
+MAIL FROM: sender e-mail address
+RCPT TO: recipient e-mail address
+DATA
+
+From the Library of Hristo Dimov Hristov
+
+278
+
+Chapter 4
+
+Networking
+
+Subject: subject
+(blank line)
+mail message (any number of lines)
+.
+QUIT
+
+The SMTP specification (RFC 821) states that lines must be terminated with \r
+followed by \n.
+It used to be that SMTP servers were often willing to route e-mail from anyone.
+However, in these days of spam floods, most servers have built-in checks and
+only accept requests from users or IP address ranges that they trust. Authentication
+usually happens over secure socket connections.
+Implementing these authentication schemes manually would be very tedious.
+Instead, we will show you how to use the JavaMail API to send e-mail from a
+Java program.
+Download JavaMail from www.oracle.com/technetwork/java/javamail and unzip it somewhere
+on your hard disk.
+To use JavaMail, you need to set up some properties that depend on your mail
+server. For example, with GMail, you use
+mail.transport.protocol=smtps
+mail.smtps.auth=true
+mail.smtps.host=smtp.gmail.com
+mail.smtps.user=cayhorstmann@gmail.com
+
+Our sample program reads these from a property file.
+For security reasons, we don’t put the password into the property file but instead
+prompt for it.
+Read in the property file, then get a mail session like this:
+Session mailSession = Session.getDefaultInstance(props);
+
+Make a message with the desired sender, recipient, subject, and message text:
+MimeMessage message = new MimeMessage(mailSession);
+message.setFrom(new InternetAddress(from));
+message.addRecipient(RecipientType.TO, new InternetAddress(to));
+message.setSubject(subject);
+message.setText(builder.toString());
+
+Then send it off:
+Transport tr = mailSession.getTransport();
+tr.connect(null, password);
+tr.sendMessage(message, message.getAllRecipients());
+tr.close();
+
+From the Library of Hristo Dimov Hristov
+
+4.5 Sending E-Mail
+
+279
+
+The program in Listing 4.8 reads the message from a text file of the format
+Sender Recipient Subject Message text (any number of lines)
+
+To run the program, type
+java -classpath .:path/to/mail.jar path/to/message.txt
+
+Here, mail.jar is the JAR file that came with the JavaMail distribution. (Windows
+users: Remember to type a semicolon instead of a colon in the classpath.)
+At the time of this writing, GMail does not check the veracity of the information—you can supply any sender you like. (Keep this in mind the next time you
+get an e-mail message from president@whitehouse.gov inviting you to a black-tie
+affair on the front lawn.)
+
+TIP: If you can’t figure out why your mail connection isn’t working, call
+mailSession.setDebug(true);
+
+and check out the messages. Also, the JavaMail API FAQ has some useful hints.
+
+Listing 4.8
+1
+
+mail/MailTest.java
+
+package mail;
+
+2
+3
+4
+5
+6
+7
+8
+9
+
+import java.io.*;
+import java.nio.charset.*;
+import java.nio.file.*;
+import java.util.*;
+import javax.mail.*;
+import javax.mail.internet.*;
+import javax.mail.internet.MimeMessage.RecipientType;
+
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+
+/**
+* This program shows how to use JavaMail to send mail messages.
+* @author Cay Horstmann
+* @version 1.00 2012-06-04
+*/
+public class MailTest
+{
+public static void main(String[] args) throws MessagingException, IOException
+{
+Properties props = new Properties();
+try (InputStream in = Files.newInputStream(Paths.get("mail", "mail.properties")))
+{
+props.load(in);
+}
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+280
+
+Chapter 4
+
+Networking
+
+Listing 4.8 (Continued)
+List<String> lines = Files.readAllLines(Paths.get(args[0]), Charset.forName("UTF-8"));
+
+25
+26
+
+String from = lines.get(0);
+String to = lines.get(1);
+String subject = lines.get(2);
+
+27
+28
+29
+30
+
+StringBuilder builder = new StringBuilder();
+for (int i = 3; i < lines.size(); i++)
+{
+builder.append(lines.get(i));
+builder.append("\n");
+}
+
+31
+32
+33
+34
+35
+36
+37
+
+Console console = System.console();
+String password = new String(console.readPassword("Password: "));
+
+38
+39
+40
+
+Session mailSession = Session.getDefaultInstance(props);
+// mailSession.setDebug(true);
+MimeMessage message = new MimeMessage(mailSession);
+message.setFrom(new InternetAddress(from));
+message.addRecipient(RecipientType.TO, new InternetAddress(to));
+message.setSubject(subject);
+message.setText(builder.toString());
+Transport tr = mailSession.getTransport();
+try
+{
+tr.connect(null, password);
+tr.sendMessage(message, message.getAllRecipients());
+}
+finally
+{
+tr.close();
+}
+
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+
+}
+
+58
+59
+
+}
+
+In this chapter, you have seen how to write network clients and servers in Java
+and how to harvest information from web servers. The next chapter covers
+database connectivity. You will learn how to work with relational databases in
+Java, using the JDBC API.
+
+From the Library of Hristo Dimov Hristov
+

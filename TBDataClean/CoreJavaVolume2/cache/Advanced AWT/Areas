@@ -1,0 +1,60 @@
+In the preceding section, you saw how you can specify complex shapes by constructing general paths composed of lines and curves. By using a sufficient
+number of lines and curves, you can draw essentially any shape. For example,
+the shapes of characters in the fonts that you see on the screen and on your
+printouts are all made up of lines and cubic curves.
+Occasionally, it is easier to describe a shape by composing it from areas, such as
+rectangles, polygons, or ellipses. The Java 2D API supports four constructive area
+geometry operations that combine two areas into a new area.
+• add: The combined area contains all points that are in the first or the second
+area.
+• subtract: The combined area contains all points that are in the first but not
+the second area.
+• intersect: The combined area contains all points that are in the first and the
+second area.
+
+From the Library of Hristo Dimov Hristov
+
+11.3 Areas
+
+787
+
+• exclusiveOr: The combined area contains all points that are in either the first or
+the second area, but not in both.
+Figure 11.10 shows these operations.
+
+Figure 11.10 Constructive area geometry operations
+To construct a complex area, start with a default area object.
+Area a = new Area();
+
+Then, combine the area with any shape.
+a.add(new Rectangle2D.Double(. . .));
+a.subtract(path);
+...
+
+The Area class implements the Shape interface. You can stroke the boundary of the
+area with the draw method or paint the interior with the fill method of the Graphics2D
+class.
+
+From the Library of Hristo Dimov Hristov
+
+788
+
+Chapter 11
+
+Advanced AWT
+
+java.awt.geom.Area
+
+•
+•
+•
+•
+
+void add(Area other)
+void subtract(Area other)
+void intersect(Area other)
+void exclusiveOr(Area other)
+
+carries out the constructive area geometry operation with this area and the other
+area and sets this area to the result.
+

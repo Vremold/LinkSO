@@ -1,0 +1,105 @@
+  We already mentioned how number and currency formatting is highly localedependent. The Java library supplies a collection of formatter objects that can format and parse numeric values in the java.text package. Go through the following steps to format a number for a particular locale: 1. 
+  2. 
+  3. 
+  Get the locale object, as described in the preceding section. 
+  Use a “factory method” to obtain a formatter object. 
+  Use the formatter object for formatting and parsing. 
+  The factory methods are static methods of the NumberFormat class that take a Locale argument. There are three factory methods: getNumberInstance, getCurrencyInstance, and getPercentInstance. These methods return objects that can format and parse numbers, currency amounts, and percentages, respectively. For example, here is how you can format a currency value in German: Locale loc = Locale.GERMAN; 
+  NumberFormat currFmt = NumberFormat.getCurrencyInstance(loc); 
+  double amt = 123456.78; 
+  String result = currFmt.format(amt); 
+  The result is 123.456,78 € Note that the currency symbol is € and that it is placed at the end of the string. 
+  Also, note the reversal of decimal points and decimal commas. 
+  Conversely, to read in a number that was entered or stored with the conventions of a certain locale, use the parse method. For example, the following code parses the value that the user typed into a text field. The parse method can deal with decimal points and commas, as well as digits in other languages. 
+  TextField inputField; 
+  ... 
+  NumberFormat fmt = NumberFormat.getNumberInstance(); 
+  // get the number formatter for default locale Number input = fmt.parse(inputField.getText().trim()); 
+  double x = input.doubleValue(); 
+  The return type of parse is the abstract type Number. The returned object is either a Double or a Long wrapper object, depending on whether the parsed number was a floating-point number. If you don’t care about the distinction, you can simply use the doubleValue method of the Number class to retrieve the wrapped number. 
+  From the Library of Hristo Dimov Hristov   7.2 Number Formats   379   CAUTION: Objects of type Number are not automatically unboxed—you cannot simply assign a Number object to a primitive type. Instead, use the doubleValue or intValue method. 
+  If the text for the number is not in the correct form, the method throws a ParseException. For example, leading whitespace in the string is not allowed. (Call trim to remove it.) However, any characters that follow the number in the string are simply ignored, so no exception is thrown. 
+  Note that the classes returned by the getXxxInstance factory methods are not actually of type NumberFormat. The NumberFormat type is an abstract class, and the actual formatters belong to one of its subclasses. The factory methods merely know how to locate the object that belongs to a particular locale. 
+  You can get a list of the currently supported locales with the static getAvailableLocales method. That method returns an array of the locales for which number formatter objects can be obtained. 
+  The sample program for this section lets you experiment with number formatters (see Figure 7.1). The combo box at the top of the figure contains all locales with number formatters. You can choose between number, currency, and percentage formatters. Each time you make another choice, the number in the text field is reformatted. If you go through a few locales, you can get a good impression of the many ways that a number or currency value can be formatted. You can also type a different number and click the Parse button to call the parse method, which tries to parse what you entered. If your input is successfully parsed, it is passed to format and the result is displayed. If parsing fails, then a “Parse error” message is displayed in the text field. 
+  Figure 7.1 The NumberFormatTest program The code, shown in Listing 7.1, is fairly straightforward. In the constructor, we call NumberFormat.getAvailableLocales. For each locale, we call getDisplayName and fill a combo box with the strings that the getDisplayName method returns. (The strings are not sorted; we tackle this issue in Section 7.5, “Collation and Normalization,” on p. 393.) Whenever the user selects another locale or clicks one of the radio buttons,   From the Library of Hristo Dimov Hristov   380   Chapter 7   Internationalization   we create a new formatter object and update the text field. When the user clicks the Parse button, we call the parse method to do the actual parsing, based on the locale selected. 
+  NOTE: You can use a Scanner to read localized integers and floating-point numbers. Call the useLocale method to set the locale. 
+  Listing 7.1 1   numberFormat/NumberFormatTest.java   package numberFormat; 
+  2 3 4 5 6   import java.awt.*; 
+  import java.awt.event.*; 
+  import java.text.*; 
+  import java.util.*; 
+  7 8   import javax.swing.*; 
+  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27   /** * This program demonstrates formatting numbers under various locales. 
+  * @version 1.14 2016-05-06 * @author Cay Horstmann */ public class NumberFormatTest { public static void main(String[] args) { EventQueue.invokeLater(() -> { JFrame frame = new NumberFormatFrame(); 
+  frame.setTitle("NumberFormatTest"); 
+  frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
+  frame.setVisible(true); 
+  }); 
+  } 
+  } 
+  28 29 30 31 32 33 34 35 36 37 38   /** * This frame contains radio buttons to select a number format, a combo box to pick a locale, a * text field to display a formatted number, and a button to parse the text field contents. 
+  */ class NumberFormatFrame extends JFrame { private Locale[] locales; 
+  private double currentNumber; 
+  private JComboBox<String> localeCombo = new JComboBox<>(); 
+  private JButton parseButton = new JButton("Parse"); 
+  From the Library of Hristo Dimov Hristov   7.2 Number Formats   39 40 41 42 43 44   381   private JTextField numberText = new JTextField(30); 
+  private JRadioButton numberRadioButton = new JRadioButton("Number"); 
+  private JRadioButton currencyRadioButton = new JRadioButton("Currency"); 
+  private JRadioButton percentRadioButton = new JRadioButton("Percent"); 
+  private ButtonGroup rbGroup = new ButtonGroup(); 
+  private NumberFormat currentNumberFormat; 
+  45 46 47 48   public NumberFormatFrame() { setLayout(new GridBagLayout()); 
+  49 50   ActionListener listener = event -> updateDisplay(); 
+  51 52 53 54 55   JPanel p = new JPanel(); 
+  addRadioButton(p, numberRadioButton, rbGroup, listener); 
+  addRadioButton(p, currencyRadioButton, rbGroup, listener); 
+  addRadioButton(p, percentRadioButton, rbGroup, listener); 
+  56 57 58 59 60 61 62 63 64 65 66 67 68   add(new JLabel("Locale:"), new GBC(0, 0).setAnchor(GBC.EAST)); 
+  add(p, new GBC(1, 1)); 
+  add(parseButton, new GBC(0, 2).setInsets(2)); 
+  add(localeCombo, new GBC(1, 0).setAnchor(GBC.WEST)); 
+  add(numberText, new GBC(1, 2).setFill(GBC.HORIZONTAL)); 
+  locales = (Locale[]) NumberFormat.getAvailableLocales().clone(); 
+  Arrays.sort(locales, Comparator.comparing(Locale::getDisplayName)); 
+  for (Locale loc : locales) localeCombo.addItem(loc.getDisplayName()); 
+  localeCombo.setSelectedItem(Locale.getDefault().getDisplayName()); 
+  currentNumber = 123456.78; 
+  updateDisplay(); 
+  69 70   localeCombo.addActionListener(listener); 
+  71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87   parseButton.addActionListener(event -> { String s = numberText.getText().trim(); 
+  try { Number n = currentNumberFormat.parse(s); 
+  if (n != null) { currentNumber = n.doubleValue(); 
+  updateDisplay(); 
+  } 
+  else { numberText.setText("Parse error: " + s); 
+  } 
+  } 
+  (Continues)   From the Library of Hristo Dimov Hristov   382   Chapter 7   Internationalization   Listing 7.1 (Continued) catch (ParseException e) { numberText.setText("Parse error: " + s); 
+  } 
+  }); 
+  pack(); 
+  88 89 90 91 92 93   } 
+  94 95   /** * Adds a radio button to a container. 
+  * @param p the container into which to place the button * @param b the button * @param g the button group * @param listener the button listener */ public void addRadioButton(Container p, JRadioButton b, ButtonGroup g, ActionListener listener) { b.setSelected(g.getButtonCount() == 0); 
+  b.addActionListener(listener); 
+  g.add(b); 
+  p.add(b); 
+  } 
+  96 97 98 99 100 101 102 103 104 105 106 107 108 109 110   /** * Updates the display and formats the number according to the user settings. 
+  */ public void updateDisplay() { Locale currentLocale = locales[localeCombo.getSelectedIndex()]; 
+  currentNumberFormat = null; 
+  if (numberRadioButton.isSelected()) currentNumberFormat = NumberFormat.getNumberInstance(currentLocale); 
+  else if (currencyRadioButton.isSelected()) currentNumberFormat = NumberFormat.getCurrencyInstance(currentLocale); 
+  else if (percentRadioButton.isSelected()) currentNumberFormat = NumberFormat.getPercentInstance(currentLocale); 
+  String formatted = currentNumberFormat.format(currentNumber); 
+  numberText.setText(formatted); 
+  } 
+  111 112 113 114 115 116 117 118 119 120 121 122 123 124 125 126 127   } 
+  From the Library of Hristo Dimov Hristov   7.2 Number Formats   383   java.text.NumberFormat 1.1   • static Locale[] getAvailableLocales() returns an array of Locale objects for which NumberFormat formatters are available. 
+  • • • • • •   static NumberFormat getNumberInstance() static NumberFormat getNumberInstance(Locale l) static NumberFormat getCurrencyInstance() static NumberFormat getCurrencyInstance(Locale l) static NumberFormat getPercentInstance() static NumberFormat getPercentInstance(Locale l)   returns a formatter for numbers, currency amounts, or percentage values for the current locale or for the given locale. 
+  • String format(double x) • String format(long x) returns the string resulting from formatting the given floating-point number or integer. 
+  • Number parse(String s) parses the given string and returns the number value, as a Double if the input string describes a floating-point number and as a Long otherwise. The beginning of the string must contain a number; no leading whitespace is allowed. The number can be followed by other characters, which are ignored. Throws ParseException if parsing was not successful. 
+  • void setParseIntegerOnly(boolean b) • boolean isParseIntegerOnly() sets or gets a flag to indicate whether this formatter should parse only integer values. 
+  • void setGroupingUsed(boolean b) • boolean isGroupingUsed() sets or gets a flag to indicate whether this formatter emits and recognizes decimal separators (such as 100,000). 
+  • • • • • • • •   void setMinimumIntegerDigits(int n) int getMinimumIntegerDigits() void setMaximumIntegerDigits(int n) int getMaximumIntegerDigits() void setMinimumFractionDigits(int n) int getMinimumFractionDigits() void setMaximumFractionDigits(int n) int getMaximumFractionDigits()   sets or gets the maximum or minimum number of digits allowed in the integer or fractional part of a number. 

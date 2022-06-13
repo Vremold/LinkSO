@@ -1,0 +1,292 @@
+
+public static void runAlgorithm2()
+{
+int size = 10;
+List<Integer> list = new Random().ints().map(i -> i % 100).limit(size)
+.boxed().collect(Collectors.toList());
+while (!IntStream.range(1, list.size()).allMatch(
+i -> list.get(i - 1).compareTo(list.get(i)) <= 0))
+Collections.shuffle(list);
+System.out.println(list);
+}
+
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+
+355
+
+}
+
+6.2 Local Dates
+Now let us turn from absolute time to human time. There are two kinds of human
+time in the Java API, local date/time and zoned time. Local date/time has a date
+and/or time of day, but no associated time zone information. An example of a
+local date is June 14, 1903 (the day on which Alonzo Church, inventor of the
+lambda calculus, was born). Since that date has neither a time of day nor time
+zone information, it does not correspond to a precise instant of time. In contrast,
+July 16, 1969, 09:32:00 EDT (the launch of Apollo 11) is a zoned date/time,
+representing a precise instant on the time line.
+There are many calculations where time zones are not required, and in some
+cases they can even be a hindrance. Suppose you schedule a meeting every week
+at 10:00. If you add 7 days (that is, 7 × 24 × 60 × 60 seconds) to the last zoned time,
+and you happen to cross the daylight savings time boundary, the meeting will
+be an hour too early or too late!
+For that reason, the API designers recommend that you do not use zoned time
+unless you really want to represent absolute time instances. Birthdays, holidays,
+schedule times, and so on are usually best represented as local dates or times.
+A LocalDate is a date with a year, month, and day of the month. To construct one,
+you can use the now or of static methods:
+LocalDate today = LocalDate.now(); // Today's date
+LocalDate alonzosBirthday = LocalDate.of(1903, 6, 14);
+alonzosBirthday = LocalDate.of(1903, Month.JUNE, 14);
+// Uses the Month enumeration
+
+Unlike the irregular conventions in UNIX and java.util.Date, where months are
+zero-based and years are counted from 1900, you supply the usual numbers for
+the month of year. Alternatively, you can use the Month enumeration.
+Table 6.2 shows the most useful methods for working with LocalDate objects.
+
+From the Library of Hristo Dimov Hristov
+
+356
+
+Chapter 6
+
+Table 6.2
+
+The Date and Time API
+
+LocalDate Methods
+
+Method
+
+Description
+
+now, of
+
+These static methods construct a LocalDate, either from the
+current time or from a given year, month, and day.
+
+plusDays, plusWeeks,
+plusMonths, plusYears
+
+Adds a number of days, weeks, months, or years to this
+LocalDate.
+
+minusDays, minusWeeks,
+minusMonths, minusYears
+
+Subtracts a number of days, weeks, months, or years from
+this LocalDate.
+
+plus, minus
+
+Adds or subtracts a Duration or Period.
+
+withDayOfMonth,
+withDayOfYear, withMonth,
+withYear
+
+Returns a new LocalDate with the day of month, day of year,
+month, or year changed to the given value.
+
+getDayOfMonth
+
+Gets the day of the month (between 1 and 31).
+
+getDayOfYear
+
+Gets the day of the year (between 1 and 366).
+
+getDayOfWeek
+
+Gets the day of the week, returning a value of the DayOfWeek
+enumeration.
+
+getMonth, getMonthValue
+
+Gets the month as a value of the Month enumeration, or as a
+number between 1 and 12.
+
+getYear
+
+Gets the year, between –999,999,999 and 999,999,999.
+
+until
+
+Gets the Period, or the number of the given ChronoUnits,
+between two dates.
+
+isBefore, isAfter
+
+Compares this LocalDate with another.
+
+isLeapYear
+
+Returns true if the year is a leap year—that is, if it is divisible
+by 4 but not by 100, or divisible by 400. The algorithm is
+applied for all past years, even though that is historically
+inaccurate. (Leap years were invented in the year –46, and
+the rules involving divisibility by 100 and 400 were
+introduced in the Gregorian calendar reform of 1582. The
+reform took over 300 years to become universal.)
+
+For example, Programmer’s Day is the 256th day of the year. Here is how you can
+easily compute it:
+LocalDate programmersDay = LocalDate.of(2014, 1, 1).plusDays(255);
+// September 13, but in a leap year it would be September 12
+
+Recall that the difference between two time instants is a Duration. The equivalent
+for local dates is a Period, which expresses a number of elapsed years, months, or
+
+From the Library of Hristo Dimov Hristov
+
+6.2 Local Dates
+
+357
+
+days. You can call birthday.plus(Period.ofYears(1)) to get the birthday next year. Of
+course, you can also just call birthday.plusYears(1). But birthday.plus(Duration.ofDays(365))
+won’t produce the correct result in a leap year.
+The until method yields the difference between two local dates. For example,
+independenceDay.until(christmas)
+
+yields a period of 5 months and 21 days. That is actually not terribly useful because
+the number of days per month varies. To find the number of days, use
+independenceDay.until(christmas, ChronoUnit.DAYS) // 174 days
+
+CAUTION: Some methods in Table 6.2 could potentially create nonexistent
+dates. For example, adding one month to January 31 should not yield
+February 31. Instead of throwing an exception, these methods return the last
+valid day of the month. For example,
+LocalDate.of(2016, 1, 31).plusMonths(1)
+
+and
+LocalDate.of(2016, 3, 31).minusMonths(1)
+
+yield February 29, 2016.
+
+The getDayOfWeek yields the weekday, as a value of the DayOfWeek enumeration.
+DayOfWeek.MONDAY has the numerical value 1, and DayOfWeek.SUNDAY has the value 7. For
+example,
+LocalDate.of(1900, 1, 1).getDayOfWeek().getValue()
+
+yields 1. The DayOfWeek enumeration has convenience methods plus and minus
+to compute weekdays modulo 7. For example, DayOfWeek.SATURDAY.plus(3) yields
+DayOfWeek.TUESDAY.
+NOTE: The weekend days actually come at the end of the week. This is different
+from java.util.Calendar where Sunday has value 1 and Saturday value 7.
+
+In addition to LocalDate, there are also classes MonthDay, YearMonth, and Year to describe
+partial dates. For example, December 25 (with the year unspecified) can be
+represented as a MonthDay.
+The example program in Listing 6.2 shows how to work with the LocalDate class.
+
+From the Library of Hristo Dimov Hristov
+
+358
+
+Chapter 6
+
+Listing 6.2
+1
+
+The Date and Time API
+
+localdates/LocalDates.java
+
+package localdates;
+
+2
+3
+4
+
+import java.time.*;
+import java.time.temporal.*;
+
+5
+6
+7
+8
+9
+10
+11
+
+public class LocalDates
+{
+public static void main(String[] args)
+{
+LocalDate today = LocalDate.now(); // Today’s date
+System.out.println("today: " + today);
+
+12
+
+LocalDate alonzosBirthday = LocalDate.of(1903, 6, 14);
+alonzosBirthday = LocalDate.of(1903, Month.JUNE, 14);
+// Uses the Month enumeration
+System.out.println("alonzosBirthday: " + alonzosBirthday);
+
+13
+14
+15
+16
+17
+
+LocalDate programmersDay = LocalDate.of(2018, 1, 1).plusDays(255);
+// September 13, but in a leap year it would be September 12
+System.out.println("programmersDay: " + programmersDay);
+
+18
+19
+20
+21
+
+LocalDate independenceDay = LocalDate.of(2018, Month.JULY, 4);
+LocalDate christmas = LocalDate.of(2018, Month.DECEMBER, 25);
+
+22
+23
+24
+
+System.out.println("Until christmas: " + independenceDay.until(christmas));
+System.out.println("Until christmas: "
++ independenceDay.until(christmas, ChronoUnit.DAYS));
+
+25
+26
+27
+28
+
+System.out.println(LocalDate.of(2016, 1, 31).plusMonths(1));
+System.out.println(LocalDate.of(2016, 3, 31).minusMonths(1));
+
+29
+30
+31
+
+DayOfWeek startOfLastMillennium = LocalDate.of(1900, 1, 1).getDayOfWeek();
+System.out.println("startOfLastMillennium: " + startOfLastMillennium);
+System.out.println(startOfLastMillennium.getValue());
+System.out.println(DayOfWeek.SATURDAY.plus(3));
+
+32
+33
+34
+35
+
+}
+
+36
+37
+
+}
+

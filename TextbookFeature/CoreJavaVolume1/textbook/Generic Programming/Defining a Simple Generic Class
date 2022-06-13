@@ -1,0 +1,15 @@
+  A generic class is a class with one or more type variables. In this chapter, we will use a simple Pair class as an example. This class allows us to focus on generics without being distracted by data storage details. Here is the code for the generic Pair class:   public class Pair<T> { private T first; 
+  private T second; 
+  public Pair() { first = null; second = null; } 
+  public Pair(T first, T second) { this.first = first; this.second = second; 
+  public T getFirst() { return first; } 
+  public T getSecond() { return second; } 
+  public void setFirst(T newValue) { first = newValue; } 
+  public void setSecond(T newValue) { second = newValue; } 
+  } 
+  The Pair class introduces a type variable T, enclosed in angle brackets < >, after the class name. A generic class can have more than one type variable. 
+  For example, we could have defined the Pair class with separate types for the first and second field: public class Pair<T, U> { . . . } 
+  The type variables are used throughout the class definition to specify method return types and the types of fields and local variables. For example:   private T first; // uses the type variable   Note It is common practice to use uppercase letters for type variables, and to keep them short. The Java library uses the variable E for the element type of a collection, K and V for key and value types of a table, and T (and the neighboring letters U and S, if necessary) for "any type at all." 
+  You instantiate the generic type by substituting types for the type variables, such as Pair<String>   You can think of the result as an ordinary class with constructors Pair<String>() Pair<String>(String, String)   and methods String getFirst() String getSecond() void setFirst(String) void setSecond(String)   In other words, the generic class acts as a factory for ordinary classes. 
+  The program in Listing 8.1 puts the Pair class to work. The static minmax method traverses an array and simultaneously computes the minimum and maximum values. It uses a Pair object to return both results. Recall that the compareTo method compares two strings, returning 0 if the strings are identical, a negative integer if the first string comes before the second in dictionary order, and a positive integer otherwise. 
+  Superficially, generic classes in Java are similar to template classes in C++. The only obvious difference is that Java has no special template keyword. However, as you will see throughout this chapter, there are substantial differences between these two mechanisms. 

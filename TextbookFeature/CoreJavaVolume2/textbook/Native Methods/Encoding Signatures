@@ -1,0 +1,17 @@
+  961   Accessing Fields (Continued)   • void SetXxxField(JNIEnv *env, jobject obj, jfieldID id, Xxx value) sets a field to a new value.The field type Xxx is one of Object, Boolean, Byte, Char, Short, Int, Long, Float, or Double. 
+  • jfieldID GetStaticFieldID(JNIEnv *env, jclass cl, const char name[], const char fieldSignature[]) returns the identifier of a static field in a class. 
+  • Xxx GetStaticXxxField(JNIEnv *env, jclass cl, jfieldID id) returns the value of a static field. The field type Xxx is one of Object, Boolean, Byte, Char, Short, Int, Long, Float, or Double. 
+  • void SetStaticXxxField(JNIEnv *env, jclass cl, jfieldID id, Xxx value) sets a static field to a new value. The field type Xxx is one of Object, Boolean, Byte, Char, Short, Int, Long, Float, or Double. 
+  12.5 Encoding Signatures To access instance fields and call methods defined in the Java programming language, you need to learn the rules for “mangling” the names of data types and method signatures. (A method signature describes the parameters and return type of the method.) Here is the encoding scheme: B   byte   C   char   D   double   F   float   I   int   J   long   Lclassname; 
+  a class type   S   short   V   void   Z   boolean   To describe an array type, use a [. For example, an array of strings is [Ljava/lang/String; 
+  A float[][] is mangled into [[F   From the Library of Hristo Dimov Hristov   962   Chapter 12   Native Methods   For the complete signature of a method, list the parameter types inside a pair of parentheses and then list the return type. For example, a method receiving two integers and returning an integer is encoded as (II)I   The sprint method in Section 12.3, “String Parameters,” on p. 949 has a mangled signature of (Ljava/lang/String;D)Ljava/lang/String; 
+  That is, the method receives a String and a double and returns a String. 
+  Note that the semicolon at the end of the L expression is the terminator of the type expression, not a separator between parameters. For example, the constructor Employee(java.lang.String, double, java.util.Date)   has a signature "(Ljava/lang/String;DLjava/util/Date;)V" 
+  Note that there is no separator between the D and Ljava/util/Date;. Also note that in this encoding scheme, you must use / instead of . to separate the package and class names. The V at the end denotes a return type of void. Even though you don’t specify a return type for constructors in Java, you need to add a V to the virtual machine signature. 
+  TIP: You can use the javap command with option -s to generate the method signatures from class files. For example, run javap -s -private Employee   You will get the following output, displaying the signatures of all fields and methods: Compiled from "Employee.java" 
+  public class Employee extends java.lang.Object{ private java.lang.String name; 
+  Signature: Ljava/lang/String; 
+  private double salary; 
+  Signature: D public Employee(java.lang.String, double); 
+  Signature: (Ljava/lang/String;D)V public native void raiseSalary(double); 
+  Signature: (D)V public void print(); 

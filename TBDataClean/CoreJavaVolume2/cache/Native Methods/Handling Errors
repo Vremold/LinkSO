@@ -1,0 +1,445 @@
+Native methods are a significant security risk to Java programs. The C runtime
+system has no protection against array bounds errors, indirection through bad
+pointers, and so on. It is particularly important that programmers of native
+methods handle all error conditions to preserve the integrity of the Java platform.
+In particular, when your native method diagnoses a problem it cannot handle, it
+should report this problem to the Java virtual machine.
+Normally, you would throw an exception in this situation. However, C has no
+exceptions. Instead, you must call the Throw or ThrowNew function to create a new exception object. When the native method exits, the Java virtual machine throws
+that exception.
+To use the Throw function, call NewObject to create an object of a subtype of Throwable.
+For example, here we allocate an EOFException object and throw it:
+jclass class_EOFException = (*env)->FindClass(env, "java/io/EOFException");
+jmethodID id_EOFException = (*env)->GetMethodID(env, class_EOFException, "<init>", "()V");
+/* ID of no-argument constructor */
+
+From the Library of Hristo Dimov Hristov
+
+12.8 Handling Errors
+
+975
+
+jthrowable obj_exc = (*env)->NewObject(env, class_EOFException, id_EOFException);
+(*env)->Throw(env, obj_exc);
+
+It is usually more convenient to call ThrowNew, which constructs an exception object,
+given a class and a “modified UTF-8” byte sequence.
+(*env)->ThrowNew(env, (*env)->FindClass(env, "java/io/EOFException"), "Unexpected end of file");
+
+Both Throw and ThrowNew merely post the exception; they do not interrupt the control
+flow of the native method. Only when the method returns does the Java virtual
+machine throw the exception. Therefore, every call to Throw and ThrowNew should
+always be immediately followed by a return statement.
+C++ NOTE: If you implement native methods in C++, you cannot throw a Java
+exception object in your C++ code. In a C++ binding, it would be possible to
+implement a translation between exceptions in C++ and Java; however, this is
+not currently done. Use Throw or ThrowNew to throw a Java exception in a native
+C++ method, and make sure your native methods throw no C++ exceptions.
+
+Normally, native code need not be concerned with catching Java exceptions.
+However, when a native method calls a Java method, that method might throw
+an exception. Moreover, a number of the JNI functions throw exceptions as well.
+For example, SetObjectArrayElement throws an ArrayIndexOutOfBoundsException if the index is
+out of bounds, and an ArrayStoreException if the class of the stored object is not a
+subclass of the element class of the array. In situations like these, a native method
+should call the ExceptionOccurred method to determine whether an exception has been
+thrown. The call
+jthrowable obj_exc = (*env)->ExceptionOccurred(env);
+
+returns NULL if no exception is pending, or a reference to the current exception
+object. If you just want to check whether an exception has been thrown, without
+obtaining a reference to the exception object, use
+jboolean occurred = (*env)->ExceptionCheck(env);
+
+Normally, a native method should simply return when an exception has occurred
+so that the virtual machine can propagate it to the Java code. However, a native
+method may analyze the exception object to determine if it can handle the
+exception. If it can, then the function
+(*env)->ExceptionClear(env);
+
+must be called to turn off the exception.
+
+From the Library of Hristo Dimov Hristov
+
+976
+
+Chapter 12
+
+Native Methods
+
+In our next example, we implement the fprint native method with all the paranoia
+appropriate for a native method. Here are the exceptions that we throw:
+• A NullPointerException if the format string is NULL
+• An IllegalArgumentException if the format string doesn’t contain a % specifier that
+is appropriate for printing a double
+• An OutOfMemoryError if the call to malloc fails
+Finally, to demonstrate how to check for an exception when calling a Java method
+from a native method, we send the string to the stream, a character at a time, and
+call ExceptionOccurred after each call. Listing 12.17 shows the code for the native
+method, and Listing 12.18 shows the definition of the class containing the
+native method. Notice that the native method does not immediately terminate
+when an exception occurs in the call to PrintWriter.print—it first frees the cstr buffer.
+When the native method returns, the virtual machine again raises the exception.
+The test program in Listing 12.19 demonstrates how the native method throws
+an exception when the formatting string is not valid.
+
+Listing 12.17
+1
+2
+3
+4
+
+printf4/Printf4.c
+
+/**
+@version 1.10 1997-07-01
+@author Cay Horstmann
+*/
+
+5
+6
+7
+8
+9
+
+#include "Printf4.h"
+#include <string.h>
+#include <stdlib.h>
+#include <float.h>
+
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+
+/**
+@param format a string containing a printf format specifier
+(such as "%8.2f"). Substrings "%%" are skipped.
+@return a pointer to the format specifier (skipping the '%')
+or NULL if there wasn't a unique format specifier
+*/
+char* find_format(const char format[])
+{
+char* p;
+char* q;
+
+21
+22
+23
+24
+25
+26
+27
+
+p = strchr(format, '%');
+while (p != NULL && *(p + 1) == '%') /* skip %% */
+p = strchr(p + 2, '%');
+if (p == NULL) return NULL;
+/* now check that % is unique */
+p++;
+
+From the Library of Hristo Dimov Hristov
+
+12.8 Handling Errors
+
+q = strchr(p, '%');
+while (q != NULL && *(q + 1) == '%') /* skip %% */
+q = strchr(q + 2, '%');
+if (q != NULL) return NULL; /* % not unique */
+q = p + strspn(p, " -0+#"); /* skip past flags */
+q += strspn(q, "0123456789"); /* skip past field width */
+if (*q == '.') { q++; q += strspn(q, "0123456789"); }
+/* skip past precision */
+if (strchr("eEfFgG", *q) == NULL) return NULL;
+/* not a floating-point format */
+return p;
+
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+
+977
+
+}
+
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+
+JNIEXPORT void JNICALL Java_Printf4_fprint(JNIEnv* env, jclass cl,
+jobject out, jstring format, jdouble x)
+{
+const char* cformat;
+char* fmt;
+jclass class_PrintWriter;
+jmethodID id_print;
+char* cstr;
+int width;
+int i;
+
+51
+52
+53
+54
+55
+56
+57
+58
+59
+
+if (format == NULL)
+{
+(*env)->ThrowNew(env,
+(*env)->FindClass(env,
+"java/lang/NullPointerException"),
+"Printf4.fprint: format is null");
+return;
+}
+
+60
+61
+62
+
+cformat = (*env)->GetStringUTFChars(env, format, NULL);
+fmt = find_format(cformat);
+
+63
+64
+65
+66
+67
+68
+69
+70
+71
+
+if (fmt == NULL)
+{
+(*env)->ThrowNew(env,
+(*env)->FindClass(env,
+"java/lang/IllegalArgumentException"),
+"Printf4.fprint: format is invalid");
+return;
+}
+
+72
+73
+74
+75
+
+width = atoi(fmt);
+if (width == 0) width = DBL_DIG + 10;
+cstr = (char*)malloc(strlen(cformat) + width);
+
+76
+
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+978
+
+Chapter 12
+
+Native Methods
+
+Listing 12.17 (Continued)
+if (cstr == NULL)
+{
+(*env)->ThrowNew(env,
+(*env)->FindClass(env, "java/lang/OutOfMemoryError"),
+"Printf4.fprint: malloc failed");
+return;
+}
+
+77
+78
+79
+80
+81
+82
+83
+84
+
+sprintf(cstr, cformat, x);
+
+85
+86
+
+(*env)->ReleaseStringUTFChars(env, format, cformat);
+
+87
+88
+
+/* now call ps.print(str) */
+
+89
+90
+
+/* get the class */
+class_PrintWriter = (*env)->GetObjectClass(env, out);
+
+91
+92
+93
+
+/* get the method ID */
+id_print = (*env)->GetMethodID(env, class_PrintWriter, "print", "(C)V");
+
+94
+95
+96
+
+/* call the method */
+for (i = 0; cstr[i] != 0 && !(*env)->ExceptionOccurred(env); i++)
+(*env)->CallVoidMethod(env, out, id_print, cstr[i]);
+
+97
+98
+99
+100
+
+free(cstr);
+
+101
+102
+
+}
+
+Listing 12.18
+1
+
+printf4/Printf4.java
+
+import java.io.*;
+
+2
+3
+4
+5
+6
+7
+8
+9
+
+/**
+* @version 1.10 1997-07-01
+* @author Cay Horstmann
+*/
+class Printf4
+{
+public static native void fprint(PrintWriter ps, String format, double x);
+
+10
+
+static
+{
+System.loadLibrary("Printf4");
+}
+
+11
+12
+13
+14
+15
+
+}
+
+From the Library of Hristo Dimov Hristov
+
+12.8 Handling Errors
+
+Listing 12.19
+1
+
+979
+
+printf4/Printf4Test.java
+
+import java.io.*;
+
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+
+/**
+* @version 1.10 1997-07-01
+* @author Cay Horstmann
+*/
+class Printf4Test
+{
+public static void main(String[] args)
+{
+double price = 44.95;
+double tax = 7.75;
+double amountDue = price * (1 + tax / 100);
+PrintWriter out = new PrintWriter(System.out);
+/* This call will throw an exception--note the %% */
+Printf4.fprint(out, "Amount due = %%8.2f\n", amountDue);
+out.flush();
+}
+}
+
+Handling Java Exceptions
+
+• jint Throw(JNIEnv *env, jthrowable obj)
+prepares an exception to be thrown upon exiting from the native code. Returns 0
+on success, a negative value on failure.
+• jint ThrowNew(JNIEnv *env, jclass cl, const char msg[])
+prepares an exception of type cl to be thrown upon exiting from the native code.
+Returns 0 on success, a negative value on failure. msg is a “modified UTF-8” byte
+sequence denoting the String construction argument of the exception object.
+• jthrowable ExceptionOccurred(JNIEnv *env)
+returns the exception object if an exception is pending, or NULL otherwise.
+• jboolean ExceptionCheck(JNIEnv *env)
+returns true if an exception is pending.
+• void ExceptionClear(JNIEnv *env)
+clears any pending exceptions.
+
+From the Library of Hristo Dimov Hristov
+
+980
+
+Chapter 12
+
+Native Methods
+

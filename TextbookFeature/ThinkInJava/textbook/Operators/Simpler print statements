@@ -1,0 +1,7 @@
+  In the previous chapter, you were introduced to the Java print statement: 
+  System.out.println("Rather a lot to type"); 
+  You may observe that this is not only a lot to type (and thus many redundant tendon hits), but also rather noisy to read. Most languages before and after Java have taken a much simpler approach to such a commonly used statement. 
+  The Access Control chapter introduces the concept of the static import that was added to Java SE5, and creates a tiny library to simplify writing print statements. However, you don’t need to know those details in order to begin using that library. We can rewrite the program from the last chapter using this new library: 
+  The results are much cleaner. Notice the insertion of the static keyword in the second import statement. 
+  In order to use this library, you must download this book’s code package from www.MindView.net or one of its mirrors. Unzip the code tree and add the root directory of that code tree to your computer’s CLASSPATH environment variable. (You’ll eventually get a full introduction to the classpath, but you might as well get used to struggling with it early. Alas, it is one of the more common battles you will have with Java.)    Although the use of net.mindview.util.Print nicely simplifies most code, it is not justifiable everywhere. If there are only a small number of print statements in a program, I forego the import and write out the full System.out.println( ). 
+  Exercise 1: (1) Write a program that uses the “short” and normal form of print statement. 

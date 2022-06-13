@@ -1,0 +1,858 @@
+A scripting language is a language that avoids the usual edit/compile/link/run
+cycle by interpreting the program text at runtime. Scripting languages have a
+number of advantages:
+• Rapid turnaround, encouraging experimentation
+• Changing the behavior of a running program
+• Enabling customization by program users
+On the other hand, most scripting languages lack features that are beneficial for
+programming complex applications, such as strong typing, encapsulation, and
+modularity.
+It is therefore tempting to combine the advantages of scripting and traditional
+languages. The scripting API lets you do just that for the Java platform. It enables
+you to invoke scripts written in JavaScript, Groovy, Ruby, and even exotic languages such as Scheme and Haskell, from a Java program. For example, the
+Renjin project (www.renjin.org) provides a Java implementation of the R programming
+language, which is commonly used for statistical programming, together with
+an “engine” of the scripting API.
+In the following sections, we’ll show you how to select an engine for a particular
+language, how to execute scripts, and how to make use of advanced features that
+some scripting engines offer.
+
+8.1.1 Getting a Scripting Engine
+A scripting engine is a library that can execute scripts in a particular language.
+When the virtual machine starts, it discovers the available scripting engines. To
+enumerate them, construct a ScriptEngineManager and invoke the getEngineFactories method.
+You can ask each engine factory for the supported engine names, MIME types,
+and file extensions. Table 8.1 shows typical values.
+Usually, you know which engine you need, and you can simply request it by
+name, MIME type, or extension. For example:
+ScriptEngine engine = manager.getEngineByName("nashorn");
+
+Java SE 8 includes a version of Nashorn, a JavaScript interpreter developed by
+Oracle. You can add more languages by providing the necessary JAR files on the
+class path.
+
+From the Library of Hristo Dimov Hristov
+
+8.1 Scripting for the Java Platform
+
+431
+
+Table 8.1 Properties of Scripting Engine Factories
+Engine
+
+Names
+
+MIME types
+
+Extensions
+
+Nashorn
+(included
+with Java SE)
+
+nashorn, Nashorn, js, JS,
+JavaScript, javascript,
+ECMAScript, ecmascript
+
+application/javascript,
+application/ecmascript,
+text/javascript,
+text/ecmascript
+
+js
+
+Groovy
+
+groovy
+
+None
+
+groovy
+
+Renjin
+
+Renjin
+
+text/x-R
+
+R, r, S, s
+
+SISC Scheme
+
+sisc
+
+None
+
+scheme, sisc
+
+javax.script.ScriptEngineManager 6
+
+• List<ScriptEngineFactory> getEngineFactories()
+gets a list of all discovered engine factories.
+• ScriptEngine getEngineByName(String name)
+• ScriptEngine getEngineByExtension(String extension)
+• ScriptEngine getEngineByMimeType(String mimeType)
+gets the script engine with the given name, script file extension, or MIME type.
+
+javax.script.ScriptEngineFactory 6
+
+• List<String> getNames()
+• List<String> getExtensions()
+• List<String> getMimeTypes()
+gets the names, script file extensions, and MIME types under which this factory is
+known.
+
+8.1.2 Script Evaluation and Bindings
+Once you have an engine, you can call a script simply by invoking
+Object result = engine.eval(scriptString);
+
+If the script is stored in a file, open a Reader and call
+Object result = engine.eval(reader);
+
+From the Library of Hristo Dimov Hristov
+
+432
+
+Chapter 8
+
+Scripting, Compiling, and Annotation Processing
+
+You can invoke multiple scripts on the same engine. If one script defines variables,
+functions, or classes, most scripting engines retain the definitions for later use.
+For example,
+engine.eval("n = 1728");
+Object result = engine.eval("n + 1");
+
+will return 1729.
+NOTE: To find out whether it is safe to concurrently execute scripts in multiple
+threads, call
+Object param = factory.getParameter("THREADING");
+
+The returned value is one of the following:
+•
+
+null: Concurrent execution is not safe.
+
+•
+
+"MULTITHREADED": Concurrent execution is safe. Effects from one thread might
+
+be visible from another thread.
+•
+
+"THREAD-ISOLATED": In addition to "MULTITHREADED", different variable bindings are
+
+maintained for each thread.
+•
+
+"STATELESS": In addition to "THREAD-ISOLATED", scripts do not alter variable bindings.
+
+You will often want to add variable bindings to the engine. A binding consists
+of a name and an associated Java object. For example, consider these statements:
+engine.put("k", 1728);
+Object result = engine.eval("k + 1");
+
+The script code reads the definition of k from the bindings in the “engine scope.”
+This is particularly important because most scripting languages can access Java
+objects, often with a syntax that is simpler than the Java syntax. For example,
+engine.put("b", new JButton());
+engine.eval("b.text = 'Ok'");
+
+Conversely, you can retrieve variables that were bound by scripting statements:
+engine.eval("n = 1728");
+Object result = engine.get("n");
+
+In addition to the engine scope, there is also a global scope. Any bindings that
+you add to the ScriptEngineManager are visible to all engines.
+
+From the Library of Hristo Dimov Hristov
+
+8.1 Scripting for the Java Platform
+
+433
+
+Instead of adding bindings to the engine or global scope, you can collect them in
+an object of type Bindings and pass it to the eval method:
+Bindings scope = engine.createBindings();
+scope.put("b", new JButton());
+engine.eval(scriptString, scope);
+
+This is useful if a set of bindings should not persist for future calls to the eval
+method.
+
+NOTE: You might want to have scopes other than the engine and global scopes.
+For example, a web container might need request and session scopes. However,
+then you are on your own. You will need to write a class that implements the
+ScriptContext interface, managing a collection of scopes. Each scope is identified
+by an integer number, and scopes with lower numbers should be searched first.
+(The standard library provides a SimpleScriptContext class, but it only holds global
+and engine scopes.)
+
+javax.script.ScriptEngine 6
+
+•
+•
+•
+•
+
+Object eval(String script)
+Object eval(Reader reader)
+Object eval(String script, Bindings bindings)
+Object eval(Reader reader, Bindings bindings)
+
+evaluates the script given by the string or reader, subject to the given bindings.
+• Object get(String key)
+• void put(String key, Object value)
+gets or puts a binding in the engine scope.
+• Bindings createBindings()
+creates an empty Bindings object suitable for this engine.
+
+javax.script.ScriptEngineManager 6
+
+• Object get(String key)
+• void put(String key, Object value)
+gets or puts a binding in the global scope.
+
+From the Library of Hristo Dimov Hristov
+
+434
+
+Chapter 8
+
+Scripting, Compiling, and Annotation Processing
+
+javax.script.Bindings 6
+
+• Object get(String key)
+• void put(String key, Object value)
+gets or puts a binding into the scope represented by this Bindings object.
+
+8.1.3 Redirecting Input and Output
+You can redirect the standard input and output of a script by calling the setReader
+and setWriter methods of the script context. For example,
+StringWriter writer = new StringWriter();
+engine.getContext().setWriter(new PrintWriter(writer, true));
+
+Any output written with the JavaScript print or println functions is sent to writer.
+The setReader and setWriter methods only affect the scripting engine’s standard input
+and output sources. For example, if you execute the JavaScript code
+println("Hello");
+java.lang.System.out.println("World");
+
+only the first output is redirected.
+The Nashorn engine does not have the notion of a standard input source. Calling
+setReader has no effect.
+javax.script.ScriptEngine 6
+
+• ScriptContext getContext()
+gets the default script context for this engine.
+
+javax.script.ScriptContext 6
+
+•
+•
+•
+•
+•
+•
+
+Reader getReader()
+void setReader(Reader reader)
+Writer getWriter()
+void setWriter(Writer writer)
+Writer getErrorWriter()
+void setErrorWriter(Writer writer)
+
+gets or sets the reader for input or writer for normal or error output.
+
+From the Library of Hristo Dimov Hristov
+
+8.1 Scripting for the Java Platform
+
+435
+
+8.1.4 Calling Scripting Functions and Methods
+With many script engines, you can invoke a function in the scripting language
+without having to evaluate the actual script code. This is useful if you allow users
+to implement a service in a scripting language of their choice.
+The script engines that offer this functionality implement the Invocable interface.
+In particular, the Nashorn engine implements Invocable.
+To call a function, call the invokeFunction method with the function name, followed
+by the function parameters:
+// Define greet function in JavaScript
+engine.eval("function greet(how, whom) { return how + ', ' + whom + '!' }");
+// Call the function with arguments "Hello", "World"
+result = ((Invocable) engine).invokeFunction("greet", "Hello", "World");
+
+If the scripting language is object-oriented, call invokeMethod:
+// Define Greeter class in JavaScript
+engine.eval("function Greeter(how) { this.how = how }");
+engine.eval("Greeter.prototype.welcome = "
++ " function(whom) { return this.how + ', ' + whom + '!' }");
+// Construct an instance
+Object yo = engine.eval("new Greeter('Yo')");
+// Call the welcome method on the instance
+result = ((Invocable) engine).invokeMethod(yo, "welcome", "World");
+
+NOTE: For more information on how to define classes in JavaScript, see
+JavaScript—The Good Parts by Douglas Crockford (O’Reilly, 2008).
+
+NOTE: If the script engine does not implement the Invocable interface, you
+might still be able to call a method in a language-independent way. The
+getMethodCallSyntax method of the ScriptEngineFactory interface produces a string
+that you can pass to the eval method. However, all method parameters must be
+bound to names, whereas invokeMethod can be called with arbitrary values.
+
+You can go a step further and ask the scripting engine to implement a Java interface. Then you can call scripting functions and methods with the Java method
+call syntax.
+
+From the Library of Hristo Dimov Hristov
+
+436
+
+Chapter 8
+
+Scripting, Compiling, and Annotation Processing
+
+The details depend on the scripting engine, but typically you need to supply a
+function for each method of the interface. For example, consider a Java interface
+public interface Greeter
+{
+String welcome(String whom);
+}
+
+If you define a global function with the same name in Nashorn, you can call it
+through this interface.
+// Define welcome function in JavaScript
+engine.eval("function welcome(whom) { return 'Hello, ' + whom + '!' }");
+// Get a Java object and call a Java method
+Greeter g = ((Invocable) engine).getInterface(Greeter.class);
+result = g.welcome("World");
+
+In an object-oriented scripting language, you can access a script class through a
+matching Java interface. For example, here is how to call an object of the JavaScript
+SimpleGreeter class with Java syntax:
+Greeter g = ((Invocable) engine).getInterface(yo, Greeter.class);
+result = g.welcome("World");
+
+In summary, the Invocable interface is useful if you want to call scripting code from
+Java without worrying about the scripting language syntax.
+javax.script.Invocable 6
+
+• Object invokeFunction(String name, Object... parameters)
+• Object invokeMethod(Object implicitParameter, String name, Object... explicitParameters)
+invokes the function or method with the given name, passing the given parameters.
+• <T> T getInterface(Class<T> iface)
+returns an implementation of the given interface, implementing the methods with
+functions in the scripting engine.
+• <T> T getInterface(Object implicitParameter, Class<T> iface)
+returns an implementation of the given interface, implementing the methods with
+the methods of the given object.
+
+From the Library of Hristo Dimov Hristov
+
+8.1 Scripting for the Java Platform
+
+437
+
+8.1.5 Compiling a Script
+Some scripting engines can compile scripting code into an intermediate form for
+efficient execution. Those engines implement the Compilable interface. The following
+example shows how to compile and evaluate code contained in a script file:
+Reader reader = new FileReader("myscript.js");
+CompiledScript script = null;
+if (engine implements Compilable)
+script = ((Compilable) engine).compile(reader);
+
+Once the script is compiled, you can execute it. The following code executes the
+compiled script if compilation was successful, or the original script if the engine
+didn’t support compilation:
+if (script != null)
+script.eval();
+else
+engine.eval(reader);
+
+Of course, it only makes sense to compile a script if you need to execute it
+repeatedly.
+javax.script.Compilable 6
+
+• CompiledScript compile(String script)
+• CompiledScript compile(Reader reader)
+compiles the script given by a string or reader.
+
+javax.script.CompiledScript 6
+
+• Object eval()
+• Object eval(Bindings bindings)
+evaluates this script.
+
+8.1.6 An Example: Scripting GUI Events
+To illustrate the scripting API, we will write a sample program that allows users
+to specify event handlers in a scripting language of their choice.
+Have a look at the program in Listing 8.1 that adds scripting to an arbitrary frame
+class. By default it reads the ButtonFrame class in Listing 8.2, which is similar to
+the event handling demo in Volume I, with two differences:
+
+From the Library of Hristo Dimov Hristov
+
+438
+
+Chapter 8
+
+Scripting, Compiling, and Annotation Processing
+
+• Each component has its name property set.
+• There are no event handlers.
+The event handlers are defined in a property file. Each property definition has
+the form
+componentName.eventName = scriptCode
+
+For example, if you choose to use JavaScript, supply the event handlers in a file
+js.properties, like this:
+yellowButton.action=panel.background = java.awt.Color.YELLOW
+blueButton.action=panel.background = java.awt.Color.BLUE
+redButton.action=panel.background = java.awt.Color.RED
+
+The companion code also has files for Groovy, R, and SISC Scheme.
+The program starts by loading an engine for the language specified on the
+command line. If no language is specified, we use JavaScript.
+We then process a script init.language if it is present. This is useful for the R and
+Scheme languages, which need some initializations that we did not want to include
+in every event handler script.
+Next, we recursively traverse all child components and add the bindings ( name ,
+object ) into a map of components. Then we add the bindings to the engine.
+Next, we read the file language.properties. For each property, we synthesize an event
+handler proxy that causes the script code to be executed. The details are a bit
+technical. You might want to read the section on proxies in Volume I, Chapter 6,
+if you want to follow the implementation in detail. The essential part, however,
+is that each event handler calls
+engine.eval(scriptCode);
+
+Let us look at the yellowButton in more detail. When the line
+yellowButton.action=panel.background = java.awt.Color.YELLOW
+
+is processed, we find the JButton component with the name "yellowButton". We then
+attach an ActionListener with an actionPerformed method that executes the script
+panel.background = java.awt.Color.YELLOW
+
+if the scripting is done with Nashorn.
+The engine contains a binding that binds the name "panel" to the JPanel object.
+When the event occurs, the setBackground method of the panel is executed, and the
+color changes.
+You can run this program with the JavaScript event handlers simply by executing
+
+From the Library of Hristo Dimov Hristov
+
+8.1 Scripting for the Java Platform
+
+439
+
+java ScriptTest
+
+For the Groovy handlers, use
+java -classpath .:groovy/lib/\* ScriptTest groovy
+
+Here, groovy is the directory into which you installed Groovy.
+For the Renjin implementation of R, include the JAR files for Renjin Studio and
+the Renjin script engine on the classpath. Both are available at www.renjin.org/
+downloads.html.
+To try out Scheme, download SISC Scheme from http://sisc-scheme.org and run
+java -classpath .:sisc/*:jsr223-engines/scheme/build/scheme-engine.jar ScriptTest scheme
+
+where sisc is the installation directory for SISC Scheme and jsr223-engines is the
+directory that contains the engine adapters from http://java.net/projects/scripting.
+This application demonstrates how to use scripting for Java GUI programming.
+One could go a step further and describe the GUI with an XML file, as you have
+seen in Chapter 3. Then our program would become an interpreter for GUIs that
+have visual presentation defined by XML and behavior defined by a scripting
+language. Note the similarity to a dynamic HTML page or a dynamic server-side
+scripting environment.
+
+Listing 8.1
+1
+
+script/ScriptTest.java
+
+package script;
+
+2
+3
+4
+5
+6
+7
+8
+9
+
+import java.awt.*;
+import java.beans.*;
+import java.io.*;
+import java.lang.reflect.*;
+import java.util.*;
+import javax.script.*;
+import javax.swing.*;
+
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+
+/**
+* @version 1.02 2016-05-10
+* @author Cay Horstmann
+*/
+public class ScriptTest
+{
+public static void main(String[] args)
+{
+EventQueue.invokeLater(() ->
+{
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+440
+
+Chapter 8
+
+Scripting, Compiling, and Annotation Processing
+
+Listing 8.1 (Continued)
+21
+22
+23
+24
+25
+26
+27
+28
+29
+
+try
+{
+ScriptEngineManager manager = new ScriptEngineManager();
+String language;
+if (args.length == 0)
+{
+System.out.println("Available factories: ");
+for (ScriptEngineFactory factory : manager.getEngineFactories())
+System.out.println(factory.getEngineName());
+
+30
+31
+32
+33
+
+language = "nashorn";
+}
+else language = args[0];
+
+34
+35
+36
+37
+38
+39
+40
+
+final ScriptEngine engine = manager.getEngineByName(language);
+if (engine == null)
+{
+System.err.println("No engine for " + language);
+System.exit(1);
+}
+
+41
+42
+43
+44
+45
+46
+47
+48
+
+final String frameClassName = args.length < 2 ? "buttons1.ButtonFrame" : args[1];
+JFrame frame = (JFrame) Class.forName(frameClassName).newInstance();
+InputStream in = frame.getClass().getResourceAsStream("init." + language);
+if (in != null) engine.eval(new InputStreamReader(in));
+Map<String, Component> components = new HashMap<>();
+getComponentBindings(frame, components);
+components.forEach((name, c) -> engine.put(name, c));
+
+49
+50
+51
+52
+
+final Properties events = new Properties();
+in = frame.getClass().getResourceAsStream(language + ".properties");
+events.load(in);
+
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+
+for (final Object e : events.keySet())
+{
+String[] s = ((String) e).split("\\.");
+addListener(s[0], s[1], (String) events.get(e), engine, components);
+}
+frame.setTitle("ScriptTest");
+frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+frame.setVisible(true);
+}
+catch (ReflectiveOperationException | IOException
+| ScriptException | IntrospectionException ex)
+{
+ex.printStackTrace();
+}
+});
+
+From the Library of Hristo Dimov Hristov
+
+8.1 Scripting for the Java Platform
+
+69
+
+441
+
+}
+
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+
+/**
+* Gathers all named components in a container.
+* @param c the component
+* @param namedComponents a map into which to enter the component names and components
+*/
+private static void getComponentBindings(Component c, Map<String, Component> namedComponents)
+{
+String name = c.getName();
+if (name != null) { namedComponents.put(name, c); }
+if (c instanceof Container)
+{
+for (Component child : ((Container) c).getComponents())
+getComponentBindings(child, namedComponents);
+}
+}
+
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+
+/**
+* Adds a listener to an object whose listener method executes a script.
+* @param beanName the name of the bean to which the listener should be added
+* @param eventName the name of the listener type, such as "action" or "change"
+* @param scriptCode the script code to be executed
+* @param engine the engine that executes the code
+* @param bindings the bindings for the execution
+* @throws IntrospectionException
+*/
+private static void addListener(String beanName, String eventName, final String scriptCode,
+final ScriptEngine engine, Map<String, Component> components)
+throws ReflectiveOperationException, IntrospectionException
+{
+Object bean = components.get(beanName);
+EventSetDescriptor descriptor = getEventSetDescriptor(bean, eventName);
+if (descriptor == null) return;
+descriptor.getAddListenerMethod().invoke(bean,
+Proxy.newProxyInstance(null, new Class[] { descriptor.getListenerType() },
+(proxy, method, args) ->
+{
+engine.eval(scriptCode);
+return null;
+}
+));
+}
+
+112
+113
+114
+115
+116
+117
+
+private static EventSetDescriptor getEventSetDescriptor(Object bean, String eventName)
+throws IntrospectionException
+{
+for (EventSetDescriptor descriptor : Introspector.getBeanInfo(bean.getClass())
+.getEventSetDescriptors())
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+442
+
+Chapter 8
+
+Scripting, Compiling, and Annotation Processing
+
+Listing 8.1 (Continued)
+if (descriptor.getName().equals(eventName)) return descriptor;
+return null;
+
+118
+119
+
+}
+
+120
+121
+
+}
+
+Listing 8.2
+1
+
+buttons1/ButtonFrame.java
+
+package buttons1;
+
+2
+3
+
+import javax.swing.*;
+
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+
+/**
+* A frame with a button panel.
+* @version 1.00 2007-11-02
+* @author Cay Horstmann
+*/
+public class ButtonFrame extends JFrame
+{
+private static final int DEFAULT_WIDTH = 300;
+private static final int DEFAULT_HEIGHT = 200;
+
+14
+
+private JPanel panel;
+private JButton yellowButton;
+private JButton blueButton;
+private JButton redButton;
+
+15
+16
+17
+18
+19
+
+public ButtonFrame()
+{
+setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+
+20
+21
+22
+23
+
+panel = new JPanel();
+panel.setName("panel");
+add(panel);
+
+24
+25
+26
+27
+
+yellowButton = new JButton("Yellow");
+yellowButton.setName("yellowButton");
+blueButton = new JButton("Blue");
+blueButton.setName("blueButton");
+redButton = new JButton("Red");
+redButton.setName("redButton");
+
+28
+29
+30
+31
+32
+33
+34
+
+panel.add(yellowButton);
+panel.add(blueButton);
+panel.add(redButton);
+
+35
+36
+37
+
+}
+
+38
+39
+
+}
+
+From the Library of Hristo Dimov Hristov
+

@@ -1,0 +1,751 @@
+
+823
+
+113
+
+/**
+* Sets the hints and repaints.
+* @param h the rendering hints
+*/
+public void setRenderingHints(RenderingHints h)
+{
+hints = h;
+repaint();
+}
+
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+
+public Dimension getPreferredSize() { return PREFERRED_SIZE; }
+
+124
+125
+
+}
+
+java.awt.Graphics2D 1.2
+
+• void setRenderingHint(RenderingHints.Key key, Object value)
+sets a rendering hint for this graphics context.
+• void setRenderingHints(Map m)
+sets all rendering hints whose key/value pairs are stored in the map.
+
+java.awt.RenderingHints 1.2
+
+• RenderingHints(Map<RenderingHints.Key, ?> m)
+constructs a rendering hints map for storing rendering hints. If m is null, a default
+map implementation is provided.
+
+11.10 Readers and Writers for Images
+The javax.imageio package contains “out of the box” support for reading and writing
+several common file formats, as well as a framework that enables third parties to
+add readers and writers for other formats. The GIF, JPEG, PNG, BMP (Windows
+bitmap), and WBMP (wireless bitmap) file formats are supported.
+The basics of the library are extremely straightforward. To load an image, use the
+static read method of the ImageIO class:
+File f = . . .;
+BufferedImage image = ImageIO.read(f);
+
+The ImageIO class picks an appropriate reader, based on the file type. It may
+consult the file extension and the “magic number” at the beginning of the file for
+
+From the Library of Hristo Dimov Hristov
+
+824
+
+Chapter 11
+
+Advanced AWT
+
+that purpose. If no suitable reader can be found or the reader can’t decode the
+file contents, the read method returns null.
+Writing an image to a file is just as simple:
+File f = . . .;
+String format = . . .;
+ImageIO.write(image, format, f);
+
+Here the format string is a string identifying the image format, such as "JPEG" or
+"PNG". The ImageIO class picks an appropriate writer and saves the file.
+
+11.10.1 Obtaining Readers and Writers for Image File Types
+For more advanced image reading and writing operations that go beyond the
+static read and write methods of the ImageIO class, you first need to get the appropriate
+ImageReader and ImageWriter objects. The ImageIO class enumerates readers and writers
+that match one of the following:
+• An image format (such as "JPEG")
+• A file suffix (such as "jpg")
+• A MIME type (such as "image/jpeg")
+NOTE: MIME is the Multipurpose Internet Mail Extensions standard. The MIME
+standard defines common data formats such as "image/jpeg" and "application/pdf".
+
+For example, you can obtain a reader that reads JPEG files as follows:
+ImageReader reader = null;
+Iterator<ImageReader> iter = ImageIO.getImageReadersByFormatName("JPEG");
+if (iter.hasNext()) reader = iter.next();
+
+The getImageReadersBySuffix and getImageReadersByMIMEType methods enumerate readers that
+match a file extension or MIME type.
+It is possible that the ImageIO class can locate multiple readers that can all read a
+particular image type. In that case, you have to pick one of them, but it isn’t clear
+how you can decide which one is the best. To find out more information about a
+reader, obtain its service provider interface:
+ImageReaderSpi spi = reader.getOriginatingProvider();
+
+From the Library of Hristo Dimov Hristov
+
+11.10 Readers and Writers for Images
+
+825
+
+Then you can get the vendor name and version number:
+String vendor = spi.getVendor();
+String version = spi.getVersion();
+
+Perhaps that information can help you decide among the choices, or you might
+just present a list of readers to your program users and let them choose. For now,
+we assume that the first enumerated reader is adequate.
+In the sample program in Listing 11.7, we want to find all file suffixes of
+all available readers so that we can use them in a file filter. Use the static
+ImageIO.getReaderFileSuffixes method for this purpose:
+String[] extensions = ImageIO.getWriterFileSuffixes();
+chooser.setFileFilter(new FileNameExtensionFilter("Image files", extensions));
+
+For saving files, we have to work harder. We’d like to present the user with a
+menu of all supported image types. Unfortunately, the getWriterFormatNames of the
+ImageIO class returns a rather curious list with redundant names, such as
+jpg, BMP, bmp, JPG, jpeg, wbmp, png, JPEG, PNG, WBMP, GIF, gif
+
+That’s not something one would want to present in a menu. What is needed is a
+list of “preferred” format names. We supply a helper method getWriterFormats for
+this purpose (see Listing 11.7). We look up the first writer associated with each
+format name. Then we ask it what its format names are, in the hope that it will
+list the most popular one first. Indeed, for the JPEG writer, this works fine—it
+lists "JPEG" before the other options. (The PNG writer, on the other hand, lists "png"
+in lower case before "PNG". We hope this behavior will be addressed at some point
+in the future. For now, we force all-lowercase names to upper case.) Once we pick
+a preferred name, we remove all alternate names from the original set. We keep
+going until all format names are handled.
+
+11.10.2 Reading and Writing Files with Multiple Images
+Some files—in particular, animated GIF files—contain multiple images. The read
+method of the ImageIO class reads a single image. To read multiple images, turn
+the input source (for example, an input stream or file) into an ImageInputStream.
+InputStream in = . . .;
+ImageInputStream imageIn = ImageIO.createImageInputStream(in);
+
+Then, attach the image input stream to the reader:
+reader.setInput(imageIn, true);
+
+From the Library of Hristo Dimov Hristov
+
+826
+
+Chapter 11
+
+Advanced AWT
+
+The second parameter indicates that the input is in “seek forward only” mode.
+Otherwise, random access is used, either by buffering stream input as it is read
+or by using random file access. Random access is required for certain operations.
+For example, to find out the number of images in a GIF file, you need to read the
+entire file. If you then want to fetch an image, the input must be read again.
+This consideration is only important if you read from a stream, if the input contains
+multiple images, and if the image format doesn’t have the information that you
+request (such as the image count) in the header. If you read from a file, simply use
+File f = . . .;
+ImageInputStream imageIn = ImageIO.createImageInputStream(f);
+reader.setInput(imageIn);
+
+Once you have a reader, you can read the images in the input by calling
+BufferedImage image = reader.read(index);
+
+where index is the image index, starting with 0.
+If the input is in the “seek forward only” mode, you keep reading images until
+the read method throws an IndexOutOfBoundsException. Otherwise, you can call the
+getNumImages method:
+int n = reader.getNumImages(true);
+
+Here, the parameter indicates that you allow a search of the input to determine
+the number of images. That method throws an IllegalStateException if the input is
+in the “seek forward only” mode. Alternatively, you can set the “allow search”
+parameter to false. Then the getNumImages method returns -1 if it can’t determine the
+number of images without a search. In that case, you’ll have to switch to Plan B
+and keep reading images until you get an IndexOutOfBoundsException.
+Some files contain thumbnails—smaller versions of an image for preview purposes.
+You can get the number of thumbnails of an image with the call
+int count = reader.getNumThumbnails(index);
+
+Then you get a particular index as
+BufferedImage thumbnail = reader.getThumbnail(index, thumbnailIndex);
+
+Sometimes you may want to get the image size before actually getting the image—in particular, if the image is huge or comes from a slow network connection.
+Use the calls
+
+From the Library of Hristo Dimov Hristov
+
+11.10 Readers and Writers for Images
+
+827
+
+int width = reader.getWidth(index);
+int height = reader.getHeight(index);
+
+to get the dimensions of an image with a given index.
+To write a file with multiple images, you first need an ImageWriter. The ImageIO class
+can enumerate the writers capable of writing a particular image format:
+String format = . . .;
+ImageWriter writer = null;
+Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName(format);
+if (iter.hasNext()) writer = iter.next();
+
+Next, turn an output stream or file into an ImageOutputStream and attach it to the
+writer. For example,
+File f = . . .;
+ImageOutputStream imageOut = ImageIO.createImageOutputStream(f);
+writer.setOutput(imageOut);
+
+You must wrap each image into an IIOImage object. You can optionally supply a
+list of thumbnails and image metadata (such as compression algorithms and
+color information). In this example, we just use null for both; see the API
+documentation for additional information.
+IIOImage iioImage = new IIOImage(images[i], null, null);
+
+To write out the first image, use the write method:
+writer.write(new IIOImage(images[0], null, null));
+
+For subsequent images, use
+if (writer.canInsertImage(i))
+writer.writeInsert(i, iioImage, null);
+
+The third parameter can contain an ImageWriteParam object to set image writing details
+such as tiling and compression; use null for default values.
+Not all file formats can handle multiple images. In that case, the canInsertImage
+method returns false for i > 0, and only a single image is saved.
+The program in Listing 11.7 lets you load and save files in the formats for which the
+Java library supplies readers and writers. The program displays multiple images
+(see Figure 11.27), but not thumbnails.
+
+From the Library of Hristo Dimov Hristov
+
+828
+
+Chapter 11
+
+Advanced AWT
+
+Figure 11.27 An animated GIF image
+Listing 11.7
+1
+
+imageIO/ImageIOFrame.java
+
+package imageIO;
+
+2
+3
+4
+5
+
+import java.awt.image.*;
+import java.io.*;
+import java.util.*;
+
+6
+7
+8
+9
+10
+
+import javax.imageio.*;
+import javax.imageio.stream.*;
+import javax.swing.*;
+import javax.swing.filechooser.*;
+
+11
+12
+13
+14
+15
+16
+17
+18
+
+/**
+* This frame displays the loaded images. The menu has items for loading and saving files.
+*/
+public class ImageIOFrame extends JFrame
+{
+private static final int DEFAULT_WIDTH = 400;
+private static final int DEFAULT_HEIGHT = 400;
+
+From the Library of Hristo Dimov Hristov
+
+11.10 Readers and Writers for Images
+
+829
+
+19
+20
+
+private static Set<String> writerFormats = getWriterFormats();
+
+21
+22
+
+private BufferedImage[] images;
+
+23
+24
+25
+26
+
+public ImageIOFrame()
+{
+setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+
+27
+
+JMenu fileMenu = new JMenu("File");
+JMenuItem openItem = new JMenuItem("Open");
+openItem.addActionListener(event -> openFile());
+fileMenu.add(openItem);
+
+28
+29
+30
+31
+32
+
+JMenu saveMenu = new JMenu("Save");
+fileMenu.add(saveMenu);
+Iterator<String> iter = writerFormats.iterator();
+while (iter.hasNext())
+{
+final String formatName = iter.next();
+JMenuItem formatItem = new JMenuItem(formatName);
+saveMenu.add(formatItem);
+formatItem.addActionListener(event -> saveFile(formatName));
+}
+
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+
+JMenuItem exitItem = new JMenuItem("Exit");
+exitItem.addActionListener(event -> System.exit(0));
+fileMenu.add(exitItem);
+
+44
+45
+46
+47
+
+JMenuBar menuBar = new JMenuBar();
+menuBar.add(fileMenu);
+setJMenuBar(menuBar);
+
+48
+49
+50
+51
+
+}
+
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+
+/**
+* Open a file and load the images.
+*/
+public void openFile()
+{
+JFileChooser chooser = new JFileChooser();
+chooser.setCurrentDirectory(new File("."));
+String[] extensions = ImageIO.getReaderFileSuffixes();
+chooser.setFileFilter(new FileNameExtensionFilter("Image files", extensions));
+int r = chooser.showOpenDialog(this);
+if (r != JFileChooser.APPROVE_OPTION) return;
+File f = chooser.getSelectedFile();
+Box box = Box.createVerticalBox();
+try
+{
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+830
+
+Chapter 11
+
+Advanced AWT
+
+Listing 11.7 (Continued)
+String name = f.getName();
+String suffix = name.substring(name.lastIndexOf('.') + 1);
+Iterator<ImageReader> iter = ImageIO.getImageReadersBySuffix(suffix);
+ImageReader reader = iter.next();
+ImageInputStream imageIn = ImageIO.createImageInputStream(f);
+reader.setInput(imageIn);
+int count = reader.getNumImages(true);
+images = new BufferedImage[count];
+for (int i = 0; i < count; i++)
+{
+images[i] = reader.read(i);
+box.add(new JLabel(new ImageIcon(images[i])));
+}
+
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+
+}
+catch (IOException e)
+{
+JOptionPane.showMessageDialog(this, e);
+}
+setContentPane(new JScrollPane(box));
+validate();
+
+81
+82
+83
+84
+85
+86
+87
+88
+
+}
+
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+
+/**
+* Save the current image in a file.
+* @param formatName the file format
+*/
+public void saveFile(final String formatName)
+{
+if (images == null) return;
+Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName(formatName);
+ImageWriter writer = iter.next();
+JFileChooser chooser = new JFileChooser();
+chooser.setCurrentDirectory(new File("."));
+String[] extensions = writer.getOriginatingProvider().getFileSuffixes();
+chooser.setFileFilter(new FileNameExtensionFilter("Image files", extensions));
+
+103
+104
+105
+106
+107
+108
+109
+110
+
+int r = chooser.showSaveDialog(this);
+if (r != JFileChooser.APPROVE_OPTION) return;
+File f = chooser.getSelectedFile();
+try
+{
+ImageOutputStream imageOut = ImageIO.createImageOutputStream(f);
+writer.setOutput(imageOut);
+
+111
+112
+113
+114
+
+writer.write(new IIOImage(images[0], null, null));
+for (int i = 1; i < images.length; i++)
+{
+
+From the Library of Hristo Dimov Hristov
+
+11.10 Readers and Writers for Images
+
+831
+
+IIOImage iioImage = new IIOImage(images[i], null, null);
+if (writer.canInsertImage(i)) writer.writeInsert(i, iioImage, null);
+
+115
+116
+
+}
+}
+catch (IOException e)
+{
+JOptionPane.showMessageDialog(this, e);
+}
+
+117
+118
+119
+120
+121
+122
+
+}
+
+123
+124
+
+/**
+* Gets a set of "preferred" format names of all image writers. The preferred format name is
+* the first format name that a writer specifies.
+* @return the format name set
+*/
+public static Set<String> getWriterFormats()
+{
+Set<String> writerFormats = new TreeSet<>();
+Set<String> formatNames = new TreeSet<>(
+Arrays.asList(ImageIO.getWriterFormatNames()));
+while (formatNames.size() > 0)
+{
+String name = formatNames.iterator().next();
+Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName(name);
+ImageWriter writer = iter.next();
+String[] names = writer.getOriginatingProvider().getFormatNames();
+String format = names[0];
+if (format.equals(format.toLowerCase())) format = format.toUpperCase();
+writerFormats.add(format);
+formatNames.removeAll(Arrays.asList(names));
+}
+return writerFormats;
+}
+
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+
+}
+
+javax.imageio.ImageIO 1.4
+
+• static BufferedImage read(File input)
+• static BufferedImage read(InputStream input)
+• static BufferedImage read(URL input)
+reads an image from input.
+• static boolean write(RenderedImage image, String formatName, File output)
+• static boolean write(RenderedImage image, String formatName, OutputStream output)
+writes an image in the given format to output. Returns false if no appropriate writer
+was found.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+832
+
+Chapter 11
+
+Advanced AWT
+
+javax.imageio.ImageIO 1.4 (Continued)
+
+•
+•
+•
+•
+•
+•
+
+static Iterator<ImageReader> getImageReadersByFormatName(String formatName)
+static Iterator<ImageReader> getImageReadersBySuffix(String fileSuffix)
+static Iterator<ImageReader> getImageReadersByMIMEType(String mimeType)
+static Iterator<ImageWriter> getImageWritersByFormatName(String formatName)
+static Iterator<ImageWriter> getImageWritersBySuffix(String fileSuffix)
+static Iterator<ImageWriter> getImageWritersByMIMEType(String mimeType)
+
+gets all readers and writers that are able to handle the given format (e.g., "JPEG"),
+file suffix (e.g., "jpg"), or MIME type (e.g., "image/jpeg").
+•
+•
+•
+•
+•
+•
+
+static String[] getReaderFormatNames()
+static String[] getReaderMIMETypes()
+static String[] getWriterFormatNames()
+static String[] getWriterMIMETypes()
+static String[] getReaderFileSuffixes() 6
+static String[] getWriterFileSuffixes() 6
+
+gets all format names, MIME type names, and file suffixes supported by readers
+and writers.
+• ImageInputStream createImageInputStream(Object input)
+• ImageOutputStream createImageOutputStream(Object output)
+creates an image input or image output stream from the given object. The object
+can be a file, a stream, a RandomAccessFile, or another object for which a service provider
+exists. Returns null if no registered service provider can handle the object.
+
+javax.imageio.ImageReader 1.4
+
+• void setInput(Object input)
+• void setInput(Object input, boolean seekForwardOnly)
+sets the input source of the reader.
+Parameters:
+
+input
+
+An ImageInputStream object or another object that
+this reader can accept.
+
+seekForwardOnly
+
+true if the reader should read forward only. By
+
+default, the reader uses random access and,
+if necessary, buffers image data.
+• BufferedImage read(int index)
+reads the image with the given image index (starting at 0). Throws an
+IndexOutOfBoundsException if no such image is available.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+11.10 Readers and Writers for Images
+
+833
+
+javax.imageio.ImageReader 1.4 (Continued)
+
+• int getNumImages(boolean allowSearch)
+gets the number of images in this reader. If allowSearch is false and the number
+of images cannot be determined without reading forward, then -1 is returned.
+If allowSearch is true and the reader is in the “seek forward only” mode, then an
+IllegalStateException is thrown.
+• int getNumThumbnails(int index)
+gets the number of thumbnails of the image with the given index.
+• BufferedImage readThumbnail(int index, int thumbnailIndex)
+gets the thumbnail with index thumbnailIndex of the image with the given index.
+• int getWidth(int index)
+• int getHeight(int index)
+gets the image width and height.Throws an IndexOutOfBoundsException if no such image
+is available.
+• ImageReaderSpi getOriginatingProvider()
+gets the service provider that constructed this reader.
+
+javax.imageio.spi.IIOServiceProvider 1.4
+
+• String getVendorName()
+• String getVersion()
+gets the vendor name and version of this service provider.
+
+javax.imageio.spi.ImageReaderWriterSpi 1.4
+
+• String[] getFormatNames()
+• String[] getFileSuffixes()
+• String[] getMIMETypes()
+gets the format names, file suffixes, and MIME types supported by the readers or
+writers that this service provider creates.
+
+From the Library of Hristo Dimov Hristov
+
+834
+
+Chapter 11
+
+Advanced AWT
+
+javax.imageio.ImageWriter 1.4
+
+• void setOutput(Object output)
+sets the output target of this writer.
+Parameters:
+
+output
+
+An ImageOutputStream object or another object that this
+writer can accept
+
+• void write(IIOImage image)
+• void write(RenderedImage image)
+writes a single image to the output.
+• void writeInsert(int index, IIOImage image, ImageWriteParam param)
+writes an image into a multi-image file.
+• boolean canInsertImage(int index)
+returns true if it is possible to insert an image at the given index.
+• ImageWriterSpi getOriginatingProvider()
+gets the service provider that constructed this writer.
+
+javax.imageio.IIOImage 1.4
+
+• IIOImage(RenderedImage image, List thumbnails, IIOMetadata metadata)
+constructs an IIOImage from an image, optional thumbnails, and optional metadata.
+

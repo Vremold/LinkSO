@@ -1,0 +1,125 @@
+  The Object class is the ultimate ancestor—every class in Java extends Object. However, you never have to write public class Employee extends Object   The ultimate superclass Object is taken for granted if no superclass is explicitly mentioned. Since every class in Java extends Object, it is important to be familiar with the services provided by the Object class. We go over the basic ones in this chapter; consult the later chapters or view the online documentation for what is not covered here. (Several methods of Object come up only when dealing with concurrency—see Chapter 12.) 5.2.1 Variables of Type Object
+  You can use a variable of type Object to refer to objects of any type: Object obj = new Employee("Harry Hacker", 35000); 
+  Of course, a variable of type Object is only useful as a generic holder for arbitrary values. To do anything specific with the value, you need to have some knowledge about the original type and apply a cast: Employee e = (Employee) obj; 
+  In Java, only the values of primitive types (numbers, characters, and boolean values) are not objects. 
+  All array types, no matter whether they are arrays of objects or arrays of   primitive types, are class types that extend the Object class. 
+  Employee[] staff = new Employee[10]; 
+  obj = staff; // OK obj = new int[10]; // OK 5.2.2 The equals Method
+  The equals method in the Object class tests whether one object is considered equal to another. The equals method, as implemented in the Object class, determines whether two object references are identical. This is a pretty reasonable default—if two objects are identical, they should certainly be equal. For quite a few classes, nothing else is required. For example, it makes little sense to compare two PrintStream objects for equality. However, you will often want to implement state-based equality testing, in which two objects are considered equal when they have the same state. 
+  For example, let us consider two employees equal if they have the same name, salary, and hire date. (In an actual employee database, it would be more sensible to compare IDs instead. We use this example to demonstrate the mechanics of implementing the equals method.) public class Employee { . . . 
+  public boolean equals(Object otherObject) { // a quick test to see if the objects are identical if (this == otherObject) return true; 
+  // must return false if the explicit parameter is null if (otherObject == null) return false; 
+  // if the classes don't match, they can't be equal if (getClass() != otherObject.getClass()) return false; 
+  // now we know otherObject is a non-null Employee Employee other = (Employee) otherObject; 
+  // test whether the fields have identical values return name.equals(other.name) && salary == other.salary && hireDay.equals(other.hireDay); 
+  } 
+  } 
+  The getClass method returns the class of an object—we discuss this method in detail later in this chapter. In our test, two objects can only be equal when they belong to the same class. 
+  Tip To guard against the possibility that name or hireDay are null, use the Objects.equals method. The call Objects.equals(a, b) returns true if both arguments are null, false if only one is null, and calls a.equals(b) otherwise. With that method, the last statement of the Employee.equals method becomes return Objects.equals(name, other.name) && salary == other.salary && Objects.equals(hireDay, other.hireDay); 
+  When you define the equals method for a subclass, first call equals on the superclass. If that test doesn’t pass, then the objects can’t be equal. If the superclass fields are equal, you are ready to compare the instance fields of the subclass. 
+  public class Manager extends Employee { . . . 
+  public boolean equals(Object otherObject) {   if (!super.equals(otherObject)) return false; 
+  // super.equals checked that this and otherObject belong to the same cl Manager other = (Manager) otherObject; 
+  return bonus == other.bonus; 
+  } 
+  } 
+5.2.3 Equality Testing and Inheritance
+  How should the equals method behave if the implicit and explicit parameters don’t belong to the same class? This has been an area of some controversy. In the preceding example, the equals method returns false if the classes don’t match exactly. But many programmers use an instanceof test instead: if (!(otherObject instanceof Employee)) return false; 
+  This leaves open the possibility that otherObject can belong to a subclass. However, this approach can get you into trouble. Here is why. The Java Language Specification requires that the equals method has the following properties: 1. It is reflexive: For any non-null reference x, x.equals(x) should return true. 
+  2. It is symmetric: For any references x and y, x.equals(y) should return true if and only if y.equals(x) returns true. 
+  3. It is transitive: For any references x, y, and z, if x.equals(y) returns true and y.equals(z) returns true, then x.equals(z) should return true. 
+  4. It is consistent: If the objects to which x and y refer haven’t changed, then repeated calls to x.equals(y) return the same value. 
+  5. For any non-null reference x, x.equals(null) should return false. 
+  These rules are certainly reasonable. You wouldn’t want a library implementor to ponder whether to call x.equals(y) or y.equals(x) when locating an element in a data structure. 
+  However, the symmetry rule has subtle consequences when the parameters belong to different classes. Consider a call e.equals(m)   where e is an Employee object and m is a Manager object, both of which happen to have the same name, salary, and hire date. If Employee.equals uses an instanceof test, the call returns true. But that means that the reverse call m.equals(e)   also needs to return true—the symmetry rule does not allow it to return false or to throw an exception. 
+  That leaves the Manager class in a bind. Its equals method must be willing to compare itself to any Employee, without taking manager-specific information into account! All of a sudden, the instanceof test looks less attractive. 
+  Some authors have gone on record that the getClass test is wrong because it violates the substitution principle. A commonly cited example is the equals method in the AbstractSet class that tests whether two sets have the same elements. The AbstractSet class has two concrete subclasses, TreeSet and HashSet, that use different algorithms for locating set elements. You really want to be able to compare any two sets, no matter how they are implemented. 
+  However, the set example is rather specialized. It would make sense to declare AbstractSet.equals as final, because nobody should redefine the semantics of set equality. (The method is not actually final. 
+  This allows a subclass to implement a more efficient algorithm for the equality test.) The way we see it, there are two distinct scenarios: If subclasses can have their own notion of equality, then the symmetry requirement forces you to use the getClass test. 
+  If the notion of equality is fixed in the superclass, then you can use the instanceof test and allow objects of different subclasses to be equal   to one another. 
+  In the example with employees and managers, we consider two objects to be equal when they have matching fields. If we have two Manager objects with the same name, salary, and hire date, but with different bonuses, we want them to be different. Therefore, we use the getClass test. 
+  But suppose we used an employee ID for equality testing. This notion of equality makes sense for all subclasses. Then we could use the instanceof test, and we should have declared Employee.equals as final. 
+  Note The standard Java library contains over 150 implementations of equals methods, with a mishmash of using instanceof, calling getClass, catching a ClassCastException, or doing nothing at all. Check out the API documentation of the java.sql.Timestamp class, where the implementors note with some embarrassment that they have painted themselves in a corner. 
+  The Timestamp class inherits from java.util.Date, whose equals method uses an instanceof test, and it is impossible to override equals to be both symmetric and accurate. 
+  Here is a recipe for writing the perfect equals method: 1. Name the explicit parameter otherObject—later, you will need to cast it to another variable that you should call other. 
+  2. Test whether this happens to be identical to otherObject: if (this == otherObject) return true; 
+  This statement is just an optimization. In practice, this is a common case. It is much cheaper to check for identity than to compare the fields. 
+  3. Test whether otherObject is null and return false if it is. This   test is required. 
+  if (otherObject == null) return false; 
+  4. Compare the classes of this and otherObject. If the semantics of equals can change in subclasses, use the getClass test: if (getClass() != otherObject.getClass()) return false; 
+  If the same semantics holds for all subclasses, you can use an instanceof test: if (!(otherObject instanceof ClassName)) return false; 
+  5. Cast otherObject to a variable of your class type: ClassName other = (ClassName) otherObject   6. Now compare the fields, as required by your notion of equality. Use == for primitive type fields, Objects.equals for object fields. Return true if all fields match, false otherwise. 
+  return field1 == other.field1 && Objects.equals(field2, other.field2) && . . .; 
+  If you redefine equals in a subclass, include a call to super.equals(other). 
+  Tip If you have fields of array type, you can use the static Arrays.equals method to check that the corresponding array elements are equal. 
+  Caution Here is a common mistake when implementing the equals method. 
+  Can you spot the problem? 
+  public class Employee { public boolean equals(Employee other) { return other != null && getClass() == other.getClass() && Objects.equals(name, other.name) && salary == other.salary && Objects.equals(hireDay, other.hireDay); 
+  } 
+  . . . 
+  } 
+  This method declares the explicit parameter type as Employee. As a result, it does not override the equals method of the Object class but defines a completely unrelated method. 
+  You can protect yourself against this type of error by tagging methods that are intended to override superclass methods with @Override: @Override public boolean equals(Object other)   If you made a mistake and are defining a new method, the compiler reports an error. For example, suppose you add the following declaration to the Employee class: @Override public boolean equals(Employee other)   An error is reported because this method doesn’t override any method from the Object superclass. 
+  java.util.Arrays 1.2   static boolean equals(xxx[] a, xxx[] b) 5 returns true if the arrays have equal lengths and equal elements in corresponding positions. The component type xxx of the array can be Object, int, long, short, char, byte, boolean, float, or double. 
+  java.util.Objects 7 static boolean equals(Object a, Object b) returns true if a and b are both null, false if exactly one of them is null, and a.equals(b) otherwise. 
+5.2.4 The hashCode Method
+  A hash code is an integer that is derived from an object. Hash codes should be scrambled—if x and y are two distinct objects, there should be a high probability that x.hashCode() and y.hashCode() are different. Table 5.1 lists a few examples of hash codes that result from the hashCode method of the String class. 
+  Table 5.1 Hash Codes Resulting from the hashCode Method String   Hash Code   Hello 69609650 Harry 69496448 Hacker-2141031506 The String class uses the following algorithm to compute the hash code: int hash = 0; 
+  for (int i = 0; i < length(); i++) hash = 31 * hash + charAt(i); 
+  The hashCode method is defined in the Object class. Therefore, every   object has a default hash code. That hash code is derived from the object’s memory address. Consider this example: var s = "Ok"; 
+  var sb = new StringBuilder(s); 
+  System.out.println(s.hashCode() + " " + sb.hashCode()); 
+  var t = new String("Ok"); 
+  var tb = new StringBuilder(t); 
+  System.out.println(t.hashCode() + " " + tb.hashCode()); 
+  Table 5.2 shows the result. 
+  Table 5.2 Hash Codes of Strings and String Builders Object Hash Code Object Hash Code s   2556   t   sb   20526976tb   2556 20527144   Note that the strings s and t have the same hash code because, for strings, the hash codes are derived from their contents. The string builders sb and tb have different hash codes because no hashCode method has been defined for the StringBuilder class and the default hashCode method in the Object class derives the hash code from the object’s memory address. 
+  If you redefine the equals method, you will also need to redefine the hashCode method for objects that users might insert into a hash table. (We discuss hash tables in Chapter 9.) The hashCode method should return an integer (which can be negative). 
+  Just combine the hash codes of the instance fields so that the hash codes for different objects are likely to be widely scattered. 
+  For example, here is a hashCode method for the Employee class: public class Employee { public int hashCode() { return 7 * name.hashCode() + 11 * new Double(salary).hashCode() + 13 * hireDay.hashCode(); 
+  } 
+  . . . 
+  } 
+  However, you can do better. First, use the null-safe method Objects.hashCode. It returns 0 if its argument is null and the result of calling hashCode on the argument otherwise. Also, use the static Double.hashCode method to avoid creating a Double object: public int hashCode() { return 7 * Objects.hashCode(name) + 11 * Double.hashCode(salary) + 13 * Objects.hashCode(hireDay); 
+  } 
+  Even better, when you need to combine multiple hash values, call Objects.hash with all of them. It will call Objects.hashCode for each argument and combine the values. Then the Employee.hashCode method is simply public int hashCode() { return Objects.hash(name, salary, hireDay); 
+  } 
+  Your definitions of equals and hashCode must be compatible: If x.equals(y) is true, then x.hashCode() must return the same value as y.hashCode(). For example, if you define Employee.equals to compare employee IDs, then the hashCode method needs to hash the IDs, not employee names or memory addresses. 
+  Tip If you have fields of an array type, you can use the static Arrays.hashCode method to compute a hash code composed of the hash codes of the array elements. 
+  java.lang.Object 1.0 int hashCode() returns a hash code for this object. A hash code can be any integer, positive or negative. Equal objects need to return identical hash codes. 
+  java.util.Objects 7 static int hash(Object... objects) returns a hash code that is combined from the hash codes of all supplied objects. 
+  static int hashCode(Object a) returns 0 if a is null or a.hashCode() otherwise. 
+  java.lang. 
+  (Integer|Long|Short|Byte|Double|Float|Character|Boolean) 1.0 static int hashCode(xxx value) 8 returns the hash code of the given value. Here xxx is the primitive type corresponding to the given wrapper type. 
+  java.util.Arrays 1.2 static int hashCode(xxx[] a) 5 computes the hash code of the array a. The component type xxx of the array can be Object, int, long, short, char, byte, boolean, float, or double. 
+5.2.5 The toString Method
+  Another important method in Object is the toString method that returns a string representing the value of this object. Here is a typical example. The toString method of the Point class returns a string like this: java.awt.Point[x=10,y=20]   Most (but not all) toString methods follow this format: the name of the class, then the field values enclosed in square brackets. Here is an implementation of the toString method for the Employee class: public String toString() { return "Employee[name=" + name + ",salary=" + salary + ",hireDay=" + hireDay + "]"; 
+  } 
+  Actually, you can do a little better. Instead of hardwiring the class name into the toString method, call getClass().getName() to obtain a string with the class name. 
+  public String toString() { return getClass().getName() + "[name=" + name + ",salary=" + salary + ",hireDay=" + hireDay + "]"; 
+  } 
+  Such toString method will also work for subclasses. 
+  Of course, the subclass programmer should define its own toString method and add the subclass fields. If the superclass uses getClass().getName(), then the subclass can simply call super.toString(). For example, here is a toString method for the Manager class:   public class Manager extends Employee { . . . 
+  public String toString() { return super.toString() + "[bonus=" + bonus + "]"; 
+  } 
+  } 
+  Now a Manager object is printed as Manager[name=. . .,salary=. . .,hireDay=. . .][bonus=. . .]   The toString method is ubiquitous for an important reason: Whenever an object is concatenated with a string by the "+" operator, the Java compiler automatically invokes the toString method to obtain a string representation of the object. For example: var p = new Point(10, 20); 
+  String message = "The current position is " + p; 
+  // automatically invokes p.toString()   Tip Instead of writing x.toString(), you can write "" + x. This statement concatenates the empty string with the string representation of x that is exactly x.toString(). Unlike toString, this statement even works if x is of primitive type. 
+  If x is any object and you call System.out.println(x); 
+  then the println method simply calls x.toString() and prints the resulting string. 
+  The Object class defines the toString method to print the class name and the hash code of the object. For example, the call System.out.println(System.out)   produces an output that looks like this: java.io.PrintStream@2f6684   The reason is that the implementor of the PrintStream class didn’t bother to override the toString method. 
+  Caution Annoyingly, arrays inherit the toString method from Object, with the added twist that the array type is printed in an archaic format. For example, int[] luckyNumbers = { 2, 3, 5, 7, 11, 13 }; 
+  String s = "" + luckyNumbers; 
+  yields the string "[I@1a46e30". (The prefix [I denotes an array of integers.) The remedy is to call the static Arrays.toString method instead. The code String s = Arrays.toString(luckyNumbers); 
+  yields the string "[2, 3, 5, 7, 11, 13]". 
+  To correctly print multidimensional arrays (that is, arrays of arrays), use Arrays.deepToString. 
+  The toString method is a great tool for logging. Many classes in the standard class library define the toString method so that you can get useful information about the state of an object. This is particularly useful in logging messages like this:   System.out.println("Current position = " + position); 
+  As we explain in Chapter 7, an even better solution is to use an object of the Logger class and call Logger.global.info("Current position = " + position); 
+  Tip We strongly recommend that you add a toString method to each class that you write. You, as well as other programmers who use your classes, will be grateful for the logging support. 
+  The program in Listing 5.8 tests the equals, hashCode, and toString methods for the classes Employee (Listing 5.9) and Manager (Listing 5.10). 
+  java.lang.Object 1.0 Class getClass() returns a class object that contains information about the object. As you will see later in this chapter, Java has a runtime representation for   classes that is encapsulated in the Class class. 
+  boolean equals(Object otherObject) compares two objects for equality; returns true if the objects point to the same area of memory, and false otherwise. You should override this method in your own classes. 
+  String toString() returns a string that represents the value of this object. You should override this method in your own classes. 
+  java.lang.Class 1.0 String getName() returns the name of this class. 
+  Class getSuperclass() returns the superclass of this class as a Class object. 

@@ -1,0 +1,208 @@
+  The reflection library gives you a very rich and elaborate toolset to write programs that manipulate Java code dynamically. Using reflection, Java can support user interface builders, object-relational mappers, and many other development tools that dynamically inquire about the capabilities of classes. 
+  A program that can analyze the capabilities of classes is called reflective. The reflection mechanism is extremely powerful. As the next sections show, you can use it to Analyze the capabilities of classes at runtime Inspect objects at runtime—for example, to write a single toString method that works for all classes Implement generic array manipulation code Take advantage of Method objects that work just like function pointers in languages such as C++   Reflection is a powerful and complex mechanism; however, it is of interest mainly to tool builders, not application programmers. If you are interested in programming applications rather than tools for other Java programmers, you can safely skip the remainder of this chapter and return to it later. 
+5.7.1 The Class Class
+  While your program is running, the Java runtime system always maintains what is called runtime type identification on all objects. This information keeps track of the class to which each object belongs. Runtime type information is used by the virtual machine to select the correct methods to execute. 
+  However, you can also access this information by working with a special Java class. The class that holds this information is called, somewhat confusingly, Class. The getClass() method in the Object class returns an instance of Class type. 
+  Employee e; 
+  . . . 
+  Class cl = e.getClass(); 
+  Just like an Employee object describes the properties of a particular employee, a Class object describes the properties of a particular class. 
+  Probably the most commonly used method of Class is getName. This returns the name of the class. For example, the statement System.out.println(e.getClass().getName() + " " + e.getName()); 
+  prints Employee Harry Hacker   if e is an employee, or Manager Harry Hacker   if e is a manager. 
+  If the class is in a package, the package name is part of the class name: var generator = new Random(); 
+  Class cl = generator.getClass(); 
+  String name = cl.getName(); // name is set to "java.util.Random" 
+  You can obtain a Class object corresponding to a class name by using the static forName method. 
+  String className = "java.util.Random"; 
+  Class cl = Class.forName(className); 
+  Use this method if the class name is stored in a string that varies at runtime. 
+  This works if className is the name of a class or interface. Otherwise, the forName method throws a checked exception. See Section 5.7.2, "A Primer on Declaring Exceptions," on p. 267 for how to supply an exception handler whenever you use this method. 
+  Tip At startup, the class containing your main method is loaded. It loads all classes that it needs. Each of those loaded classes loads the classes that it needs, and so on. That can take a long time for a big application, frustrating the user. You can give the users of your program an illusion of a faster start with the following trick. Make sure the class containing the main method does not explicitly refer to other classes. In it, display a splash screen. Then manually force the loading of other classes by calling Class.forName. 
+  A third method for obtaining an object of type Class is a convenient shorthand. If T is any Java type (or the void keyword), then T.class is the matching class object. For example: Class cl1 = Random.class; // if you import java.util.*; 
+  Class cl2 = int.class; 
+  Class cl3 = Double[].class; 
+  Note that a Class object really describes a type, which may or may not be a class. For example, int is not a class, but int.class is nevertheless an object of type Class. 
+  Note The Class class is actually a generic class. For example, Employee.class is of type Class<Employee>. We are not dwelling on this issue because it would further complicate an already abstract concept. For most practical purposes, you can ignore the type parameter and work with the raw Class type. See Chapter 8 for more information on this issue. 
+  Caution For historical reasons, the getName method returns somewhat strange names for array types: Double[].class.getName() returns " 
+  [Ljava.lang.Double;". 
+  int[].class.getName() returns "[I". 
+  The virtual machine manages a unique Class object for each type. 
+  Therefore, you can use the == operator to compare class objects. For example: if (e.getClass() == Employee.class) . . . 
+  This test passes if e is an instance of Employee. Unlike the condition e instanceof Employee, this test fails if e is an instance of a subclass such as Manager. 
+  If you have an object of type Class, you can use it to construct instances of the class. Call the getConstructor method to get an object of type   Constructor, then use the newInstance method to construct an instance. For example: var className = "java.util.Random"; // or any other name of a class with // a no-arg constructor Class cl = Class.forName(className); 
+  Object obj = cl.getConstructor().newInstance(); 
+  If the class doesn’t have a constructor without arguments, the getConstructor method throws an exception. You will see in Section 5.7.7, "Invoking Arbitrary Methods and Constructors," on p. 286 how to invoke other constructors. 
+  Note There is a deprecated Class.toInstance method that also constructs an instance with the no-argument constructor. However, if the constructor throws a checked exception, the exception is rethrown without being checked. This violates the compile-time checking of exceptions. In contrast, Constructor.newInstance wraps any constructor exception into an InvocationTargetException. 
+  java.lang.Class 1.0 static Class forName(String className) returns the Class object representing the class with name className. 
+  Constructor getConstructor(Class... 
+  parameterTypes) 1.1 yields an object describing the constructor with the given parameter types. See Section 5.7.7, "Invoking Arbitrary Methods and Constructors," on p. 286 for more information on how to supply parameter types. 
+  java.lang.reflect.Constructor 1.1 Object newInstance(Object... params) constructs a new instance of the constructor’s declaring class, passing params to the constructor. See Section 5.7.7, "Invoking Arbitrary Methods and Constructors," on p. 286 for more information on how to supply parameters. 
+  java.lang.Throwable 1.0 void printStackTrace() prints the Throwable object and the stack trace to the standard error stream. 
+5.7.2 A Primer on Declaring Exceptions
+  We cover exception handling fully in Chapter 7, but in the meantime you will occasionally encounter methods that threaten to throw exceptions. 
+  When an error occurs at runtime, a program can "throw an exception." 
+  Throwing an exception is more flexible than terminating the program because you can provide a handler that "catches" the exception and deals with it. 
+  If you don’t provide a handler, the program terminates and prints a message to the console, giving the type of the exception. You may have already seen exception reports when you accidentally used a null reference or overstepped the bounds of an array. 
+  There are two kinds of exceptions: unchecked exceptions and checked exceptions. With checked exceptions, the compiler checks that you, the programmer, are aware of the exception and are prepared to deal with the consequences. However, many common exceptions, such as bounds errors, or accessing a null reference, are unchecked. The compiler does not expect that you provide a handler—after all, you should spend your mental energy on avoiding these mistakes rather than coding handlers for them. 
+  But not all errors are avoidable. If an exception can occur despite your best efforts, then most Java APIs will throw a checked exception. One example is the Class.forName method. There is no way for you to ensure that a class with the given name exists. In Chapter 7, you will see several strategies for exception handling. For now, we just show you the simplest strategy. 
+  Whenever a method contains a statement that might throw a checked exception, add a throws clause to the method name. 
+  public static void doSomethingWithClass(String name) throws ReflectiveOperationException { Class cl = Class.forName(name); // might throw exception do something with cl } 
+  Any method that calls this method also needs a throws declaration. This includes the main method. If an exception actually occurs, the main method terminates with a stack trace. (You will learn in Chapter 7 how to catch exceptions instead of having them terminate your programs.) You only need to supply a throws clause for checked exceptions. It is easy to find out which methods throw checked exceptions—the compiler will complain whenever you call a method that threatens to throw a checked   exception and you don’t supply a handler. 
+5.7.3 Resources
+  Classes often have associated data files, such as: Image and sound files Text files with message strings and button labels In Java, such an associated file is called a resource. 
+  For example, consider a dialog box that displays a message such as the one in Figure 5.3. 
+  Figure 5.3 Displaying image and text resources Of course, the book title and copyright year in the panel will change for the next edition of the book. To make it easy to track this change, we will put the text inside a file and not hardcode it as a string. 
+  But where should you put a file such as about.txt? Of course, it would be convenient to simply place it with the rest of the program files inside a JAR file. 
+  The Class class provides a useful service for locating resource files. Here are the necessary steps: 1. Get the Class object of the class that has a resource—for example, ResourceTest.class. 
+  2. Some methods, such as the getImage method of the ImageIcon   class, accept URLs that describe resource locations. Then you call URL url = cl.getResource("about.gif"); 
+  3. Otherwise, use the getResourceAsStream method to obtain an input stream for reading the data in the file. 
+  The point is that the Java virtual machine knows how to locate a class, so it can then search for the associated resource in the same location. For example, suppose the ResourceTest class is in a package resources. Then the ResourceTest.class file is located in a resources directory, and you place an icon file into the same directory. 
+  Instead of placing a resource file inside the same directory as the class file, you can provide a relative or absolute path such as data/about.txt /corejava/title.txt   Automating the loading of files is all the resource loading feature does. There are no standard methods for interpreting the contents of resource files. Each program must have its own way of interpreting its resource files. 
+  Another common application of resources is the internationalization of programs. Language-dependent strings, such as messages and user interface labels, are stored in resource files, with one file per language. The internationalization API, which is discussed in Chapter 7 of Volume II, supports a standard method for organizing and accessing these localization files. 
+  Listing 5.13 is a program that demonstrates resource loading. (Do not worry about the code for reading text and displaying dialogs—we cover those details later.) Compile, build a JAR file, and execute it: javac resource/ResourceTest.java jar cvfe ResourceTest.jar resources.ResourceTest \ resources/*.class resources/*.gif resources/data/*.txt corejava/*.txt java -jar ResourceTest.jar   Move the JAR file to a different directory and run it again to check that the   program reads the resource files from the JAR file, not from the current directory. 
+  java.lang.Class 1.0 URL getResource(String name) 1.1 InputStream getResourceAsStream(String name) 1.1 finds the resource in the same place as the class and then returns a URL or input stream that you can use for loading the resource. Returns null if the resource isn’t found, so does not throw an exception for an I/O error. 
+5.7.4 Using Reflection to Analyze the Capabilities of Classes
+  Here is a brief overview of the most important parts of the reflection mechanism for letting you examine the structure of a class. 
+  The three classes Field, Method, and Constructor in the java.lang.reflect package describe the fields, methods, and constructors of a class, respectively. All three classes have a method called getName that returns the name of the item. The Field class has a method getType that returns an object, again of type Class, that describes the field type. The Method and Constructor classes have methods to report the types of the parameters, and the Method class also reports the return type. All three of these classes also have a method called getModifiers that returns an integer, with various bits turned on and off, that describes the modifiers used, such as public and static. You can then use the static methods in the Modifier class in the java.lang.reflect package to analyze the integer that getModifiers returns. Use methods like isPublic, isPrivate, or isFinal in the Modifier class to tell whether a method or constructor was public, private, or final. All you have to do is have the appropriate method in the Modifier class work on the integer that getModifiers returns. You can also use the Modifier.toString method to print the modifiers. 
+  The getFields, getMethods, and getConstructors methods of the Class class return arrays of the public fields, methods, and constructors that the class supports. This includes public members of superclasses. The getDeclaredFields, getDeclaredMethods, and getDeclaredConstructors methods of the Class class return arrays consisting of all fields, methods, and constructors that are declared in the class. This includes private, package, and protected members, but not members of superclasses. 
+  Listing 5.14 shows you how to print out all information about a class. The program prompts you for the name of a class and writes out the signatures of all methods and constructors as well as the names of all instance fields of a class. For example, if you enter   java.lang.Double   the program prints public class java.lang.Double extends java.lang.Number { public java.lang.Double(java.lang.String); 
+  public java.lang.Double(double); 
+  public int hashCode(); 
+  public int compareTo(java.lang.Object); 
+  public int compareTo(java.lang.Double); 
+  public boolean equals(java.lang.Object); 
+  public java.lang.String toString(); 
+  public static java.lang.String toString(double); 
+  public static java.lang.Double valueOf(java.lang.String); 
+  public static boolean isNaN(double); 
+  public boolean isNaN(); 
+  public static boolean isInfinite(double); 
+  public boolean isInfinite(); 
+  public byte byteValue(); 
+  public short shortValue(); 
+  public int intValue(); 
+  public long longValue(); 
+  public float floatValue(); 
+  public double doubleValue(); 
+  public static double parseDouble(java.lang.String); 
+  public static native long doubleToLongBits(double); 
+  public static native long doubleToRawLongBits(double); 
+  public static native double longBitsToDouble(long); 
+  public static final double POSITIVE_INFINITY; 
+  public static final double NEGATIVE_INFINITY; 
+  public static final double NaN; 
+  public static final double MAX_VALUE; 
+  public static final double MIN_VALUE; 
+  public static final java.lang.Class TYPE; 
+  private double value; 
+  private static final long serialVersionUID; 
+  } 
+  What is remarkable about this program is that it can analyze any class that the Java interpreter can load, not just the classes that were available when the program was compiled. We will use this program in the next chapter to peek inside the inner classes that the Java compiler generates automatically. 
+  java.lang.Class 1.0 Field[] getFields() 1.1 Field[] getDeclaredFields() 1.1 getFields returns an array containing Field objects for the public fields of this class or its superclasses; getDeclaredField returns an array of Field objects for all fields of this class. The methods return an array of length 0 if there are no such fields or if the Class object represents a primitive or array type. 
+  Method[] getMethods() 1.1 Method[] getDeclaredMethods() 1.1 returns an array containing Method objects: getMethods returns public methods and includes inherited methods; 
+  getDeclaredMethods returns all methods of this class or interface but does not include inherited methods. 
+  Constructor[] getConstructors() 1.1 Constructor[] getDeclaredConstructors() 1.1   returns an array containing Constructor objects that give you all the public constructors (for getConstructors) or all constructors (for getDeclaredConstructors) of the class represented by this Class object. 
+  String getPackageName() 9 gets the name of the package containing this type, or the package of the element type if this type is an array type, or "java.lang" if this type is a primitive type. 
+  java.lang.reflect.Field 1.1 java.lang.reflect.Method 1.1 java.lang.reflect.Constructor 1.1 Class getDeclaringClass() returns the Class object for the class that defines this constructor, method, or field. 
+  Class[] getExceptionTypes() (in Constructor and Method classes) returns an array of Class objects that represent the types of the exceptions thrown by the method. 
+  int getModifiers() returns an integer that describes the modifiers of this constructor, method, or field. Use the methods in the Modifier class to analyze the return value. 
+  String getName() returns a string that is the name of the constructor, method, or field. 
+  Class[] getParameterTypes() (in Constructor and Method classes) returns an array of Class objects that represent the types of the parameters. 
+  Class getReturnType() (in Method class) returns a Class object that represents the return type. 
+  java.lang.reflect.Modifier 1.1 static String toString(int modifiers) returns a string with the modifiers that correspond to the bits set in modifiers. 
+  static boolean isAbstract(int modifiers) static boolean isFinal(int modifiers) static boolean isInterface(int modifiers) static boolean isNative(int modifiers) static boolean isPrivate(int modifiers) static boolean isProtected(int modifiers) static boolean isPublic(int modifiers) static boolean isStatic(int modifiers) static boolean isStrict(int modifiers) static boolean isSynchronized(int modifiers) static boolean isVolatile(int modifiers) tests the bit in the modifiers value that corresponds to the modifier in the method name. 
+5.7.5 Using Reflection to Analyze Objects at Runtime
+  In the preceding section, we saw how we can find out the names and types of the data fields of any object: Get the corresponding Class object. 
+  Call getDeclaredFields on the Class object. 
+  In this section, we will go one step further and actually look at the contents of the fields. Of course, it is easy to look at the contents of a specific field of an object whose name and type are known when you write a program. But reflection lets you look at fields of objects that were not known at compile time. 
+  The key method to achieve this is the get method in the Field class. If f is an object of type Field (for example, one obtained from getDeclaredFields) and obj is an object of the class of which f is a field, then f.get(obj) returns an object whose value is the current value of the field of obj. This is all a bit abstract, so let’s run through an example. 
+  var harry = new Employee("Harry Hacker", 50000, 10, 1, 1989); 
+  Class cl = harry.getClass(); 
+  // the class object representing Employee Field f = cl.getDeclaredField("name"); 
+  // the name field of the Employee class Object v = f.get(harry); 
+  // the value of the name field of the harry object, i.e., // the String object "Harry Hacker" 
+  Of course, you can also set the values that you can get. The call f.set(obj, value) sets the field represented by f of the object obj to the new value. 
+  Actually, there is a problem with this code. Since the name field is a private field, the get and set methods will throw an IllegalAccessException. You can only use get and set with accessible fields. The security mechanism of Java lets you find out what fields an object has, but it won’t let you read and write the values of those fields unless you have permission. 
+  The default behavior of the reflection mechanism is to respect Java access control. However, you can override access control by invoking the setAccessible method on a Field, Method, or Constructor object. For example: f.setAccessible(true); // now OK to call f.get(harry)   The setAccessible method is a method of the AccessibleObject class, the common superclass of the Field, Method, and Constructor classes. This feature is provided for debuggers, persistent storage, and similar mechanisms. We use it for a generic toString method later in this section. 
+  The call to setAccessible throws an exception if the access is not granted. The access can be denied by the module system (Chapter 9 of Volume II) or a security manager (Chapter 10 of Volume II). The use of security managers is not common. However, as of Java 9, every program contains modules since the Java API is modularized. 
+  Because so many libraries make use of reflection, Java 9 and 10 only give a warning when you use reflection to access a nonpublic feature inside a module. For example, the sample program at the end of this section looks into the internals of ArrayList and Integer objects. When you run the program, the following ominous message appears in the console:   WARNING: An illegal reflective access operation has occurred WARNING: Illegal reflective access by objectAnalyzer.ObjectAnalyzer (file:/hom /books/cj11/code/v1ch05/bin/) to field java.util.ArrayList.serialVersionUID WARNING: Please consider reporting this to the maintainers of objectAnalyzer.ObjectAnalyzer WARNING: Use --illegalaccess=warn to enable warnings of further illegal reflective access operations WARNING: All illegal access operations will be denied in a future release   For now, you can deactivate the warning. You need to "open" the java.util and java.lang packages in the java.base module to the "unnamed module." The details are in Chapter 9 of Volume II. Here is the syntax: java --add-opens java.base/java.util=ALL-UNNAMED \ --add-opens java.base/java.lang=ALL-UNNAMED \ objectAnalyzer.ObjectAnalyzerTest   Alternatively, you can see how the program will behave in a future version of Java, by running: java --illegal-access=deny objectAnalyzer/ObjectAnalyzerTest   Then the program will simply fail with an IllegalAccessException. 
+  Note It is possible that future libraries will use variable handles instead of reflection for reading and writing fields. A VarHandle is similar to a Field. You can use it to read or write a specific field of any instance of a specific class. However, to obtain a VarHandle, the library code needs a Lookup object:   public Object getFieldValue(Object obj, String fieldName, Lookup lookup) throws NoSuchFieldException, IllegalAccessException { Class<?> cl = obj.getClass(); 
+  Field field = cl.getDeclaredField(fieldName); 
+  VarHandle handle = MethodHandles.privateLookupIn(cl, lookup) .unreflectVarHandle(field); 
+  return handle.get(obj); 
+  } 
+  This works provided the Lookup object is generated in the module that has the permission to access the field. Some method in the module simply calls MethodHandles.lookup(), which yields an object encapsulating the access rights of the caller. In this way, one module can give permission for accessing private members to another module. The practical issue is how those permissions can be given with a minimum of hassle. 
+  While we can still do so, let us look at a generic toString method that works for any class (see Listing 5.15). The generic toString method uses getDeclaredFields to obtain all data fields and the setAccessible convenience method to make all fields accessible. For each field, it obtains the name and the value. Each value is turned into a string by recursively invoking toString. 
+  The generic toString method needs to address a couple of complexities. 
+  Cycles of references could cause an infinite recursion. Therefore, the   ObjectAnalyzer keeps track of objects that were already visited. Also, to peek inside arrays, you need a different approach. You’ll learn about the details in the next section. 
+  You can use this toString method to peek inside any object. For example, the call var squares = new ArrayList<Integer>(); 
+  for (int i = 1; i <= 5; i++) squares.add(i * i); 
+  System.out.println(new ObjectAnalyzer().toString(squares)); 
+  yields the printout java.util.ArrayList[elementData=class java.lang.Object[] {java.lang.Integer[value=1][][], java.lang.Integer[value=4][][],java.lang.Integer[value=9][][], java.lang.Integer[value=16][][], java.lang.Integer[value=25][][],null,null,null,null,null},size=5] [modCount=5][][]   You can use this generic toString method to implement the toString methods of your own classes, like this: public String toString() { return new ObjectAnalyzer().toString(this); 
+  } 
+  This is a hassle-free and undoubtedly useful method for supplying a universal toString method. However, before you get too excited about never having to implement toString again, remember that the days of uncontrolled access to internals are numbered. 
+  java.lang.reflect.AccessibleObject 1.2 void setAccessible(boolean flag) sets or clears the accessibility flag for this accessible object, or throws an IllegalAccessException if the access is denied. 
+  void setAccessible(boolean flag)   boolean trySetAccessible() 9 sets the accessibility flag for this accessible object, or returns false if the access is denied. 
+  boolean isAccessible() gets the value of the accessibility flag for this accessible object. 
+  static void setAccessible(AccessibleObject[] array, boolean flag) is a convenience method to set the accessibility flag for an array of objects. 
+  java.lang.Class 1.1 Field getField(String name) Field[] getFields() gets the public field with the given name, or an array of all fields. 
+  Field getDeclaredField(String name) Field[] getDeclaredFields() gets the field that is declared in this class with the given name, or an array of all fields. 
+  java.lang.reflect.Field 1.1 Object get(Object obj) gets the value of the field described by this Field object in the object obj. 
+  void set(Object obj, Object newValue) sets the field described by this Field object in the object obj to a new value. 
+5.7.6 Using Reflection to Write Generic Array Code
+  The Array class in the java.lang.reflect package allows you to create arrays dynamically. This is used, for example, in the implementation of the copyOf method in the Arrays class. Recall how this method can be used to grow an array that has become full. 
+  var a = new Employee[100]; 
+  . . . 
+  // array is full a = Arrays.copyOf(a, 2 * a.length); 
+  How can one write such a generic method? It helps that an Employee[] array can be converted to an Object[] array. That sounds promising. Here is a first attempt: public static Object[] badCopyOf(Object[] a, int newLength) // not useful { var newArray = new Object[newLength]; 
+  System.arraycopy(a, 0, newArray, 0, Math.min(a.length, newLength)); 
+  return newArray; 
+  } 
+  However, there is a problem with actually using the resulting array. The type of array that this code returns is an array of objects (Object[]) because we created the array using the line of code new Object[newLength]   An array of objects cannot be cast to an array of employees (Employee[]). 
+  The virtual machine would generate a ClassCastException at runtime. 
+  The point is that, as we mentioned earlier, a Java array remembers the type of its entries—that is, the element type used in the new expression that created it. It is legal to cast an Employee[] temporarily to an Object[] array and then cast it back, but an array that started its life as an Object[] array can never be cast into an Employee[] array. To write this kind of generic array code, we need to be able to make a new array of the same type as the original array. For this, we need the methods of the Array class in the java.lang.reflect package. The key is the static newInstance method of the Array class that constructs a new array. You must supply the   type for the entries and the desired length as parameters to this method. 
+  Object newArray = Array.newInstance(componentType, newLength); 
+  To actually carry this out, we need to get the length and the component type of the new array. 
+  We obtain the length by calling Array.getLength(a). The static getLength method of the Array class returns the length of an array. To get the component type of the new array: 1. First, get the class object of a. 
+  2. Confirm that it is indeed an array. 
+  3. Use the getComponentType method of the Class class (which is defined only for class objects that represent arrays) to find the right type for the array. 
+  Why is getLength a method of Array but getComponentType a method of Class? We don’t know—the distribution of the reflection methods seems a bit ad hoc at times. 
+  Here’s the code: public static Object goodCopyOf(Object a, int newLength) { Class cl = a.getClass(); 
+  if (!cl.isArray()) return null; 
+  Class componentType = cl.getComponentType(); 
+  int length = Array.getLength(a); 
+  Object newArray = Array.newInstance(componentType, newLength); 
+  System.arraycopy(a, 0, newArray, 0, Math.min(length, newLength)); 
+  return newArray; 
+  } 
+  Note that this copyOf method can be used to grow arrays of any type, not just arrays of objects. 
+  int[] a = { 1, 2, 3, 4, 5 }; 
+  a = (int[]) goodCopyOf(a, 10); 
+  To make this possible, the parameter of goodCopyOf is declared to be of type Object, not an array of objects (Object[]). The integer array type int[] can be converted to an Object, but not to an array of objects! 
+  Listing 5.17 shows both methods in action. Note that the cast of the return value of badcopyOf will throw an exception. 
+  java.lang.reflect.Array 1.1 • static Object get(Object array, int index) static xxx getXxx(Object array, int index) (xxx is one of the primitive types boolean, byte, char, double, float, int, long, or short.) These methods return the value of the given array that is stored at the given index. 
+  static void set(Object array, int index, Object newValue) static setXxx(Object array, int index, xxx newValue) (xxx is one of the primitive types boolean, byte, char, double, float, int, long, or short.) These methods store a new value into the given array at the given index. 
+  static int getLength(Object array) returns the length of the given array. 
+  static Object newInstance(Class componentType, int length) static Object newInstance(Class componentType, int[] lengths) returns a new array of the given component type with the given dimensions. 
+5.7.7 Invoking Arbitrary Methods and Constructors
+  In C and C++, you can execute an arbitrary function through a function pointer. On the surface, Java does not have method pointers—that is, ways of giving the location of a method to another method, so that the second method can invoke it later. In fact, the designers of Java have said that method pointers are dangerous and error-prone, and that Java interfaces and lambda expressions (discussed in the next chapter) are a superior solution. However, the reflection mechanism allows you to call arbitrary methods. 
+  Recall that you can inspect a field of an object with the get method of the Field class. Similarly, the Method class has an invoke method that lets you call the method that is wrapped in the current Method object. The signature for the invoke method is Object invoke(Object obj, Object... args)   The first parameter is the implicit parameter, and the remaining objects provide the explicit parameters. 
+  For a static method, the first parameter is ignored—you can set it to null. 
+  For example, if m1 represents the getName method of the Employee class, the following code shows how you can call it: String n = (String) m1.invoke(harry); 
+  If the return type is a primitive type, the invoke method will return the wrapper type instead. For example, suppose that m2 represents the   getSalary method of the Employee class. Then, the returned object is actually a Double, and you must cast it accordingly. Use automatic unboxing to turn it into a double: double s = (Double) m2.invoke(harry); 
+  How do you obtain a Method object? You can, of course, call getDeclaredMethods and search through the returned array of Method objects until you find the method you want. Or, you can call the getMethod method of the Class class. This is similar to the getField method that takes a string with the field name and returns a Field object. However, there may be several methods with the same name, so you need to be careful that you get the right one. For that reason, you must also supply the parameter types of the desired method. The signature of getMethod is Method getMethod(String name, Class... parameterTypes)   For example, here is how you can get method pointers to the getName and raiseSalary methods of the Employee class: Method m1 = Employee.class.getMethod("getName"); 
+  Method m2 = Employee.class.getMethod("raiseSalary", double.class); 
+  Use a similar approach for invoking arbitrary constructors. Supply the constructor’s parameter types to the Class.getConstructor method, and supply the parameter values to the Constructor.newInstance method: Class cl = Random.class; // or any other class with a constructor that // accepts a long parameter Constructor cons = cl.getConstructor(long.class); 
+  Object obj = cons.newInstance(42L); 
+  Now that you have seen the rules for using Method objects, let’s put them to work. Listing 5.18 is a program that prints a table of values for a mathematical function such as Math.sqrt or Math.sin. The printout looks like this:   public static native double java.lang.Math.sqrt(double) 1.0000 | 1.0000 2.0000 | 1.4142 3.0000 | 1.7321 4.0000 | 2.0000 5.0000 | 2.2361 6.0000 | 2.4495 7.0000 | 2.6458 8.0000 | 2.8284 9.0000 | 3.0000 10.0000 | 3.1623   The code for printing a table is, of course, independent of the actual function that is being tabulated. 
+  double dx = (to - from) / (n - 1); 
+  for (double x = from; x <= to; x += dx) { double y = (Double) f.invoke(null, x); 
+  System.out.printf("%10.4f | %10.4f%n", x, y); 
+  } 
+  Here, f is an object of type Method. The first parameter of invoke is null because we are calling a static method. 
+  To tabulate the Math.sqrt function, we set f to Math.class.getMethod("sqrt", double.class)   That is the method of the Math class that has the name sqrt and a single parameter of type double. 
+  Listing 5.18 shows the complete code of the generic tabulator and a couple of test runs. 
+  As this example clearly shows, you can do anything with Method objects that you can do with function pointers in C (or delegates in C#). Just as in C, this style of programming is usually quite inconvenient, and always errorprone. What happens if you invoke a method with the wrong parameters? The invoke method throws an exception. 
+  Also, the parameters and return values of invoke are necessarily of type Object. That means you must cast back and forth a lot. As a result, the compiler is deprived of the chance to check your code, so errors surface only during testing, when they are more tedious to find and fix. Moreover, code that uses reflection to get at method pointers is significantly slower than code that simply calls methods directly. 
+  For that reason, we suggest that you use Method objects in your own programs only when absolutely necessary. Using interfaces and, as of Java 8, lambda expressions (the subject of the next chapter) is almost always a better idea. In particular, we echo the developers of Java and suggest not using Method objects for callback functions. Using interfaces for the callbacks leads to code that runs faster and is a lot more maintainable. 
+  java.lang.reflect.Method 1.1 public Object invoke(Object implicitParameter, Object[] explicitParameters) invokes the method described by this object, passing the given parameters and returning the value that the method returns. For static methods, pass null as the implicit parameter. Pass primitive type values by using wrappers. Primitive type return values must be unwrapped. 

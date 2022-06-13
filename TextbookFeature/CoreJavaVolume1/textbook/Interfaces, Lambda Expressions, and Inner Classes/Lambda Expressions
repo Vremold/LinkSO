@@ -1,0 +1,169 @@
+  In the following sections, you will learn how to use lambda expressions for defining blocks of code with a concise syntax, and how to write code that consumes lambda expressions. 
+6.2.1 Why Lambdas?
+   
+  A lambda expression is a block of code that you can pass around so it can be executed later, once or multiple times. Before getting into the syntax (or even the curious name), let’s step back and observe where we have used such code blocks in Java. 
+  In Section 6.1.7, "Interfaces and Callbacks," on p. 310, you saw how to do work in timed intervals. Put the work into the actionPerformed method of an ActionListener: class Worker implements ActionListener { public void actionPerformed(ActionEvent event) { // do some work } 
+  } 
+  Then, when you want to repeatedly execute this code, you construct an instance of the Worker class. You then submit the instance to a Timer object. 
+  The key point is that the actionPerformed method contains code that you want to execute later. 
+  Or consider sorting with a custom comparator. If you want to sort strings by length instead of the default dictionary order, you can pass a Comparator object to the sort method: class LengthComparator implements Comparator<String> { public int compare(String first, String second) { return first.length() - second.length(); 
+  } 
+  } 
+  . . . 
+  Arrays.sort(strings, new LengthComparator()); 
+  The compare method isn’t called right away. Instead, the sort method keeps calling the compare method, rearranging the elements if they are out of order, until the array is sorted. You give the sort method a snippet of code needed to compare elements, and that code is integrated into the rest of the sorting logic, which you’d probably not care to reimplement. 
+  Both examples have something in common. A block of code was passed to someone—a timer, or a sort method. That code block was called at some later time. 
+  Up to now, giving someone a block of code hasn’t been easy in Java. You couldn’t just pass code blocks around. Java is an object-oriented language, so you had to construct an object belonging to a class that has a method with the desired code. 
+  In other languages, it is possible to work with blocks of code directly. The Java designers have resisted adding this feature for a long time. After all, a great strength of Java is its simplicity and consistency. A language can become an unmaintainable mess if it includes every feature that yields marginally more concise code. However, in those other languages it isn’t just easier to spawn a thread or to register a button click handler; large swaths of their APIs are simpler, more consistent, and more powerful. In Java, one could have written similar APIs taking objects of classes that implement a particular interface, but such APIs would be unpleasant to use. 
+  For some time, the question was not whether to augment Java for functional programming, but how to do it. It took several years of experimentation before a design emerged that is a good fit for Java. In the next section, you will see how you can work with blocks of code in Java. 
+6.2.2 The Syntax of Lambda Expressions
+  Consider again the sorting example from the preceding section. We pass code that checks whether one string is shorter than another. We compute   first.length() - second.length()   What are first and second? They are both strings. Java is a strongly typed language, and we must specify that as well: (String first, String second) -> first.length() - second.length()   You have just seen your first lambda expression. Such an expression is simply a block of code, together with the specification of any variables that must be passed to the code. 
+  Why the name? Many years ago, before there were any computers, the logician Alonzo Church wanted to formalize what it means for a mathematical function to be effectively computable. (Curiously, there are functions that are known to exist, but nobody knows how to compute their values.) He used the Greek letter lambda (λ) to mark parameters. Had he known about the Java API, he would have written λfirst.λsecond.first.length() - second.length()   Note Why the letter λ? Did Church run out of other letters of the alphabet? 
+  Actually, the venerable Principia Mathematica used the ^ accent to denote free variables, which inspired Church to use an uppercase lambda Λ for parameters. But in the end, he switched to the lowercase version. Ever since, an expression with parameter variables has been called a lambda expression. 
+  You have just seen one form of lambda expressions in Java: parameters, the > arrow, and an expression. If the code carries out a computation that doesn’t fit in a single expression, write it exactly like you would have written a method: enclosed in {} and with explicit return statements. For example, (String first, String second) ->   { if (first.length() < second.length()) return -1; 
+  else if (first.length() > second.length()) return 1; 
+  else return 0; 
+  } 
+  If a lambda expression has no parameters, you still supply empty parentheses, just as with a parameterless method: () -> { for (int i = 100; i >= 0; i--) System.out.println(i); } 
+  If the parameter types of a lambda expression can be inferred, you can omit them. For example, Comparator<String> comp = (first, second) // same as (String first, String second) -> first.length() - second.length(); 
+  Here, the compiler can deduce that first and second must be strings because the lambda expression is assigned to a string comparator. (We will have a closer look at this assignment in the next section.) If a method has a single parameter with inferred type, you can even omit the parentheses: ActionListener listener = event -> System.out.println("The time is " 
+  + Instant.ofEpochMilli(event.getWhen())); 
+  // instead of (event) -> . . . or (ActionEvent event) > . . . 
+  You never specify the result type of a lambda expression. It is always inferred from context. For example, the expression (String first, String second) -> first.length() - second.length()   can be used in a context where a result of type int is expected. 
+  Note   It is illegal for a lambda expression to return a value in some branches but not in others. For example, (int x) -> { if (x >= 0) return 1; } is invalid. 
+  The program in Listing 6.6 shows how to use lambda expressions for a comparator and an action listener. 
+6.2.3 Functional Interfaces
+  As we discussed, there are many existing interfaces in Java that encapsulate blocks of code, such as ActionListener or Comparator. Lambdas are compatible with these interfaces. 
+  You can supply a lambda expression whenever an object of an interface with a single abstract method is expected. Such an interface is called a functional interface. 
+  Note You may wonder why a functional interface must have a single abstract method. Aren’t all methods in an interface abstract? 
+  Actually, it has always been possible for an interface to redeclare methods from the Object class such as toString or clone, and these declarations do not make the methods abstract. (Some interfaces in the Java API redeclare Object methods in order to attach javadoc comments. Check out the Comparator API for an example.) More importantly, as you saw in Section 6.1.5, "Default Methods," on p. 307, interfaces can declare nonabstract methods. 
+  To demonstrate the conversion to a functional interface, consider the Arrays.sort method. Its second parameter requires an instance of Comparator, an interface with a single method. Simply supply a lambda: Arrays.sort(words, (first, second) -> first.length() - second.length()); 
+  Behind the scenes, the Arrays.sort method receives an object of some class that implements Comparator<String>. Invoking the compare method on that object executes the body of the lambda expression. The management of these objects and classes is completely implementationdependent, and it can be much more efficient than using traditional inner classes. It is best to think of a lambda expression as a function, not an object, and to accept that it can be passed to a functional interface. 
+  This conversion to interfaces is what makes lambda expressions so compelling. The syntax is short and simple. Here is another example: var timer = new Timer(1000, event -> { System.out.println("At the tone, the time is " 
+  + Instant.ofEpochMilli(event.getWhen())); 
+  Toolkit.getDefaultToolkit().beep(); 
+  }); 
+  That’s a lot easier to read than the alternative with a class that implements the ActionListener interface. 
+  In fact, conversion to a functional interface is the only thing that you can do with a lambda expression in Java. In other programming languages that support function literals, you can declare function types such as (String, String) -> int, declare variables of those types, and use the variables to save function expressions. However, the Java designers decided to stick with the familiar concept of interfaces instead of adding function types to the language. 
+  Note You can’t even assign a lambda expression to a variable of type Object—Object is not a functional interface. 
+  The Java API defines a number of very generic functional interfaces in the java.util.function package. One of the interfaces, BiFunction<T, U, R>, describes functions with parameter types T and U and return type R. You can save our string comparison lambda in a variable of that type: BiFunction<String, String, Integer> comp = (first, second) -> first.length() - second.length(); 
+  However, that does not help you with sorting. There is no Arrays.sort method that wants a BiFunction. If you have used a functional   programming language before, you may find this curious. But for Java programmers, it’s pretty natural. An interface such as Comparator has a specific purpose, not just a method with given parameter and return types. 
+  When you want to do something with lambda expressions, you still want to keep the purpose of the expression in mind, and have a specific functional interface for it. 
+  A particularly useful interface in the java.util.function package is Predicate: public interface Predicate<T> { boolean test(T t); 
+  // additional default and static methods } 
+  The ArrayList class has a removeIf method whose parameter is a Predicate. It is specifically designed to pass a lambda expression. For example, the following statement removes all null values from an array list: list.removeIf(e -> e == null); 
+  Another useful functional interface is Supplier<T>: public interface Supplier<T> { T get(); 
+  } 
+  A supplier has no arguments and yields a value of type T when it is called. 
+  Suppliers are used for lazy evaluation. For example, consider the call LocalDate hireDay = Objects.requireNonNullOrElse(day, new LocalDate(1970, 1, 1)); 
+  This is not optimal. We expect that day is rarely null, so we only want to construct the default LocalDate when necessary. By using the supplier, we can defer the computation:   LocalDate hireDay = Objects.requireNonNullOrElseGet(day, () -> new LocalDate(1970, 1, 1)); 
+  The requireNonNullOrElseGet method only calls the supplier when the value is needed. 
+6.2.4 Method References
+  Sometimes, a lambda expression involves a single method. For example, suppose you simply want to print the event object whenever a timer event occurs. Of course, you could call var timer = new Timer(1000, event -> System.out.println(event)); 
+  It would be nicer if you could just pass the println method to the Timer constructor. Here is how you do that: var timer = new Timer(1000, System.out::println); 
+  The expression System.out::println is a method reference. It directs the compiler to produce an instance of a functional interface, overriding the single abstract method of the interface to call the given method. In this example, an ActionListener is produced whose actionPerformed(ActionEvent e) method calls System.out.println(e). 
+  Note Like a lambda expression, a method reference is not an object. It gives rise to an object when assigned to a variable whose type is a functional interface. 
+  Note There are ten overloaded println methods in the PrintStream class (of which System.out is an instance). The compiler needs to   figure out which one to use, depending on context. In our example, the method reference System.out::println must be turned into an ActionListener instance with a method void actionPerformed(ActionEvent e)   The println(Object x) method is selected from the ten overloaded println methods since Object is the best match for ActionEvent. When the actionPerformed method is called, the event object is printed. 
+  Now suppose we assign the same method reference to a different functional interface: Runnable task = System.out::println; 
+  The Runnable functional interface has a single abstract method with no parameters void run()   In this case, the println() method with no parameters is chosen. 
+  Calling task.run() prints a blank line to System.out. 
+  As another example, suppose you want to sort strings regardless of letter case. You can pass this method expression: Arrays.sort(strings, String::compareToIgnoreCase)   As you can see from these examples, the :: operator separates the method name from the name of an object or class. There are three variants: 1. object::instanceMethod 2. Class::instanceMethod 3. Class::staticMethod In the first variant, the method reference is equivalent to a lambda expression whose parameters are passed to the method. In the case of   System.out::println, the object is System.out, and the method expression is equivalent to x -> System.out.println(x). 
+  In the second variant, the first parameter becomes the implicit parameter of the method. For example, String::compareToIgnoreCase is the same as (x, y) -> x.compareToIgnoreCase(y). 
+  In the third variant, all parameters are passed to the static method: Math::pow is equivalent to (x, y) -> Math.pow(x, y). 
+  Table 6.1 walks you through additional examples. 
+  Table 6.1 Method Reference Examples Method Reference   Equivalent Lambda Expression   Notes   separator::equalsx -> This is a method separator.equals(x) expression with an object and an instance method. The lambda parameter is passed as the explicit parameter of the method. 
+  String::trim   x -> x.trim()   This is a method expression with a class and an instance method. The lambda parameter becomes the implicit parameter. 
+  String::concat   (x, y) -> x.concat(y)   Again, we have an instance method, but this time, with an explicit parameter. As before, the first lambda parameter becomes the implicit parameter, and the remaining ones are   passed to the method. 
+  Integer::valueOf x -> This is a method Integer::valueOf(x) expression with a static method. The lambda parameter is passed to the static method. 
+  Integer::sum   (x, y) -> This is another static Integer::sum(x, y) method, but this time with two parameters. 
+  Both lambda parameters are passed to the static method. 
+  The Integer.sum method was specifically created to be used as a method reference. As a lambda, you could just write (x, y) -> x + y. 
+  Integer::new   x -> new Integer(x) This is a constructor reference—see Section 6.2.5. The lambda parameters are passed to the constructor. 
+  Integer[]::new   n -> new Integer[n] This is an array constructor reference —see Section 6.2.5. 
+  The lambda parameter is the array length. 
+  Note that a lambda expression can only be rewritten as a method reference if the body of the lambda expression calls a single method and doesn’t do anything else. Consider the lambda expression   s -> s.length() == 0   There is a single method call. But there is also a comparison, so you can’t use a method reference here. 
+  Note When there are multiple overloaded methods with the same name, the compiler will try to find from the context which one you mean. 
+  For example, there are two versions of the Math.max method, one for integers and one for double values. Which one gets picked depends on the method parameters of the functional interface to which Math::max is converted. Just like lambda expressions, method references don’t live in isolation. They are always turned into instances of functional interfaces. 
+  Note Sometimes, the API contains methods that are specifically intended to be used as method references. For example, the Objects class has a method isNull to test whether an object reference is null. 
+  At first glance, this doesn’t seem useful because the test obj == null is easier to read than Objects.isNull(obj). But you can pass the method reference to any method with a Predicate parameter. For example, to remove all null references from a list, you can call list.removeIf(Objects::isNull); 
+  // A bit easier to read than list.removeIf(e > e == null); 
+  Note   There is a tiny difference between a method reference with an object and its equivalent lambda expression. Consider a method reference such as separator::equals. If separator is null, forming separator::equals immediately throws a NullPointerException. The lambda expression x -> separator.equals(x) only throws a NullPointerException if it is invoked. 
+  You can capture the this parameter in a method reference. For example, this::equals is the same as x -> this.equals(x). It is also valid to use super. The method expression super::instanceMethod   uses this as the target and invokes the superclass version of the given method. Here is an artificial example that shows the mechanics: class Greeter { public void greet(ActionEvent event) { System.out.println("Hello, the time is " 
+  + Instant.ofEpochMilli(event.getWhen())); 
+  } 
+  } 
+  class RepeatedGreeter extends Greeter { public void greet(ActionEvent event) { var timer = new Timer(1000, super::greet); 
+  timer.start(); 
+  } 
+  } 
+  When the RepeatedGreeter.greet method starts, a Timer is constructed that executes the super::greet method on every timer tick. 
+6.2.5 Constructor References
+  Constructor references are just like method references, except that the name of the method is new. For example, Person::new is a reference to a   Person constructor. Which constructor? It depends on the context. Suppose you have a list of strings. Then you can turn it into an array of Person objects, by calling the constructor on each of the strings, with the following invocation: ArrayList<String> names = . . .; 
+  Stream<Person> stream = names.stream().map(Person::new); 
+  List<Person> people = stream.collect(Collectors.toList()); 
+  We will discuss the details of the stream, map, and collect methods in Chapter 1 of Volume II. For now, what’s important is that the map method calls the Person(String) constructor for each list element. If there are multiple Person constructors, the compiler picks the one with a String parameter because it infers from the context that the constructor is called with a string. 
+  You can form constructor references with array types. For example, int[]::new is a constructor reference with one parameter: the length of the array. It is equivalent to the lambda expression x -> new int[x]. 
+  Array constructor references are useful to overcome a limitation of Java. It is not possible to construct an array of a generic type T. The expression new T[n] is an error since it would be erased to new Object[n]. That is a problem for library authors. For example, suppose we want to have an array of Person objects. The Stream interface has a toArray method that returns an Object array: Object[] people = stream.toArray(); 
+  But that is unsatisfactory. The user wants an array of references to Person, not references to Object. The stream library solves that problem with constructor references. Pass Person[]::new to the toArray method: Person[] people = stream.toArray(Person[]::new); 
+  The toArray method invokes this constructor to obtain an array of the correct type. Then it fills and returns the array. 
+6.2.6 Variable Scope
+  Often, you want to be able to access variables from an enclosing method or class in a lambda expression. Consider this example: public static void repeatMessage(String text, int delay) { ActionListener listener = event -> { System.out.println(text); 
+  Toolkit.getDefaultToolkit().beep(); 
+  }; 
+  new Timer(delay, listener).start(); 
+  } 
+  Consider a call repeatMessage("Hello", 1000); // prints Hello every 1,000 milliseconds   Now look at the variable text inside the lambda expression. Note that this variable is not defined in the lambda expression. Instead, it is a parameter variable of the repeatMessage method. 
+  If you think about it, something nonobvious is going on here. The code of the lambda expression may run long after the call to repeatMessage has returned and the parameter variables are gone. How does the text variable stay around? 
+  To understand what is happening, we need to refine our understanding of a lambda expression. A lambda expression has three ingredients: 1. A block of code 2. Parameters 3. Values for the free variables—that is, the variables that are not parameters and not defined inside the code In our example, the lambda expression has one free variable, text. The data structure representing the lambda expression must store the values for the free variables—in our case, the string "Hello". We say that such values   have been captured by the lambda expression. (It’s an implementation detail how that is done. For example, one can translate a lambda expression into an object with a single method, so that the values of the free variables are copied into instance variables of that object.)   Note The technical term for a block of code together with the values of the free variables is a closure. If someone gloats that their language has closures, rest assured that Java has them as well. In Java, lambda expressions are closures. 
+  As you have seen, a lambda expression can capture the value of a variable in the enclosing scope. In Java, to ensure that the captured value is well-defined, there is an important restriction. In a lambda expression, you can only reference variables whose value doesn’t change. For example, the following is illegal: public static void countDown(int start, int delay) { ActionListener listener = event -> { start--; // ERROR: Can't mutate captured variable System.out.println(start); 
+  }; 
+  new Timer(delay, listener).start(); 
+  } 
+  There is a reason for this restriction. Mutating variables in a lambda expression is not safe when multiple actions are executed concurrently. This won’t happen for the kinds of actions that we have seen so far, but in general, it is a serious problem. See Chapter 12 for more information on this important issue. 
+  It is also illegal to refer, in a lambda expression, to a variable that is mutated outside. For example, the following is illegal: public static void repeat(String text, int count)   { for (int i = 1; i <= count; i++) { ActionListener listener = event -> { System.out.println(i + ": " + text); 
+  // ERROR: Cannot refer to changing i }; 
+  new Timer(1000, listener).start(); 
+  } 
+  } 
+  The rule is that any captured variable in a lambda expression must be effectively final. An effectively final variable is a variable that is never assigned a new value after it has been initialized. In our case, text always refers to the same String object, and it is OK to capture it. However, the value of i is mutated, and therefore i cannot be captured. 
+  The body of a lambda expression has the same scope as a nested block. The same rules for name conflicts and shadowing apply. It is illegal to declare a parameter or a local variable in the lambda that has the same name as a local variable. 
+  Path first = Path.of("/usr/bin"); 
+  Comparator<String> comp = (first, second) -> first.length() - second.length(); 
+  // ERROR: Variable first already defined   Inside a method, you can’t have two local variables with the same name, and therefore, you can’t introduce such variables in a lambda expression either. 
+  When you use the this keyword in a lambda expression, you refer to the this parameter of the method that creates the lambda. For example, consider public class Application { public void init() { ActionListener listener = event -> { System.out.println(this.toString()); 
+  . . . 
+  } 
+  . . . 
+  } 
+  } 
+  The expression this.toString() calls the toString method of the Application object, not the ActionListener instance. There is nothing special about the use of this in a lambda expression. The scope of the lambda expression is nested inside the init method, and this has the same meaning anywhere in that method. 
+6.2.7 Processing Lambda Expressions
+  Up to now, you have seen how to produce lambda expressions and pass them to a method that expects a functional interface. Now let us see how to write methods that can consume lambda expressions. 
+  The point of using lambdas is deferred execution. After all, if you wanted to execute some code right now, you’d do that, without wrapping it inside a lambda. There are many reasons for executing code later, such as: Running the code in a separate thread Running the code multiple times Running the code at the right point in an algorithm (for example, the comparison operation in sorting) Running the code when something happens (a button was clicked, data has arrived, and so on) Running the code only when necessary Let’s look at a simple example. Suppose you want to repeat an action n times. The action and the count are passed to a repeat method: repeat(10, () -> System.out.println("Hello, World!")); 
+  To accept the lambda, we need to pick (or, in rare cases, provide) a functional interface. Table 6.2 lists the most important functional interfaces that are provided in the Java API. In this case, we can use the Runnable interface: Table 6.2 Common Functional Interfaces   Functional Interface   Parameter Return Types Type   Abstract Description Other Method Methods Name   Runnable   none   void   run   Runs an action without arguments or return value   Supplier<T>   none   T   get   Supplies a value of type T   Consumer<T>   T   void   accept Consumes a andThen value of type T   BiConsumer<T, U> T, U   void   accept Consumes andThen values of types T and U   Function<T, R>   R   apply A function compose with andThen argument of identity type T   BiFunction<T, U, T, U R>   R   apply A function andThen with arguments of types T and U   UnaryOperator<T> T   T   apply A unary compose operator on andThen the type T identity   BinaryOperator<T> T, T   T   apply A binary andThen operator on maxBy   T   the type T Predicate<T>   T   BiPredicate<T, U> T, U   minBy   booleantest   A boolean- and, or valued negate function isEqual   booleantest   A boolean- and, or valued negate function with two arguments   public static void repeat(int n, Runnable action) { for (int i = 0; i < n; i++) action.run(); 
+  } 
+  Note that the body of the lambda expression is executed when action.run() is called. 
+  Now let’s make this example a bit more sophisticated. We want to tell the action in which iteration it occurs. For that, we need to pick a functional interface that has a method with an int parameter and a void return. The standard interface for processing int values is public interface IntConsumer { void accept(int value); 
+  } 
+  Here is the improved version of the repeat method: public static void repeat(int n, IntConsumer action) { for (int i = 0; i < n; i++) action.accept(i); 
+  } 
+  And here is how you call it: repeat(10, i -> System.out.println("Countdown: " + (9 - i))); 
+  Table 6.3 lists the 34 available specializations for primitive types int, long, and double. As you will see in Chapter 8, it is more efficient to use these specializations than the generic interfaces. For that reason, I used an IntConsumer instead of a Consumer<Integer> in the example of the preceding section. 
+  Table 6.3 Functional Interfaces for Primitive Types p, q is int, long, double; P, Q is Int, Long, Double Functional Interface   Parameter Types   Return Type   Abstract Method Name   BooleanSupplier   none   boolean getAsBoolean   PSupplier   none   p   getAsP   PConsumer   p   void   accept   ObjPConsumer<T>   T, p   void   accept   PFunction<T>   p   T   apply   PToQFunction   p   q   applyAsQ   ToPFunction<T>   T   p   applyAsP   ToPBiFunction<T, T, U U>   p   applyAsP   PUnaryOperator   p   p   applyAsP   PBinaryOperator   p, p   p   applyAsP   PPredicate   p   boolean test   Tip It is a good idea to use an interface from Tables 6.2 or 6.3 whenever you can. For example, suppose you write a method to process files that match a certain criterion. There is a legacy interface java.io.FileFilter, but it is better to use the standard Predicate<File>. The only reason not to do so would be if you   already have many useful methods producing FileFilter instances. 
+  Note Most of the standard functional interfaces have nonabstract methods for producing or combining functions. For example, Predicate.isEqual(a) is the same as a::equals, but it also works if a is null. There are default methods and, or, negate for combining predicates. For example, Predicate.isEqual(a).or( Predicate.isEqual(b)) is the same as x -> a.equals(x) || b.equals(x). 
+  Note If you design your own interface with a single abstract method, you can tag it with the @FunctionalInterface annotation. This has two advantages. The compiler gives an error message if you accidentally add another abstract method. And the javadoc page includes a statement that your interface is a functional interface. 
+  It is not required to use the annotation. Any interface with a single abstract method is, by definition, a functional interface. But using the @FunctionalInterface annotation is a good idea. 
+6.2.8 More about Comparators
+  The Comparator interface has a number of convenient static methods for creating comparators. These methods are intended to be used with lambda expressions or method references. 
+  The static comparing method takes a "key extractor" function that maps a type T to a comparable type (such as String). The function is applied to the objects to be compared, and the comparison is then made on the returned   keys. For example, suppose you have an array of Person objects. Here is how you can sort them by name: Arrays.sort(people, Comparator.comparing(Person::getName)); 
+  This is certainly much easier than implementing a Comparator by hand. 
+  Moreover, the code is clearer since it is obvious that we want to compare people by name. 
+  You can chain comparators with the thenComparing method for breaking ties. For example, Arrays.sort(people, Comparator.comparing(Person::getLastName) .thenComparing(Person::getFirstName)); 
+  If two people have the same last name, then the second comparator is used. 
+  There are a few variations of these methods. You can specify a comparator to be used for the keys that the comparing and thenComparing methods extract. For example, here we sort people by the length of their names: Arrays.sort(people, Comparator.comparing(Person::getName, (s, t) -> Integer.compare(s.length(), t.length()))); 
+  Moreover, both the comparing and thenComparing methods have variants that avoid boxing of int, long, or double values. An easier way of producing the preceding operation would be Arrays.sort(people, Comparator.comparingInt(p -> p.getName().length())); 
+  If your key function can return null, you will like the nullsFirst and nullsLast adapters. These static methods take an existing comparator and modify it so that it doesn’t throw an exception when encountering null values but ranks them as smaller or larger than regular values. For example, suppose getMiddleName returns a null when a person has no middle name. Then you can use Comparator.comparing(Person::getMiddleName(),   Comparator.nullsFirst(. . .)). 
+  The nullsFirst method needs a comparator—in this case, one that compares two strings. The naturalOrder method makes a comparator for any class implementing Comparable. A Comparator. 
+  <String>naturalOrder() is what we need. Here is the complete call for sorting by potentially null middle names. I use a static import of java.util.Comparator.*, to make the expression more legible. Note that the type for naturalOrder is inferred. 
+  Arrays.sort(people, comparing(Person::getMiddleName, nullsFirst(naturalOrder()))); 
+  The static reverseOrder method gives the reverse of the natural order. To reverse any comparator, use the reversed instance method. For example, naturalOrder().reversed() is the same as reverseOrder(). 

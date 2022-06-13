@@ -1,0 +1,322 @@
+So far, we have collected integers in a Stream<Integer>, even though it is clearly inefficient to wrap each integer into a wrapper object. The same is true for the other
+primitive types: double, float, long, short, char, byte, and boolean. The stream library has
+specialized types IntStream, LongStream, and DoubleStream that store primitive values directly, without using wrappers. If you want to store short, char, byte, and boolean,
+use an IntStream, and for float, use a DoubleStream.
+To create an IntStream, call the IntStream.of and Arrays.stream methods:
+IntStream stream = IntStream.of(1, 1, 2, 3, 5);
+stream = Arrays.stream(values, from, to); // values is an int[] array
+
+As with object streams, you can also use the static generate and iterate methods. In
+addition, IntStream and LongStream have static methods range and rangeClosed that generate
+integer ranges with step size one:
+IntStream zeroToNinetyNine = IntStream.range(0, 100); // Upper bound is excluded
+IntStream zeroToHundred = IntStream.rangeClosed(0, 100); // Upper bound is included
+
+The CharSequence interface has methods codePoints and chars that yield an IntStream of
+the Unicode codes of the characters or of the code units in the UTF-16 encoding.
+(See Chapter 2 for the sordid details.)
+String sentence = "\uD835\uDD46 is the set of octonions.";
+// \uD835\uDD46 is the UTF-16 encoding of the letter , unicode U+1D546
+IntStream codes = sentence.codePoints();
+// The stream with hex values 1D546 20 69 73 20 . . .
+
+When you have a stream of objects, you can transform it to a primitive type stream
+with the mapToInt, mapToLong, or mapToDouble methods. For example, if you have a
+stream of strings and want to process their lengths as integers, you might as well
+do it in an IntStream:
+Stream<String> words = . . .;
+IntStream lengths = words.mapToInt(String::length);
+
+To convert a primitive type stream to an object stream, use the boxed method:
+Stream<Integer> integers = IntStream.range(0, 100).boxed();
+
+Generally, the methods on primitive type streams are analogous to those on object
+streams. Here are the most notable differences:
+• The toArray methods return primitive type arrays.
+
+From the Library of Hristo Dimov Hristov
+
+1.13 Primitive Type Streams
+
+37
+
+• Methods that yield an optional result return an OptionalInt, OptionalLong, or
+OptionalDouble. These classes are analogous to the Optional class but have methods
+getAsInt, getAsLong, and getAsDouble instead of the get method.
+• There are methods sum, average, max, and min that return the sum, average,
+maximum, and minimum. These methods are not defined for object streams.
+• The summaryStatistics method yields an object of type IntSummaryStatistics,
+LongSummaryStatistics, or DoubleSummaryStatistics that can simultaneously report the
+sum, average, maximum, and minimum of the stream.
+NOTE: The Random class has methods ints, longs, and doubles that return primitive
+type streams of random numbers.
+
+The program in Listing 1.7 gives examples for the API of primitive type streams.
+
+Listing 1.7
+1
+
+streams/PrimitiveTypeStreams.java
+
+package streams;
+
+2
+3
+4
+5
+6
+7
+8
+9
+10
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+
+public class PrimitiveTypeStreams
+{
+public static void show(String title, IntStream stream)
+{
+final int SIZE = 10;
+int[] firstElements = stream.limit(SIZE + 1).toArray();
+System.out.print(title + ": ");
+for (int i = 0; i < firstElements.length; i++)
+{
+if (i > 0) System.out.print(", ");
+if (i < SIZE) System.out.print(firstElements[i]);
+else System.out.print("...");
+}
+System.out.println();
+}
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+38
+
+Chapter 1
+
+The Java SE 8 Stream Library
+
+Listing 1.7 (Continued)
+27
+
+public static void main(String[] args) throws IOException
+{
+IntStream is1 = IntStream.generate(() -> (int) (Math.random() * 100));
+show("is1", is1);
+IntStream is2 = IntStream.range(5, 10);
+show("is2", is2);
+IntStream is3 = IntStream.rangeClosed(5, 10);
+show("is3", is3);
+
+28
+29
+30
+31
+32
+33
+34
+35
+36
+
+Path path = Paths.get("../gutenberg/alice30.txt");
+String contents = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
+
+37
+38
+39
+
+Stream<String> words = Stream.of(contents.split("\\PL+"));
+IntStream is4 = words.mapToInt(String::length);
+show("is4", is4);
+String sentence = "\uD835\uDD46 is the set of octonions.";
+System.out.println(sentence);
+IntStream codes = sentence.codePoints();
+System.out.println(codes.mapToObj(c -> String.format("%X ", c)).collect(
+Collectors.joining()));
+
+40
+41
+42
+43
+44
+45
+46
+47
+48
+
+Stream<Integer> integers = IntStream.range(0, 100).boxed();
+IntStream is5 = integers.mapToInt(Integer::intValue);
+show("is5", is5);
+
+49
+50
+51
+
+}
+
+52
+53
+
+}
+
+java.util.stream.IntStream 8
+
+• static IntStream range(int startInclusive, int endExclusive)
+• static IntStream rangeClosed(int startInclusive, int endInclusive)
+yields an IntStream with the integers in the given range.
+• static IntStream of(int... values)
+yields an IntStream with the given elements.
+• int[] toArray()
+yields an array with the elements of this stream.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+1.13 Primitive Type Streams
+
+39
+
+java.util.stream.IntStream 8 (Continued)
+
+•
+•
+•
+•
+•
+
+int sum()
+OptionalDouble average()
+OptionalInt max()
+OptionalInt min()
+IntSummaryStatistics summaryStatistics()
+
+yields the sum, average, maximum, or minimum of the elements in this stream, or
+an object from which all four of these results can be obtained.
+• Stream<Integer> boxed()
+yields a stream of wrapper objects for the elements in this stream.
+
+java.util.stream.LongStream 8
+
+• static LongStream range(long startInclusive, long endExclusive)
+• static LongStream rangeClosed(long startInclusive, long endInclusive)
+yields a LongStream with the integers in the given range.
+• static LongStream of(long... values)
+yields a LongStream with the given elements.
+• long[] toArray()
+yields an array with the elements of this stream.
+•
+•
+•
+•
+•
+
+long sum()
+OptionalDouble average()
+OptionalLong max()
+OptionalLong min()
+LongSummaryStatistics summaryStatistics()
+
+yields the sum, average, maximum, or minimum of the elements in this stream, or
+an object from which all four of these results can be obtained.
+• Stream<Long> boxed()
+yields a stream of wrapper objects for the elements in this stream.
+
+java.util.stream.DoubleStream 8
+
+• static DoubleStream of(double... values)
+yields a DoubleStream with the given elements.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+40
+
+Chapter 1
+
+The Java SE 8 Stream Library
+
+java.util.stream.DoubleStream 8 (Continued)
+
+• double[] toArray()
+yields an array with the elements of this stream.
+•
+•
+•
+•
+•
+
+double sum()
+OptionalDouble average()
+OptionalDouble max()
+OptionalDouble min()
+DoubleSummaryStatistics summaryStatistics()
+
+yields the sum, average, maximum, or minimum of the elements in this stream, or
+an object from which all four of these results can be obtained.
+• Stream<Double> boxed()
+yields a stream of wrapper objects for the elements in this stream.
+
+java.lang.CharSequence 1.0
+
+• IntStream codePoints() 8
+yields a stream of all Unicode code points of this string.
+
+java.util.Random 1.0
+
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+
+IntStream ints()
+IntStream ints(int randomNumberOrigin, int randomNumberBound) 8
+IntStream ints(long streamSize) 8
+IntStream ints(long streamSize, int randomNumberOrigin, int randomNumberBound) 8
+LongStream longs() 8
+LongStream longs(long randomNumberOrigin, long randomNumberBound) 8
+LongStream longs(long streamSize) 8
+LongStream longs(long streamSize, long randomNumberOrigin, long randomNumberBound) 8
+DoubleStream doubles() 8
+DoubleStream doubles(double randomNumberOrigin, double randomNumberBound) 8
+DoubleStream doubles(long streamSize) 8
+DoubleStream doubles(long streamSize, double randomNumberOrigin, double randomNumberBound) 8
+
+yields streams of random numbers. If streamSize is provided, the stream is finite with
+the given number of elements.When bounds are provided, the elements are between
+randomNumberOrigin (inclusive) and randomNumberBound (exclusive).
+
+From the Library of Hristo Dimov Hristov
+

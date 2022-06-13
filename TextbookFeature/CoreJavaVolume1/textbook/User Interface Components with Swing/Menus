@@ -1,0 +1,137 @@
+  We started this chapter by introducing the most common components that you might want to place into a window, such as various kinds of buttons, text fields, and combo boxes. Swing also supports another type of user interface element—pull-down menus that are familiar from GUI applications. 
+  A menu bar at the top of a window contains the names of the pull-down menus. Clicking on a name opens the menu containing menu items and submenus. When the user clicks on a menu item, all menus are closed and a message is sent to the program. Figure 11.17 shows a typical menu with a submenu. 
+  Figure 11.17 A menu with a submenu 11.5.1 Menu Building
+  Building menus is straightforward. First, create a menu bar: var menuBar = new JMenuBar(); 
+  A menu bar is just a component that you can add anywhere you like. 
+  Normally, you want it to appear at the top of a frame. You can add it there with the setJMenuBar method: frame.setJMenuBar(menuBar); 
+  For each menu, you create a menu object: var editMenu = new JMenu("Edit"); 
+  Add the top-level menus to the menu bar: menuBar.add(editMenu); 
+  Add menu items, separators, and submenus to the menu object: var pasteItem = new JMenuItem("Paste"); 
+  editMenu.add(pasteItem); 
+  editMenu.addSeparator(); 
+  JMenu optionsMenu = . . .; // a submenu editMenu.add(optionsMenu); 
+  You can see separators in Figure 11.17 below the Paste and Read-only menu items. 
+  When the user selects a menu item, an action event is triggered. You need to install an action listener for each menu item: ActionListener listener = . . .; 
+  pasteItem.addActionListener(listener); 
+  The method JMenu.add(String s) conveniently adds a menu item to the end of a menu. For example: editMenu.add("Paste"); 
+  The add method returns the created menu item, so you can capture it and add the listener, as follows:   JMenuItem pasteItem = editMenu.add("Paste"); 
+  pasteItem.addActionListener(listener); 
+  It often happens that menu items trigger commands that can also be activated through other user interface elements such as toolbar buttons. In Section 10.4.5, "Actions," on p. 608, you saw how to specify commands through Action objects. You define a class that implements the Action interface, usually by extending the AbstractAction convenience class, specify the menu item label in the constructor of the AbstractAction object, and override the actionPerformed method to hold the menu action handler. 
+  For example: var exitAction = new AbstractAction("Exit") // menu item text goes here { public void actionPerformed(ActionEvent event) { // action code goes here System.exit(0); 
+  } 
+  }; 
+  You can then add the action to the menu: JMenuItem exitItem = fileMenu.add(exitAction); 
+  This command adds a menu item to the menu, using the action name. The action object becomes its listener. This is just a convenient shortcut for var exitItem = new JMenuItem(exitAction); 
+  fileMenu.add(exitItem); 
+  javax.swing.JMenu 1.2 JMenu(String label) constructs a menu with the given label. 
+  JMenuItem add(JMenuItem item) adds a menu item (or a menu). 
+  JMenuItem add(String label)   adds a menu item with the given label to this menu and returns the item. 
+  JMenuItem add(Action a) adds a menu item with the given action to this menu and returns the item. 
+  void addSeparator() adds a separator line to the menu. 
+  JMenuItem insert(JMenuItem menu, int index) adds a new menu item (or submenu) to the menu at a specific index. 
+  JMenuItem insert(Action a, int index) adds a new menu item with the given action at a specific index. 
+  void insertSeparator(int index) adds a separator to the menu. 
+  void remove(int index) void remove(JMenuItem item) removes a specific item from the menu. 
+  javax.swing.JMenuItem 1.2 JMenuItem(String label) constructs a menu item with a given label. 
+  JMenuItem(Action a) 1.3 constructs a menu item for the given action. 
+  javax.swing.AbstractButton 1.2 void setAction(Action a) 1.3 sets the action for this button or menu item. 
+  javax.swing.JFrame 1.2 void setJMenuBar(JMenuBar menubar) sets the menu bar for this frame. 
+11.5.2 Icons in Menu Items
+  Menu items are very similar to buttons. In fact, the JMenuItem class extends the AbstractButton class. Just like buttons, menus can have just a text label, just an icon, or both. You can specify the icon with the JMenuItem(String, Icon) or JMenuItem(Icon) constructor, or you can set it with the setIcon method that the JMenuItem class inherits from the AbstractButton class. Here is an example: var cutItem = new JMenuItem("Cut", new ImageIcon("cut.gif")); 
+  In Figure 11.17, you can see icons next to several menu items. By default, the menu item text is placed to the right of the icon. If you prefer the text to be placed on the left, call the setHorizontalTextPosition method that the JMenuItem class inherits from the AbstractButton class. For example, the call cutItem.setHorizontalTextPosition(SwingConstants.LEFT); 
+  moves the menu item text to the left of the icon. 
+  You can also add an icon to an action: cutAction.putValue(Action.SMALL_ICON, new ImageIcon("cut.gif")); 
+  Whenever you construct a menu item out of an action, the Action.NAME value becomes the text of the menu item and the Action.SMALL_ICON value becomes the icon. 
+  Alternatively, you can set the icon in the AbstractAction constructor:   cutAction = new AbstractAction("Cut", new ImageIcon("cut.gif")) { public void actionPerformed(ActionEvent event) { . . . 
+  } 
+  }; 
+  javax.swing.JMenuItem 1.2 JMenuItem(String label, Icon icon) constructs a menu item with the given label and icon. 
+  javax.swing.AbstractButton 1.2 void setHorizontalTextPosition(int pos) sets the horizontal position of the text relative to the icon. The pos parameter is SwingConstants.RIGHT (text is to the right of icon) or SwingConstants.LEFT. 
+  javax.swing.AbstractAction 1.2 AbstractAction(String name, Icon smallIcon) constructs an abstract action with the given name and icon. 
+11.5.3 Checkbox and Radio Button Menu Items
+  Checkbox and radio button menu items display a checkbox or radio button next to the name (see Figure 11.17). When the user selects the menu item, the item automatically toggles between checked and unchecked. 
+  Apart from the button decoration, treat these menu items just as you would any others. For example, here is how you create a checkbox menu item: var readonlyItem = new JCheckBoxMenuItem("Read-only"); 
+  optionsMenu.add(readonlyItem); 
+  The radio button menu items work just like regular radio buttons. You must add them to a button group. When one of the buttons in a group is selected, all others are automatically deselected. 
+  var group = new ButtonGroup(); 
+  var insertItem = new JRadioButtonMenuItem("Insert"); 
+  insertItem.setSelected(true); 
+  var overtypeItem = new JRadioButtonMenuItem("Overtype"); 
+  group.add(insertItem); 
+  group.add(overtypeItem); 
+  optionsMenu.add(insertItem); 
+  optionsMenu.add(overtypeItem); 
+  With these menu items, you don’t necessarily want to be notified when the user selects the item. Instead, you can simply use the isSelected method to test the current state of the menu item. (Of course, that means you should keep a reference to the menu item stored in an instance field.) Use the setSelected method to set the state. 
+  javax.swing.JCheckBoxMenuItem 1.2 JCheckBoxMenuItem(String label) constructs the checkbox menu item with the given label. 
+  JCheckBoxMenuItem(String label, boolean state) constructs the checkbox menu item with the given label and the given   initial state (true is checked). 
+  javax.swing.JRadioButtonMenuItem 1.2 JRadioButtonMenuItem(String label) constructs the radio button menu item with the given label. 
+  JRadioButtonMenuItem(String label, boolean state) constructs the radio button menu item with the given label and the given initial state (true is checked). 
+  javax.swing.AbstractButton 1.2 boolean isSelected() void setSelected(boolean state) gets or sets the selection state of this item (true is checked). 
+11.5.4 Pop-Up Menus
+  A pop-up menu is a menu that is not attached to a menu bar but floats somewhere (see Figure 11.18). 
+  Figure 11.18 A pop-up menu   Create a pop-up menu just as you create a regular menu, except that a pop-up menu has no title. 
+  var popup = new JPopupMenu(); 
+  Then, add your menu items as usual: var item = new JMenuItem("Cut"); 
+  item.addActionListener(listener); 
+  popup.add(item); 
+  Unlike the regular menu bar that is always shown at the top of the frame, you must explicitly display a pop-up menu by using the show method. Specify the parent component and the location of the pop-up, using the coordinate system of the parent. For example: popup.show(panel, x, y); 
+  Usually, you want to pop up a menu when the user clicks a particular mouse button—the so-called pop-up trigger. In Windows and Linux, the pop-up trigger is the nonprimary (usually, the right) mouse button. To pop up a menu when the user clicks on a component, using the pop-up trigger, simply call the method component.setComponentPopupMenu(popup); 
+  Very occasionally, you may place a component inside another component that has a pop-up menu. The child component can inherit the parent component’s pop-up menu by calling child.setInheritsPopupMenu(true); 
+  javax.swing.JPopupMenu 1.2 void show(Component c, int x, int y) shows the pop-up menu over the component c with the top left corner at (x, y) (in the coordinate space of c). 
+  boolean isPopupTrigger(MouseEvent event) 1.3 returns true if the mouse event is the pop-up menu trigger. 
+  java.awt.event.MouseEvent 1.1 boolean isPopupTrigger() returns true if this mouse event is the pop-up menu trigger. 
+  javax.swing.JComponent 1.2 JPopupMenu getComponentPopupMenu() 5 void setComponentPopupMenu(JPopupMenu popup) 5 gets or sets the pop-up menu for this component. 
+  boolean getInheritsPopupMenu() 5 void setInheritsPopupMenu(boolean b) 5 gets or sets the inheritsPopupMenu property. If the property is set and this component’s pop-up menu is null, it uses its parent’s pop-up menu. 
+11.5.5 Keyboard Mnemonics and Accelerators
+  It is a real convenience for the experienced user to select menu items by keyboard mnemonics. You can create a keyboard mnemonic for a menu item by specifying a mnemonic letter in the menu item constructor: var aboutItem = new JMenuItem("About", 'A'); 
+  The keyboard mnemonic is displayed automatically in the menu, with the mnemonic letter underlined (see Figure 11.19). For example, in the item defined in the last example, the label will be displayed as "About" with an underlined letter ‘A’. When the menu is displayed, the user just needs to   press the A key, and the menu item is selected. (If the mnemonic letter is not part of the menu string, then typing it still selects the item, but the mnemonic is not displayed in the menu. Naturally, such invisible mnemonics are of dubious utility.)   Figure 11.19 Keyboard mnemonics Sometimes, you don’t want to underline the first letter of the menu item that matches the mnemonic. For example, if you have a mnemonic ‘A’ for the menu item "Save As," then it makes more sense to underline the second ‘A’ (Save As). You can specify which character you want to have underlined by calling the setDisplayedMnemonicIndex method. 
+  If you have an Action object, you can add the mnemonic as the value of the Action.MNEMONIC_KEY key, as follows: aboutAction.putValue(Action.MNEMONIC_KEY, new Integer('A')); 
+  You can supply a mnemonic letter only in the constructor of a menu item, not in the constructor for a menu. To attach a mnemonic to a menu, call the setMnemonic method: var helpMenu = new JMenu("Help"); 
+  helpMenu.setMnemonic('H'); 
+  To select a top-level menu from the menu bar, press the Alt key together with the mnemonic letter. For example, press Alt+H to select the Help menu from   the menu bar. 
+  Keyboard mnemonics let you select a submenu or menu item from the currently open menu. In contrast, accelerators are keyboard shortcuts that let you select menu items without ever opening a menu. For example, many programs attach the accelerators Ctrl+O and Ctrl+S to the Open and Save items in the File menu. Use the setAccelerator method to attach an accelerator key to a menu item. The setAccelerator method takes an object of type Keystroke. For example, the following call attaches the accelerator Ctrl+O to the openItem menu item: openItem.setAccelerator(KeyStroke.getKeyStroke("ctrl O")); 
+  Typing the accelerator key combination automatically selects the menu option and fires an action event, as if the user had selected the menu option manually. 
+  You can attach accelerators only to menu items, not to menus. Accelerator keys don’t actually open the menu. Instead, they directly fire the action event associated with a menu. 
+  Conceptually, adding an accelerator to a menu item is similar to the technique of adding an accelerator to a Swing component. However, when the accelerator is added to a menu item, the key combination is automatically displayed in the menu (see Figure 11.20). 
+  Figure 11.20 Accelerators   Note Under Windows, Alt+F4 closes a window. But this is not an accelerator to be programmed in Java. It is a shortcut defined by the operating system. This key combination will always trigger the WindowClosing event for the active window regardless of whether there is a Close item on the menu. 
+  javax.swing.JMenuItem 1.2 JMenuItem(String label, int mnemonic) constructs a menu item with a given label and mnemonic. 
+  void setAccelerator(KeyStroke k) sets the keystroke k as accelerator for this menu item. The accelerator key is displayed next to the label. 
+  javax.swing.AbstractButton 1.2 void setMnemonic(int mnemonic) sets the mnemonic character for the button. This character will be underlined in the label. 
+  void setDisplayedMnemonicIndex(int index) 1.4 sets the index of the character to be underlined in the button text. Use this method if you don’t want the first occurrence of the mnemonic character to be underlined. 
+11.5.6 Enabling and Disabling Menu Items
+  Occasionally, a particular menu item should be selected only in certain contexts. For example, when a document is opened in read-only mode, the Save menu item is not meaningful. Of course, we could remove the item from   the menu with the JMenu.remove method, but users would react with some surprise to menus whose content keeps changing. Instead, it is better to deactivate the menu items that lead to temporarily inappropriate commands. 
+  A deactivated menu item is shown in gray and cannot be selected (see Figure 11.21). 
+  Figure 11.21 Disabled menu items To enable or disable a menu item, use the setEnabled method: saveItem.setEnabled(false); 
+  There are two strategies for enabling and disabling menu items. Each time circumstances change, you can call setEnabled on the relevant menu items or actions. For example, as soon as a document has been set to readonly mode, you can locate the Save and Save As menu items and disable them. Alternatively, you can disable items just before displaying the menu. 
+  To do this, you must register a listener for the "menu selected" event. The javax.swing.event package defines a MenuListener interface with three methods: void menuSelected(MenuEvent event) void menuDeselected(MenuEvent event) void menuCanceled(MenuEvent event)   The menuSelected method is called before the menu is displayed. It can therefore be used to disable or enable menu items. The following code shows   how to disable the Save and Save As actions whenever the Read Only checkbox menu item is selected: public void menuSelected(MenuEvent event) { saveAction.setEnabled(!readonlyItem.isSelected()); 
+  saveAsAction.setEnabled(!readonlyItem.isSelected()); 
+  } 
+  Caution Disabling menu items just before displaying the menu is a clever idea, but it does not work for menu items that also have accelerator keys. Since the menu is never opened when the accelerator key is pressed, the action is never disabled, and is still triggered by the accelerator key. 
+  javax.swing.JMenuItem 1.2 void setEnabled(boolean b) enables or disables the menu item. 
+  javax.swing.event.MenuListener 1.2 void menuSelected(MenuEvent e) is called when the menu has been selected, before it is opened. 
+  void menuDeselected(MenuEvent e) is called when the menu has been deselected, after it has been closed. 
+  void menuCanceled(MenuEvent e) is called when the menu has been canceled, for example, by a user clicking outside the menu. 
+  Listing 11.6 is a sample program that generates a set of menus. It shows all the features that you saw in this section: nested menus, disabled menu items, checkbox and radio button menu items, a pop-up menu, and keyboard mnemonics and accelerators. 
+11.5.7 Toolbars
+  A toolbar is a button bar that gives quick access to the most commonly used commands in a program (see Figure 11.22). 
+  Figure 11.22 A toolbar What makes toolbars special is that you can move them elsewhere. You can drag the toolbar to one of the four borders of the frame (see Figure 11.23). 
+  When you release the mouse button, the toolbar is dropped into the new location (see Figure 11.24). 
+  Figure 11.23 Dragging the toolbar   Figure 11.24 The toolbar has been dragged to another border   Note Toolbar dragging works if the toolbar is inside a container with a border layout, or any other layout manager that supports the North, East, South, and West constraints. 
+  The toolbar can even be completely detached from the frame. A detached toolbar is contained in its own frame (see Figure 11.25). When you close the frame containing a detached toolbar, the toolbar jumps back into the original   frame. 
+  Figure 11.25 Detaching the toolbar Toolbars are straightforward to program. Add components into the toolbar: var toolbar = new JToolBar(); 
+  toolbar.add(blueButton); 
+  The JToolBar class also has a method to add an Action object. Simply populate the toolbar with Action objects, like this: toolbar.add(blueAction); 
+  The small icon of the action is displayed in the toolbar. 
+  You can separate groups of buttons with a separator: toolbar.addSeparator(); 
+  For example, the toolbar in Figure 11.22 has a separator between the third and fourth button. 
+  Then, add the toolbar to the frame: add(toolbar, BorderLayout.NORTH); 
+  You can also specify a title for the toolbar that appears when the toolbar is   undocked: toolbar = new JToolBar(titleString); 
+  By default, toolbars are initially horizontal. To have a toolbar start out vertical, use toolbar = new JToolBar(SwingConstants.VERTICAL)   or toolbar = new JToolBar(titleString, SwingConstants.VERTICAL)   Buttons are the most common components inside toolbars. But there is no restriction on the components that you can add to a toolbar. For example, you can add a combo box to a toolbar. 
+11.5.8 Tooltips
+  A disadvantage of toolbars is that users are often mystified by the meanings of the tiny icons in toolbars. To solve this problem, user interface designers invented tooltips. A tooltip is activated when the cursor rests for a moment over a button. The tooltip text is displayed inside a colored rectangle. When the user moves the mouse away, the tooltip disappears. (See Figure 11.26.)   Figure 11.26 A tooltip In Swing, you can add tooltips to any JComponent simply by calling the setToolTipText method:   exitButton.setToolTipText("Exit"); 
+  Alternatively, if you use Action objects, you associate the tooltip with the SHORT_DESCRIPTION key: exitAction.putValue(Action.SHORT_DESCRIPTION, "Exit"); 
+  javax.swing.JToolBar 1.2 JToolBar() JToolBar(String titleString) JToolBar(int orientation) JToolBar(String titleString, int orientation) constructs a toolbar with the given title string and orientation. 
+  orientation is one of SwingConstants.HORIZONTAL (the default) or SwingConstants.VERTICAL. 
+  JButton add(Action a) constructs a new button inside the toolbar with name, icon, short description, and action callback from the given action, and adds the button to the end of the toolbar. 
+  void addSeparator() adds a separator to the end of the toolbar. 
+  javax.swing.JComponent 1.2 void setToolTipText(String text) sets the text that should be displayed as a tooltip when the mouse hovers over the component. 

@@ -1,0 +1,224 @@
+  In the following sections, you will learn what Java interfaces are and how to use them. You will also find out how interfaces have been made more powerful in recent versions of Java. 
+6.1.1 The Interface Concept
+  In the Java programming language, an interface is not a class but a set of requirements for the classes that want to conform to the interface. 
+  Typically, the supplier of some service states: "If your class conforms to a particular interface, then I’ll perform the service." Let’s look at a concrete example. The sort method of the Arrays class promises to sort an array of objects, but under one condition: The objects must belong to classes that implement the Comparable interface. 
+  Here is what the Comparable interface looks like: public interface Comparable { int compareTo(Object other); 
+  } 
+  This means that any class that implements the Comparable interface is required to have a compareTo method, and the method must take an Object parameter and return an integer. 
+  Note As of Java 5, the Comparable interface has been enhanced to be a generic type. 
+  public interface Comparable<T> { int compareTo(T other); // parameter has type T } 
+  For example, a class that implements Comparable<Employee> must supply a method int compareTo(Employee other)   You can still use the "raw" Comparable type without a type parameter. Then the compareTo method has a parameter of type   Object, and you have to manually cast that parameter of the compareTo method to the desired type. We will do just that for a little while so that you don’t have to worry about two new concepts at the same time. 
+  All methods of an interface are automatically public. For that reason, it is not necessary to supply the keyword public when declaring a method in an interface. 
+  Of course, there is an additional requirement that the interface cannot spell out: When calling x.compareTo(y), the compareTo method must actually be able to compare the two objects and return an indication whether x or y is larger. The method is supposed to return a negative number if x is smaller than y, zero if they are equal, and a positive number otherwise. 
+  This particular interface has a single method. Some interfaces have multiple methods. As you will see later, interfaces can also define constants. What is more important, however, is what interfaces cannot supply. Interfaces never have instance fields. Before Java 8, methods were never implemented in interfaces. (As you will see in Section 6.1.4, "Static and Private Methods," on p. 306 and Section 6.1.5, "Default Methods," on p. 307, it is now possible to supply simple methods in interfaces. Of course, those methods cannot refer to instance fields—interfaces don’t have any.) Supplying instance fields and methods that operate on them is the job of the classes that implement the interface. You can think of an interface as an abstract class with no instance fields. However, there are some differences between these two concepts—we look at them later in some detail. 
+  Now, suppose we want to use the sort method of the Arrays class to sort an array of Employee objects. Then the Employee class must implement the Comparable interface. 
+  To make a class implement an interface, you carry out two steps: 1. You declare that your class intends to implement the given interface. 
+  2. You supply definitions for all methods in the interface. 
+  To declare that a class implements an interface, use the implements   keyword: class Employee implements Comparable   Of course, now the Employee class needs to supply the compareTo method. Let’s suppose that we want to compare employees by their salary. 
+  Here is an implementation of the compareTo method: public int compareTo(Object otherObject) { Employee other = (Employee) otherObject; 
+  return Double.compare(salary, other.salary); 
+  } 
+  Here, we use the static Double.compare method that returns a negative if the first argument is less than the second argument, 0 if they are equal, and a positive value otherwise. 
+  Caution In the interface declaration, the compareTo method was not declared public because all methods in an interface are automatically public. However, when implementing the interface, you must declare the method as public. Otherwise, the compiler assumes that the method has package access—the default for a class. 
+  The compiler then complains that you’re trying to supply a more restrictive access privilege. 
+  We can do a little better by supplying a type parameter for the generic Comparable interface: class Employee implements Comparable<Employee> { public int compareTo(Employee other) { return Double.compare(salary, other.salary); 
+  } 
+  . . . 
+  } 
+  Note that the unsightly cast of the Object parameter has gone away. 
+  Tip The compareTo method of the Comparable interface returns an integer. If the objects are not equal, it does not matter what negative or positive value you return. This flexibility can be useful when you are comparing integer fields. For example, suppose each employee has a unique integer id and you want to sort by the employee ID number. Then you can simply return id - other.id. That value will be some negative value if the first ID number is less than the other, 0 if they are the same ID, and some positive value otherwise. 
+  However, there is one caveat: The range of the integers must be small enough so that the subtraction does not overflow. If you know that the IDs are not negative or that their absolute value is at most (Integer.MAX_VALUE - 1) / 2, you are safe. Otherwise, call the static Integer.compare method. 
+  Of course, the subtraction trick doesn’t work for floating-point numbers. The difference salary - other.salary can round to 0 if the salaries are close together but not identical. The call Double.compare(x, y) simply returns -1 if x < y or 1 if x > y. 
+  Note The documentation of the Comparable interface suggests that the compareTo method should be compatible with the equals method. That is, x.compareTo(y) should be zero exactly when x.equals(y). Most classes in the Java API that implement Comparable follow this advice. A notable exception is BigDecimal. Consider x = new BigDecimal("1.0") and y = new BigDecimal("1.00"). Then x.equals(y) is false because the numbers differ in precision. But   x.compareTo(y) is zero. Ideally, it shouldn’t be, but there was no obvious way of deciding which one should come first. 
+  Now you saw what a class must do to avail itself of the sorting service—it must implement a compareTo method. That’s eminently reasonable. There needs to be some way for the sort method to compare objects. But why can’t the Employee class simply provide a compareTo method without implementing the Comparable interface? 
+  The reason for interfaces is that the Java programming language is strongly typed. When making a method call, the compiler needs to be able to check that the method actually exists. Somewhere in the sort method will be statements like this: if (a[i].compareTo(a[j]) > 0) { // rearrange a[i] and a[j] . . . 
+  } 
+  The compiler must know that a[i] actually has a compareTo method. If a is an array of Comparable objects, then the existence of the method is assured because every class that implements the Comparable interface must supply the method. 
+  Note You would expect that the sort method in the Arrays class is defined to accept a Comparable[] array so that the compiler can complain if anyone ever calls sort with an array whose element type doesn’t implement the Comparable interface. Sadly, that is not the case. Instead, the sort method accepts an Object[] array and uses a clumsy cast: // approach used in the standard library--not recommended if (((Comparable) a[i]).compareTo(a[j]) > 0)   { // rearrange a[i] and a[j] . . . 
+  } 
+  If a[i] does not belong to a class that implements the Comparable interface, the virtual machine throws an exception. 
+  Listing 6.1 presents the full code for sorting an array of instances of the class Employee (Listing 6.2). 
+  java.lang.Comparable<T> 1.0 int compareTo(T other) compares this object with other and returns a negative integer if this object is less than other, zero if they are equal, and a positive integer otherwise. 
+  java.util.Arrays 1.2 static void sort(Object[] a) sorts the elements in the array a. All elements in the array must belong to classes that implement the Comparable interface, and they must all be comparable to each other. 
+  java.lang.Integer 1.0 static int compare(int x, int y) 7 returns a negative integer if x < y, zero if x and y are equal, and a positive integer otherwise. 
+  java.lang.Double 1.0 static int compare(double x, double y) 1.4 returns a negative integer if x < y, zero if x and y are equal, and a positive integer otherwise. 
+  Note According to the language standard: "The implementor must ensure sgn(x.compareTo(y)) = -sgn(y.compareTo(x)) for all x and y. (This implies that x.compareTo(y) must throw an exception if y.compareTo(x) throws an exception.)" Here, sgn is the sign of a number: sgn(n) is –1 if n is negative, 0 if n equals 0, and 1 if n is positive. In plain English, if you flip the parameters of compareTo, the sign (but not necessarily the actual value) of the result must also flip. 
+  As with the equals method, problems can arise when inheritance   comes into play. 
+  Since Manager extends Employee, it implements Comparable<Employee> and not Comparable<Manager>. 
+  If Manager chooses to override compareTo, it must be prepared to compare managers to employees. It can’t simply cast an employee to a manager: class Manager extends Employee { public int compareTo(Employee other) { Manager otherManager = (Manager) other; // NO . . . 
+  } 
+  . . . 
+  } 
+  That violates the "antisymmetry" rule. If x is an Employee and y is a Manager, then the call x.compareTo(y) doesn’t throw an exception—it simply compares x and y as employees. But the reverse, y.compareTo(x), throws a ClassCastException. 
+  This is the same situation as with the equals method that we discussed in Chapter 5, and the remedy is the same. There are two distinct scenarios. 
+  If subclasses have different notions of comparison, then you should outlaw comparison of objects that belong to different classes. Each compareTo method should start out with the test if (getClass() != other.getClass()) throw new ClassCastException(); 
+  If there is a common algorithm for comparing subclass objects, simply provide a single compareTo method in the superclass and declare it as final. 
+  For example, suppose you want managers to be better than regular employees, regardless of salary. What about other subclasses such as Executive and Secretary? If you need to establish a pecking   order, supply a method such as rank in the Employee class. Have each subclass override rank, and implement a single compareTo method that takes the rank values into account. 
+6.1.2 Properties of Interfaces
+  Interfaces are not classes. In particular, you can never use the new operator to instantiate an interface: x = new Comparable(. . .); // ERROR   However, even though you can’t construct interface objects, you can still declare interface variables. 
+  Comparable x; // OK   An interface variable must refer to an object of a class that implements the interface: x = new Employee(. . .); // OK provided Employee implements Comparable   Next, just as you use instanceof to check whether an object is of a specific class, you can use instanceof to check whether an object implements an interface: if (anObject instanceof Comparable) { . . . } 
+  Just as you can build hierarchies of classes, you can extend interfaces. This allows for multiple chains of interfaces that go from a greater degree of generality to a greater degree of specialization. For example, suppose you had an interface called Moveable. 
+  public interface Moveable { void move(double x, double y); 
+  } 
+  Then, you could imagine an interface called Powered that extends it:   public interface Powered extends Moveable { double milesPerGallon(); 
+  } 
+  Although you cannot put instance fields in an interface, you can supply constants in them. For example: public interface Powered extends Moveable { double milesPerGallon(); 
+  double SPEED_LIMIT = 95; // a public static final constant } 
+  Just as methods in an interface are automatically public, fields are always public static final. 
+  Note It is legal to tag interface methods as public, and fields as public static final. Some programmers do that, either out of habit or for greater clarity. However, the Java Language Specification recommends that the redundant keywords not be supplied, and we follow that recommendation. 
+  Some interfaces define just constants and no methods. For example, the standard library contains an interface SwingConstants that defines constants NORTH, SOUTH, HORIZONTAL, and so on. Any class that chooses to implement the SwingConstants interface automatically inherits these constants. Its methods can simply refer to NORTH rather than the more cumbersome SwingConstants.NORTH. However, this use of interfaces seems rather degenerate, and we do not recommend it. 
+  While each class can have only one superclass, classes can implement multiple interfaces. This gives you the maximum amount of flexibility in defining a class’s behavior. For example, the Java programming language has an important interface built into it, called Cloneable. (We will discuss this   interface in detail in Section 6.1.9, "Object Cloning," on p. 314.) If your class implements Cloneable, the clone method in the Object class will make an exact copy of your class’s objects. If you want both cloneability and comparability, simply implement both interfaces. Use commas to separate the interfaces that you want to implement: class Employee implements Cloneable, Comparable 6.1.3 Interfaces and Abstract Classes
+  If you read the section about abstract classes in Chapter 5, you may wonder why the designers of the Java programming language bothered with introducing the concept of interfaces. Why can’t Comparable simply be an abstract class: abstract class Comparable // why not? 
+  { public abstract int compareTo(Object other); 
+  } 
+  The Employee class would then simply extend this abstract class and supply the compareTo method: class Employee extends Comparable // why not? 
+  { public int compareTo(Object other) { . . . } 
+  } 
+  There is, unfortunately, a major problem with using an abstract base class to express a generic property. A class can only extend a single class. Suppose the Employee class already extends a different class, say, Person. Then it can’t extend a second class. 
+  class Employee extends Person, Comparable // ERROR   But each class can implement as many interfaces as it likes: class Employee extends Person implements Comparable // OK   Other programming languages, in particular C++, allow a class to have more than one superclass. This feature is called multiple inheritance. The designers of Java chose not to support multiple inheritance, because it makes the language either very complex (as in C++) or less efficient (as in Eiffel). 
+  Instead, interfaces afford most of the benefits of multiple inheritance while avoiding the complexities and inefficiencies. 
+  In the mix-in style, a primary base class describes the parent object, and additional base classes (the so-called mix-ins) may supply auxiliary characteristics. That style is similar to a Java class with a single superclass and additional interfaces. 
+6.1.4 Static and Private Methods
+  As of Java 8, you are allowed to add static methods to interfaces. There was never a technical reason why this should be outlawed. It simply seemed to be against the spirit of interfaces as abstract specifications. 
+  Up to now, it has been common to place static methods in companion classes. 
+  In the standard library, you’ll find pairs of interfaces and utility classes such as Collection/Collections or Path/Paths. 
+  You can construct a path to a file or directory from a URI, or from a sequence of strings, such as Paths.get("jdk-11", "conf", "security"). 
+  In Java 11, equivalent methods are provided in the Path interface: public interface Path { public static Path of(URI uri) { . . . } 
+  public static Path of(String first, String... more) { . . . } 
+  . . . 
+  } 
+  Then the Paths class is no longer necessary. 
+  Similarly, when you implement your own interfaces, there is no longer a reason to provide a separate companion class for utility methods. 
+  As of Java 9, methods in an interface can be private. A private method can be static or an instance method. Since private methods can only be used in the methods of the interface itself, their use is limited to being helper methods for the other methods of the interface. 
+6.1.5 Default Methods
+  You can supply a default implementation for any interface method. You must tag such a method with the default modifier. 
+  public interface Comparable<T> { default int compareTo(T other) { return 0; } 
+  // by default, all elements are the same } 
+  Of course, that is not very useful since every realistic implementation of Comparable would override this method. But there are other situations where default methods can be useful. For example, in Chapter 9 you will see an Iterator interface for visiting elements in a data structure. It declares a remove method as follows: public interface Iterator<E> { boolean hasNext(); 
+  E next(); 
+  default void remove() { throw new UnsupportedOperationException("remove"); 
+  . . . 
+  } 
+  If you implement an iterator, you need to provide the hasNext and next methods. There are no defaults for these methods—they depend on the data structure that you are traversing. But if your iterator is read-only, you don’t   have to worry about the remove method. 
+  A default method can call other methods. For example, a Collection interface can define a convenience method public interface Collection { int size(); // an abstract method default boolean isEmpty() { return size() == 0; } 
+  . . . 
+  } 
+  Then a programmer implementing Collection doesn’t have to worry about implementing an isEmpty method. 
+  Note The Collection interface in the Java API does not actually do this. Instead, there is a class AbstractCollection that implements Collection and defines isEmpty in terms of size. 
+  Implementors of a collection are advised to extend AbstractCollection. That technique is obsolete. Just implement the methods in the interface. 
+  An important use for default methods is interface evolution. Consider, for example, the Collection interface that has been a part of Java for many years. Suppose that a long time ago, you provided a class public class Bag implements Collection   Later, in Java 8, a stream method was added to the interface. 
+  Suppose the stream method was not a default method. Then the Bag class would no longer compile since it doesn’t implement the new method. Adding a nondefault method to an interface is not source-compatible. 
+  But suppose you don’t recompile the class and simply use an old JAR file containing it. The class will still load, even with the missing method. 
+  Programs can still construct Bag instances, and nothing bad will happen. 
+  (Adding a method to an interface is binary compatible.) However, if a program calls the stream method on a Bag instance, an AbstractMethodError occurs. 
+  Making the method a default method solves both problems. The Bag class will again compile. And if the class is loaded without being recompiled and the stream method is invoked on a Bag instance, the Collection.stream method is called. 
+6.1.6 Resolving Default Method Conflicts
+  What happens if the exact same method is defined as a default method in one interface and then again as a method of a superclass or another interface? 
+  Languages such as Scala and C++ have complex rules for resolving such ambiguities. Fortunately, the rules in Java are much simpler. Here they are: 1. Superclasses win. If a superclass provides a concrete method, default methods with the same name and parameter types are simply ignored. 
+  2. Interfaces clash. If an interface provides a default method, and another interface contains a method with the same name and parameter types (default or not), then you must resolve the conflict by overriding that method. 
+  Let’s look at the second rule. Consider two interfaces with a getName method: interface Person { default String getName() { return ""; }; 
+  } 
+  interface Named { default String getName() { return getClass().getName() + "_" + hashCode(); 
+  } 
+  What happens if you form a class that implements both of them? 
+  class Student implements Person, Named { . . . } 
+  The class inherits two inconsistent getName methods provided by the Person and Named interfaces. Instead of choosing one over the other, the Java compiler reports an error and leaves it up to the programmer to resolve the ambiguity. Simply provide a getName method in the Student class. In that method, you can choose one of the two conflicting methods, like this: class Student implements Person, Named { public String getName() { return Person.super.getName(); } 
+  . . . 
+  } 
+  Now assume that the Named interface does not provide a default implementation for getName: interface Named { String getName(); 
+  } 
+  Can the Student class inherit the default method from the Person interface? This might be reasonable, but the Java designers decided in favor of uniformity. It doesn’t matter how two interfaces conflict. If at least one interface provides an implementation, the compiler reports an error, and the programmer must resolve the ambiguity. 
+  Note Of course, if neither interface provides a default for a shared method, then we are in the situation before Java 8, and there is no conflict. An implementing class has two choices: implement the method, or leave it unimplemented. In the latter case, the class is itself abstract. 
+  We just discussed name clashes between two interfaces. Now consider a class that extends a superclass and implements an interface, inheriting the same method from both. For example, suppose that Person is a class and Student is defined as   class Student extends Person implements Named { . . . } 
+  In that case, only the superclass method matters, and any default method from the interface is simply ignored. In our example, Student inherits the getName method from Person, and it doesn’t make any difference whether the Named interface provides a default for getName or not. This is the "class wins" rule. 
+  The "class wins" rule ensures compatibility with Java 7. If you add default methods to an interface, it has no effect on code that worked before there were default methods. 
+  Caution You can never make a default method that redefines one of the methods in the Object class. For example, you can’t define a default method for toString or equals, even though that might be attractive for interfaces such as List. As a consequence of the "class wins" rule, such a method could never win against Object.toString or Objects.equals. 
+6.1.7 Interfaces and Callbacks
+  A common pattern in programming is the callback pattern. In this pattern, you specify the action that should occur whenever a particular event happens. 
+  For example, you may want a particular action to occur when a button is clicked or a menu item is selected. However, as you have not yet seen how to implement user interfaces, we will consider a similar but simpler situation. 
+  The javax.swing package contains a Timer class that is useful if you want to be notified whenever a time interval has elapsed. For example, if a part of your program contains a clock, you can ask to be notified every second so that you can update the clock face. 
+  When you construct a timer, you set the time interval and tell it what it should do whenever the time interval has elapsed. 
+  How do you tell the timer what it should do? In many programming languages, you supply the name of a function that the timer should call periodically. However, the classes in the Java standard library take an objectoriented approach. You pass an object of some class. The timer then calls one of the methods on that object. Passing an object is more flexible than passing a function because the object can carry additional information. 
+  Of course, the timer needs to know what method to call. The timer requires that you specify an object of a class that implements the ActionListener interface of the java.awt.event package. Here is that interface: public interface ActionListener { void actionPerformed(ActionEvent event); 
+  } 
+  The timer calls the actionPerformed method when the time interval has expired. 
+  Suppose you want to print a message "At the tone, the time is . . .", followed by a beep, once every second. You would define a class that implements the ActionListener interface. You would then place whatever statements you want to have executed inside the actionPerformed method. 
+  class TimePrinter implements ActionListener { public void actionPerformed(ActionEvent event) { System.out.println("At the tone, the time is " 
+  + Instant.ofEpochMilli(event.getWhen())); 
+  Toolkit.getDefaultToolkit().beep(); 
+  } 
+  } 
+  Note the ActionEvent parameter of the actionPerformed method. 
+  This parameter gives information about the event, such as the time when the event happened. The call event.getWhen() returns the event time, measured in milliseconds since the "epoch" (January 1, 1970). By passing it to the static Instant.ofEpochMilli method, we get a more readable description. 
+  Next, construct an object of this class and pass it to the Timer constructor. 
+  var listener = new TimePrinter(); 
+  Timer t = new Timer(1000, listener); 
+  The first parameter of the Timer constructor is the time interval that must elapse between notifications, measured in milliseconds. We want to be notified every second. The second parameter is the listener object. 
+  Finally, start the timer. 
+  t.start(); 
+  Every second, a message like At the tone, the time is 2017-12-16T05:01:49.550Z   is displayed, followed by a beep. 
+  Listing 6.3 puts the timer and its action listener to work. After the timer is started, the program puts up a message dialog and waits for the user to click the OK button to stop. While the program waits for the user, the current time is displayed every second. (If you omit the dialog, the program would terminate as soon as the main method exits.)   javax.swing.JOptionPane 1.2 static void showMessageDialog(Component parent, Object message) displays a dialog box with a message prompt and an OK button. The dialog is centered over the parent component. If parent is null, the dialog is centered on the screen. 
+  javax.swing.Timer 1.2 Timer(int interval, ActionListener listener) constructs a timer that notifies listener whenever interval milliseconds have elapsed. 
+  void start() starts the timer. Once started, the timer calls actionPerformed on its listeners. 
+  void stop() stops the timer. Once stopped, the timer no longer calls actionPerformed on its listeners. 
+  java.awt.Toolkit 1.0 static Toolkit getDefaultToolkit() gets the default toolkit. A toolkit contains information about the GUI environment. 
+  void beep() emits a beep sound. 
+6.1.8 The Comparator Interface
+  In Section 6.1.1, "The Interface Concept," on p. 296, you have seen how you can sort an array of objects, provided they are instances of classes that implement the Comparable interface. For example, you can sort an array of strings since the String class implements Comparable<String>, and the String.compareTo method compares strings in dictionary order. 
+  Now suppose we want to sort strings by increasing length, not in dictionary order. We can’t have the String class implement the compareTo method in two ways—and at any rate, the String class isn’t ours to modify. 
+  To deal with this situation, there is a second version of the Arrays.sort method whose parameters are an array and a comparator—an instance of a class that implements the Comparator interface. 
+  public interface Comparator<T> { int compare(T first, T second); 
+  } 
+  To compare strings by length, define a class that implements Comparator<String>:   class LengthComparator implements Comparator<String> { public int compare(String first, String second) { return first.length() - second.length(); 
+  } 
+  } 
+  To actually do the comparison, you need to make an instance: var comp = new LengthComparator(); 
+  if (comp.compare(words[i], words[j]) > 0) . . . 
+  Contrast this call with words[i].compareTo(words[j]). The compare method is called on the comparator object, not the string itself. 
+  Note Even though the LengthComparator object has no state, you still need to make an instance of it. You need the instance to call the compare method—it is not a static method. 
+  To sort an array, pass a LengthComparator object to the Arrays.sort method: String[] friends = { "Peter", "Paul", "Mary" }; 
+  Arrays.sort(friends, new LengthComparator()); 
+  Now the array is either ["Paul", "Mary", "Peter"] or ["Mary", "Paul", "Peter"]. 
+  You will see in Section 6.2, "Lambda Expressions," on p. 322 how to use a Comparator much more easily with a lambda expression. 
+6.1.9 Object Cloning
+  In this section, we discuss the Cloneable interface that indicates that a   class has provided a safe clone method. Since cloning is not all that common, and the details are quite technical, you may just want to glance at this material until you need it. 
+  To understand what cloning means, recall what happens when you make a copy of a variable holding an object reference. The original and the copy are references to the same object (see Figure 6.1). This means a change to either variable also affects the other. 
+  Figure 6.1 Copying and cloning var original = new Employee("John Public", 50000); 
+  Employee copy = original; 
+  copy.raiseSalary(10); // oops--also changed original   If you would like copy to be a new object that begins its life being identical to original but whose state can diverge over time, use the clone method. 
+  Employee copy = original.clone(); 
+  copy.raiseSalary(10); // OK--original unchanged   But it isn’t quite so simple. The clone method is a protected method of Object, which means that your code cannot simply call it. Only the Employee class can clone Employee objects. There is a reason for this restriction. Think about the way in which the Object class can implement clone. It knows nothing about the object at all, so it can make only a fieldby-field copy. If all data fields in the object are numbers or other basic types, copying the fields is just fine. But if the object contains references to subobjects, then copying the field gives you another reference to the same subobject, so the original and the cloned objects still share some information. 
+  To visualize that, consider the Employee class that was introduced in Chapter 4. Figure 6.2 shows what happens when you use the clone method of the Object class to clone such an Employee object. As you can see, the default cloning operation is "shallow"—it doesn’t clone objects that are referenced inside other objects. (The figure shows a shared Date object. For reasons that will become clear shortly, this example uses a version of the Employee class in which the hire day is represented as a Date.)   Figure 6.2 A shallow copy Does it matter if the copy is shallow? It depends. If the subobject shared between the original and the shallow clone is immutable, then the sharing is safe. This certainly happens if the subobject belongs to an immutable class, such as String. Alternatively, the subobject may simply remain constant throughout the lifetime of the object, with no mutators touching it and no methods yielding a reference to it. 
+  Quite frequently, however, subobjects are mutable, and you must redefine the clone method to make a deep copy that clones the subobjects as well. In our example, the hireDay field is a Date, which is mutable, so it too must be cloned. (For that reason, this example uses a field of type Date, not LocalDate, to demonstrate the cloning process. Had hireDay been an instance of the immutable LocalDate class, no further action would have been required.) For every class, you need to decide whether 1. The default clone method is good enough; 
+  2. The default clone method can be patched up by calling clone on the   mutable subobjects; or 3. clone should not be attempted. 
+  The third option is actually the default. To choose either the first or the second option, a class must 1. Implement the Cloneable interface; and 2. Redefine the clone method with the public access modifier. 
+  Note The clone method is declared protected in the Object class, so that your code can’t simply call anObject.clone(). But aren’t protected methods accessible from any subclass, and isn’t every class a subclass of Object? Fortunately, the rules for protected access are more subtle (see Chapter 5). A subclass can call a protected clone method only to clone its own objects. You must redefine clone to be public to allow objects to be cloned by any method. 
+  In this case, the appearance of the Cloneable interface has nothing to do with the normal use of interfaces. In particular, it does not specify the clone method—that method is inherited from the Object class. The interface merely serves as a tag, indicating that the class designer understands the cloning process. Objects are so paranoid about cloning that they generate a checked exception if an object requests cloning but does not implement that interface. 
+  Note The Cloneable interface is one of a handful of tagging interfaces that Java provides. (Some programmers call them marker interfaces.) Recall that the usual purpose of an interface such as Comparable is to ensure that a class implements a particular method or set of   methods. A tagging interface has no methods; its only purpose is to allow the use of instanceof in a type inquiry: if (obj instanceof Cloneable) . . . 
+  We recommend that you do not use tagging interfaces in your own programs. 
+  Even if the default (shallow copy) implementation of clone is adequate, you still need to implement the Cloneable interface, redefine clone to be public, and call super.clone(). Here is an example: class Employee implements Cloneable { // public access, change return type public Employee clone() throws CloneNotSupportedException { return (Employee) super.clone(); 
+  } 
+  . . . 
+  } 
+  Note Up to Java 1.4, the clone method always had return type Object. 
+  Nowadays, you can specify the correct return type for your clone methods. This is an example of covariant return types (see Chapter 5). 
+  The clone method that you just saw adds no functionality to the shallow copy provided by Object.clone. It merely makes the method public. To make a deep copy, you have to work harder and clone the mutable instance fields. 
+  Here is an example of a clone method that creates a deep copy:   class Employee implements Cloneable { . . . 
+  public Employee clone() throws CloneNotSupportedException { // call Object.clone() Employee cloned = (Employee) super.clone(); 
+  // clone mutable fields cloned.hireDay = (Date) hireDay.clone(); 
+  return cloned; 
+  } 
+  } 
+  The clone method of the Object class threatens to throw a CloneNotSupportedException—it does that whenever clone is invoked on an object whose class does not implement the Cloneable interface. Of course, the Employee and Date classes implement the Cloneable interface, so the exception won’t be thrown. However, the compiler does not know that. Therefore, we declared the exception: public Employee clone() throws CloneNotSupportedException   Note Would it be better to catch the exception instead? (See Chapter 7 for details on catching exceptions.) public Employee clone() { try { Employee cloned = (Employee) super.clone(); 
+  . . . 
+  } 
+  catch (CloneNotSupportedException e) { return null; } 
+  // this won't happen, since we are Cloneable } 
+  This is appropriate for final classes. Otherwise, it is better to leave the throws specifier in place. That gives subclasses the option of throwing a CloneNotSupportedException if they can’t   support cloning. 
+  You have to be careful about cloning of subclasses. For example, once you have defined the clone method for the Employee class, anyone can use it to clone Manager objects. Can the Employee clone method do the job? It depends on the fields of the Manager class. In our case, there is no problem because the bonus field has primitive type. But Manager might have acquired fields that require a deep copy or are not cloneable. There is no guarantee that the implementor of the subclass has fixed clone to do the right thing. For that reason, the clone method is declared as protected in the Object class. But you don’t have that luxury if you want the users of your classes to invoke clone. 
+  Should you implement clone in your own classes? If your clients need to make deep copies, then you probably should. Some authors feel that you should avoid clone altogether and instead implement another method for the same purpose. We agree that clone is rather awkward, but you’ll run into the same issues if you shift the responsibility to another method. At any rate, cloning is less common than you may think. Less than 5 percent of the classes in the standard library implement clone. 
+  The program in Listing 6.4 clones an instance of the class Employee (Listing 6.5), then invokes two mutators. The raiseSalary method changes the value of the salary field, whereas the setHireDay method changes the state of the hireDay field. Neither mutation affects the original object because clone has been defined to make a deep copy. 
+  Note All array types have a clone method that is public, not protected. 
+  You can use it to make a new array that contains copies of all elements. For example: int[] luckyNumbers = { 2, 3, 5, 7, 11, 13 }; 
+  int[] cloned = luckyNumbers.clone(); 
+  cloned[5] = 12; // doesn't change luckyNumbers[5]   Note Chapter 2 of Volume II shows an alternate mechanism for cloning objects, using the object serialization feature of Java. That mechanism is easy to implement and safe, but not very efficient. 

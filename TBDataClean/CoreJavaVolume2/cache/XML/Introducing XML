@@ -1,0 +1,228 @@
+In Chapter 13 of Volume I, you have seen the use of property files to describe the
+configuration of a program. A property file contains a set of name/value pairs,
+such as
+fontname=Times Roman
+fontsize=12
+windowsize=400 200
+color=0 50 100
+
+You can use the Properties class to read in such a file with a single method call.
+That’s a nice feature, but it doesn’t really go far enough. In many cases, the information you want to describe has more structure than the property file format can
+comfortably handle. Consider the fontname/fontsize entries in the example. It would
+be more object-oriented to have a single entry:
+font=Times Roman 12
+
+But then, parsing the font description gets ugly as you have to figure out when
+the font name ends and the font size starts.
+Property files have a single flat hierarchy. You can often see programmers work
+around that limitation with key names like
+title.fontname=Helvetica
+title.fontsize=36
+body.fontname=Times Roman
+body.fontsize=12
+
+Another shortcoming of the property file format is the requirement that keys
+must be unique. To store a sequence of values, you need another workaround,
+such as
+menu.item.1=Times Roman
+menu.item.2=Helvetica
+menu.item.3=Goudy Old Style
+
+The XML format solves these problems. It can express hierarchical structures and
+is thus more flexible than the flat table structure of a property file.
+
+From the Library of Hristo Dimov Hristov
+
+3.1 Introducing XML
+
+145
+
+An XML file for describing a program configuration might look like this:
+<configuration>
+<title>
+<font>
+<name>Helvetica</name>
+<size>36</size>
+</font>
+</title>
+<body>
+<font>
+<name>Times Roman</name>
+<size>12</size>
+</font>
+</body>
+<window>
+<width>400</width>
+<height>200</height>
+</window>
+<color>
+<red>0</red>
+<green>50</green>
+<blue>100</blue>
+</color>
+<menu>
+<item>Times Roman</item>
+<item>Helvetica</item>
+<item>Goudy Old Style</item>
+</menu>
+</configuration>
+
+The XML format allows you to express the hierarchy and record repeated elements
+without contortions.
+The format of an XML file is straightforward. It looks similar to an HTML file.
+There is a good reason for that—both the XML and HTML formats are descendants
+of the venerable Standard Generalized Markup Language (SGML).
+SGML has been around since the 1970s for describing the structure of complex
+documents. It has been used with success in some industries that require ongoing
+maintenance of massive documentation—in particular, the aircraft industry.
+However, SGML is quite complex, so it has never caught on in a big way. Much
+of that complexity arises because SGML has two conflicting goals. SGML wants
+to make sure that documents are formed according to the rules for their document
+type, but it also wants to make data entry easy by allowing shortcuts that reduce
+typing. XML was designed as a simplified version of SGML for use on the Internet.
+
+From the Library of Hristo Dimov Hristov
+
+146
+
+Chapter 3
+
+XML
+
+As is often true, simpler is better, and XML has enjoyed the immediate and
+enthusiastic reception that has eluded SGML for so long.
+
+NOTE: You can find a very nice version of the XML standard, with annotations
+by Tim Bray, at www.xml.com/axml/axml.html.
+
+Even though XML and HTML have common roots, there are important differences
+between the two.
+• Unlike HTML, XML is case-sensitive. For example, <H1> and <h1> are different
+XML tags.
+• In HTML, you can omit end tags, such as </p> or </li>, if it is clear from the
+context where a paragraph or list item ends. In XML, you can never omit an
+end tag.
+• In XML, elements that have a single tag without a matching end tag must end
+in a /, as in <img src="coffeecup.png"/>. That way, the parser knows not to look for
+a </img> tag.
+• In XML, attribute values must be enclosed in quotation marks. In HTML,
+quotation marks are optional. For example, <applet code="MyApplet.class" width=300
+height=300> is legal HTML but not legal XML. In XML, you have to use quotation
+marks: width="300".
+• In HTML, you can have attribute names without values, such as <input type="radio"
+name="language" value="Java" checked>. In XML, all attributes must have values, such
+as checked="true" or (ugh) checked="checked".
+
+3.1.1 The Structure of an XML Document
+An XML document should start with a header such as
+<?xml version="1.0"?>
+
+or
+<?xml version="1.0" encoding="UTF-8"?>
+
+Strictly speaking, a header is optional, but it is highly recommended.
+
+NOTE: Since SGML was created for processing of real documents, XML files
+are called documents even though many of them describe data sets that one
+would not normally call documents.
+
+From the Library of Hristo Dimov Hristov
+
+3.1 Introducing XML
+
+147
+
+The header can be followed by a document type definition (DTD), such as
+<!DOCTYPE web-app PUBLIC
+"-//Sun Microsystems, Inc.//DTD Web Application 2.2//EN"
+"http://java.sun.com/j2ee/dtds/web-app_2_2.dtd">
+
+DTDs are an important mechanism to ensure the correctness of a document, but
+they are not required. We will discuss them later in this chapter.
+Finally, the body of the XML document contains the root element, which can contain
+other elements. For example,
+<?xml version="1.0"?>
+<!DOCTYPE configuration . . .>
+<configuration>
+<title>
+<font>
+<name>Helvetica</name>
+<size>36</size>
+</font>
+</title>
+...
+</configuration>
+
+An element can contain child elements, text, or both. In the preceding example, the
+font element has two child elements, name and size. The name element contains the text
+"Helvetica".
+TIP: It is best to structure your XML documents so that an element contains either
+child elements or text. In other words, you should avoid situations such as
+<font>
+Helvetica
+<size>36</size>
+</font>
+
+This is called mixed content in the XML specification. As you will see later in
+this chapter, you can simplify parsing if you avoid mixed content.
+
+XML elements can contain attributes, such as
+<size unit="pt">36</size>
+
+There is some disagreement among XML designers about when to use elements
+and when to use attributes. For example, it would seem easier to describe a font as
+<font name="Helvetica" size="36"/>
+
+than
+
+From the Library of Hristo Dimov Hristov
+
+148
+
+Chapter 3
+
+XML
+
+<font>
+<name>Helvetica</name>
+<size>36</size>
+</font>
+
+However, attributes are much less flexible. Suppose you want to add units to the
+size value. If you use attributes, you will have to add the unit to the attribute
+value:
+<font name="Helvetica" size="36 pt"/>
+
+Ugh! Now you have to parse the string "36 pt", just the kind of hassle that XML
+was designed to avoid. Adding an attribute to the size element is much cleaner:
+<font>
+<name>Helvetica</name>
+<size unit="pt">36</size>
+</font>
+
+A commonly used rule of thumb is that attributes should be used only to modify
+the interpretation of a value, not to specify values. If you find yourself engaged
+in metaphysical discussions about whether a particular setting is a modification
+of the interpretation of a value or not, just say “no” to attributes and use elements
+throughout. Many useful XML documents don’t use attributes at all.
+
+NOTE: In HTML, the rule for attribute usage is simple: If it isn’t displayed on the
+web page, it’s an attribute. For example, consider the hyperlink
+<a href="http://java.sun.com">Java Technology</a>
+
+The string Java Technology is displayed on the web page, but the URL of the link
+is not a part of the displayed page. However, the rule isn’t all that helpful for
+most XML files because the data in an XML file aren’t normally meant to be
+viewed by humans.
+
+Elements and text are the “bread and butter” of XML documents. Here are a few
+other markup instructions that you might encounter:
+• Character references have the form &#decimalValue; or &#xhexValue;. For example,
+the é character can be denoted with either of the following:
+&#233; &#xE9;
+
+• Entity references have the form &name;. The entity references
+&lt; &gt; &amp; &quot; &apos;
+
+From the Library of Hristo Dimov Hristov
+

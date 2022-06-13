@@ -1,0 +1,174 @@
+When you process a collection, you usually iterate over its elements and do some
+work with each of them. For example, suppose we want to count all long words
+in a book. First, let’s put them into a list:
+String contents = new String(Files.readAllBytes(
+Paths.get("alice.txt")), StandardCharsets.UTF_8); // Read file into string
+List<String> words = Arrays.asList(contents.split("\\PL+"));
+// Split into words; nonletters are delimiters
+
+Now we are ready to iterate:
+long count = 0;
+for (String w : words)
+{
+if (w.length() > 12) count++;
+}
+
+With streams, the same operation looks like this:
+long count = words.stream()
+.filter(w -> w.length() > 12)
+.count();
+
+The stream version is easier to read than the loop because you do not have to
+scan the code for evidence of filtering and counting. The method names tell you
+right away what the code intends to do. Moreover, while the loop prescribes the
+order of operations in complete detail, a stream is able to schedule the operations
+any way it wants, as long as the result is correct.
+Simply changing stream into parallelStream allows the stream library to do the filtering
+and counting in parallel.
+long count = words.parallelStream()
+.filter(w -> w.length() > 12)
+.count();
+
+From the Library of Hristo Dimov Hristov
+
+1.1 From Iterating to Stream Operations
+
+3
+
+Streams follow the “what, not how” principle. In our stream example, we describe
+what needs to be done: get the long words and count them. We don’t specify
+in which order, or in which thread, this should happen. In contrast, the loop at
+the beginning of this section specifies exactly how the computation should work,
+and thereby forgoes any chances of optimization.
+A stream seems superficially similar to a collection, allowing you to transform
+and retrieve data. But there are significant differences:
+1.
+2.
+
+3.
+
+A stream does not store its elements. They may be stored in an underlying
+collection or generated on demand.
+Stream operations don’t mutate their source. For example, the filter method
+does not remove elements from a new stream, but it yields a new stream in
+which they are not present.
+Stream operations are lazy when possible. This means they are not executed
+until their result is needed. For example, if you only ask for the first five long
+words instead of all, the filter method will stop filtering after the fifth match.
+As a consequence, you can even have infinite streams!
+
+Let us have another look at the example. The stream and parallelStream methods yield
+a stream for the words list. The filter method returns another stream that contains
+only the words of length greater than twelve. The count method reduces that stream
+to a result.
+This workflow is typical when you work with streams. You set up a pipeline of
+operations in three stages:
+1.
+2.
+3.
+
+Create a stream.
+Specify intermediate operations for transforming the initial stream into others,
+possibly in multiple steps.
+Apply a terminal operation to produce a result. This operation forces the execution of the lazy operations that precede it. Afterwards, the stream can no
+longer be used.
+
+In the example in Listing 1.1, the stream is created with the stream or parallelStream
+method. The filter method transforms it, and count is the terminal operation.
+In the next section, you will see how to create a stream. The subsequent three
+sections deal with stream transformations. They are followed by five sections on
+terminal operations.
+
+From the Library of Hristo Dimov Hristov
+
+4
+
+Chapter 1
+
+Listing 1.1
+1
+
+The Java SE 8 Stream Library
+
+streams/CountLongWords.java
+
+package streams;
+
+2
+3
+4
+5
+6
+7
+8
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.List;
+
+9
+10
+11
+12
+13
+14
+15
+16
+
+public class CountLongWords
+{
+public static void main(String[] args) throws IOException
+{
+String contents = new String(Files.readAllBytes(
+Paths.get("../gutenberg/alice30.txt")), StandardCharsets.UTF_8);
+List<String> words = Arrays.asList(contents.split("\\PL+"));
+
+17
+
+long count = 0;
+for (String w : words)
+{
+if (w.length() > 12) count++;
+}
+System.out.println(count);
+
+18
+19
+20
+21
+22
+23
+24
+
+count = words.stream().filter(w -> w.length() > 12).count();
+System.out.println(count);
+
+25
+26
+27
+
+count = words.parallelStream().filter(w -> w.length() > 12).count();
+System.out.println(count);
+
+28
+29
+
+}
+
+30
+31
+
+}
+
+java.util.stream.Stream<T> 8
+
+• Stream<T> filter(Predicate<? super T> p)
+yields a stream containing all elements of this stream fulfilling p.
+• long count()
+yields the number of elements of this stream. This is a terminal operation.
+
+From the Library of Hristo Dimov Hristov
+

@@ -1,0 +1,309 @@
+
+29
+
+java.util.stream.Collectors 8
+
+• static <T,K> Collector<T,?,Map<K,List<T>>> groupingBy(Function<? super T,? extends K> classifier)
+• static <T,K> Collector<T,?,ConcurrentMap<K,List<T>>> groupingByConcurrent(Function<? super T,?
+extends K> classifier)
+
+yields a collector that produces a map or concurrent map whose keys are the results
+of applying classifier to all collected elements, and whose values are lists of elements
+with the same key.
+• static <T> Collector<T,?,Map<Boolean,List<T>>> partitioningBy(Predicate<? super T> predicate)
+yields a collector that produces a map whose keys are true/false, and whose values
+are lists of the elements that fulfill/do not fulfill the predicate.
+
+1.11 Downstream Collectors
+The groupingBy method yields a map whose values are lists. If you want to process
+those lists in some way, supply a “downstream collector.” For example, if you
+want sets instead of lists, you can use the Collectors.toSet collector that you saw in
+the previous section:
+Map<String, Set<Locale>> countryToLocaleSet = locales.collect(
+groupingBy(Locale::getCountry, toSet()));
+
+NOTE: In this and the remaining examples of this section, we assume a static
+import of java.util.stream.Collectors.* to make the expressions easier to read.
+
+Several collectors are provided for reducing grouped elements to numbers:
+• counting produces a count of the collected elements. For example,
+Map<String, Long> countryToLocaleCounts = locales.collect(
+groupingBy(Locale::getCountry, counting()));
+
+counts how many locales there are for each country.
+• summing(Int|Long|Double) takes a function argument, applies the function to the
+downstream elements, and produces their sum. For example,
+Map<String, Integer> stateToCityPopulation = cities.collect(
+groupingBy(City::getState, summingInt(City::getPopulation)));
+
+computes the sum of populations per state in a stream of cities.
+
+From the Library of Hristo Dimov Hristov
+
+30
+
+Chapter 1
+
+The Java SE 8 Stream Library
+
+• maxBy and minBy take a comparator and produce maximum and minimum of the
+downstream elements. For example,
+Map<String, Optional<City>> stateToLargestCity = cities.collect(
+groupingBy(City::getState,
+maxBy(Comparator.comparing(City::getPopulation))));
+
+produces the largest city per state.
+The mapping method yields a collector that applies a function to downstream results
+and passes the function values to yet another collector. For example,
+Map<String, Optional<String>> stateToLongestCityName = cities.collect(
+groupingBy(City::getState,
+mapping(City::getName,
+maxBy(Comparator.comparing(String::length)))));
+
+Here, we group cities by state. Within each state, we produce the names of the
+cities and reduce by maximum length.
+The mapping method also yields a nicer solution to a problem from the preceding
+section—gathering a set of all languages in a country.
+Map<String, Set<String>> countryToLanguages = locales.collect(
+groupingBy(Locale::getDisplayCountry,
+mapping(Locale::getDisplayLanguage,
+toSet())));
+
+In the previous section, we used toMap instead of groupingBy. In this form, you don’t
+need to worry about combining the individual sets.
+If the grouping or mapping function has return type int, long, or double, you can
+collect elements into a summary statistics object, as discussed in Section 1.8,
+“Collecting Results,” on p. 19. For example,
+Map<String, IntSummaryStatistics> stateToCityPopulationSummary = cities.collect(
+groupingBy(City::getState,
+summarizingInt(City::getPopulation)));
+
+Then you can get the sum, count, average, minimum, and maximum of the
+function values from the summary statistics objects of each group.
+NOTE: There are also three versions of a reducing method that apply general
+reductions, as described in Section 1.12, “Reduction Operations,” on p. 33.
+
+Composing collectors is a powerful approach, but it can also lead to very convoluted expressions. Their best use is with groupingBy or partitioningBy to process the
+
+From the Library of Hristo Dimov Hristov
+
+1.11 Downstream Collectors
+
+31
+
+“downstream” map values. Otherwise, simply apply methods such as map, reduce,
+count, max, or min directly on streams.
+The example program in Listing 1.6 demonstrates downstream collectors.
+
+Listing 1.6
+1
+
+collecting/DownstreamCollectors.java
+
+package collecting;
+
+2
+3
+
+import static java.util.stream.Collectors.*;
+
+4
+5
+6
+7
+8
+
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
+import java.util.stream.*;
+
+9
+10
+11
+
+public class DownstreamCollectors
+{
+
+12
+13
+14
+15
+16
+17
+
+public static class City
+{
+private String name;
+private String state;
+private int population;
+
+18
+
+public City(String name, String state, int population)
+{
+this.name = name;
+this.state = state;
+this.population = population;
+}
+
+19
+20
+21
+22
+23
+24
+25
+
+public String getName()
+{
+return name;
+}
+
+26
+27
+28
+29
+30
+
+public String getState()
+{
+return state;
+}
+
+31
+32
+33
+34
+35
+
+public int getPopulation()
+{
+return population;
+}
+
+36
+37
+38
+39
+40
+
+}
+
+41
+
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+32
+
+Chapter 1
+
+The Java SE 8 Stream Library
+
+Listing 1.6 (Continued)
+42
+43
+44
+45
+46
+
+public static Stream<City> readCities(String filename) throws IOException
+{
+return Files.lines(Paths.get(filename)).map(l -> l.split(", "))
+.map(a -> new City(a[0], a[1], Integer.parseInt(a[2])));
+}
+
+47
+48
+49
+50
+51
+52
+53
+54
+
+public static void main(String[] args) throws IOException
+{
+Stream<Locale> locales = Stream.of(Locale.getAvailableLocales());
+locales = Stream.of(Locale.getAvailableLocales());
+Map<String, Set<Locale>> countryToLocaleSet = locales.collect(groupingBy(
+Locale::getCountry, toSet()));
+System.out.println("countryToLocaleSet: " + countryToLocaleSet);
+
+55
+56
+57
+58
+59
+
+locales = Stream.of(Locale.getAvailableLocales());
+Map<String, Long> countryToLocaleCounts = locales.collect(groupingBy(
+Locale::getCountry, counting()));
+System.out.println("countryToLocaleCounts: " + countryToLocaleCounts);
+
+60
+61
+62
+63
+64
+
+Stream<City> cities = readCities("cities.txt");
+Map<String, Integer> stateToCityPopulation = cities.collect(groupingBy(
+City::getState, summingInt(City::getPopulation)));
+System.out.println("stateToCityPopulation: " + stateToCityPopulation);
+
+65
+66
+67
+68
+69
+70
+71
+
+cities = readCities("cities.txt");
+Map<String, Optional<String>> stateToLongestCityName = cities
+.collect(groupingBy(
+City::getState,
+mapping(City::getName,
+maxBy(Comparator.comparing(String::length)))));
+
+72
+73
+
+System.out.println("stateToLongestCityName: " + stateToLongestCityName);
+
+74
+75
+76
+77
+78
+79
+
+locales = Stream.of(Locale.getAvailableLocales());
+Map<String, Set<String>> countryToLanguages = locales.collect(groupingBy(
+Locale::getDisplayCountry,
+mapping(Locale::getDisplayLanguage, toSet())));
+System.out.println("countryToLanguages: " + countryToLanguages);
+
+80
+81
+82
+83
+84
+85
+
+cities = readCities("cities.txt");
+Map<String, IntSummaryStatistics> stateToCityPopulationSummary = cities
+.collect(groupingBy(City::getState,
+summarizingInt(City::getPopulation)));
+System.out.println(stateToCityPopulationSummary.get("NY"));
+
+86
+87
+
+cities = readCities("cities.txt");
+
+From the Library of Hristo Dimov Hristov
+

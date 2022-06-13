@@ -1,0 +1,27 @@
+# ignore model files
+*.model
+*.mdl
+*.vec
+*.npy
+*.ipynb
+*.log
+__pycache__
+*.pyc
+.DS_Store
+word2vec_corpus
+
+# ignore specific dirs
+/教材
+/build/*/*
+/crx
+/Optimization
+/SOPostClassifier/pretrained/*
+/SOPostClassifier/log/*
+
+# ignore too big dataset
+so_posts.csv
+test_result.json
+so_posts_duplicate.csv
+/RawData
+
+# textbook_code

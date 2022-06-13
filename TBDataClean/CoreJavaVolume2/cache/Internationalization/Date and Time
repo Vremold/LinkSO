@@ -1,0 +1,685 @@
+
+385
+
+java.util.Currency 1.4
+
+• static Currency getInstance(String currencyCode)
+• static Currency getInstance(Locale locale)
+returns the Currency instance for the given ISO 4217 currency code or the country of
+the given locale.
+• String toString()
+• String getCurrencyCode()
+gets the ISO 4217 currency code of this currency.
+• String getSymbol()
+• String getSymbol(Locale locale)
+gets the formatting symbol of this currency for the default locale or the given locale.
+For example, the symbol for USD can be "$" or "US$", depending on the locale.
+• int getDefaultFractionDigits()
+gets the default number of fraction digits of this currency.
+• static Set<Currency> getAvailableCurrencies() 7
+gets all available currencies.
+
+7.4 Date and Time
+When you are formatting date and time, you should be concerned with four
+locale-dependent issues:
+•
+•
+•
+•
+
+The names of months and weekdays should be presented in the local language.
+There will be local preferences for the order of year, month, and day.
+The Gregorian calendar might not be the local preference for expressing dates.
+The time zone of the location must be taken into account.
+
+The DateTimeFormatter class from the java.time package handles these issues. Pick one
+of the formatting styles shown in Tables 7.4. Then get a formatter:
+FormatStyle style = . . .; // One of FormatStyle.SHORT, FormatStyle.MEDIUM, . . .
+DateTimeFormatter dateFormatter = DateTimeFormatter.ofLocalizedDate(style);
+DateTimeFormatter timeFormatter = DateTimeFormatter.ofLocalizedTime(style);
+DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofLocalizedDateTime(style);
+// or DateTimeFormatter.ofLocalizedDateTime(style1, style2)
+
+These formatters use the current locale. To use a different locale, use the withLocale
+method:
+
+From the Library of Hristo Dimov Hristov
+
+386
+
+Chapter 7
+
+Internationalization
+
+DateTimeFormatter dateFormatter =
+DateTimeFormatter.ofLocalizedDate(style).withLocale(locale);
+
+Now you can format a LocalDate, LocalDateTime, LocalTime, or ZonedDateTime:
+ZonedDateTime appointment = . . .;
+String formatted = formatter.format(appointment);
+
+Table 7.4 Date and Time Formatting Styles
+Style
+
+Date
+
+Time
+
+SHORT
+
+7/16/69
+
+9:32 AM
+
+MEDIUM
+
+Jul 16, 1969
+
+9:32:00 AM
+
+LONG
+
+July 16, 1969
+
+9:32:00 AM EDT in en-US, 9:32:00 MSZ in de-DE
+(only for ZonedDateTime)
+
+FULL
+
+Wednesday, July 16, 1969
+
+9:32:00 AM EDT in en-US, 9:32 Uhr MSZ in de-DE
+(only for ZonedDateTime)
+
+NOTE: Here we use the DateTimeFormatter class from the java.time package. There
+is also a legacy java.text.DateFormatter class from Java 1.1 that works with Date
+and Calendar objects.
+
+You can use one of the static parse methods of LocalDate, LocalDateTime, LocalTime, or
+ZonedDateTime to parse a date or time in a string:
+LocalTime time = LocalTime.parse("9:32 AM", formatter);
+
+These methods are not suitable for parsing human input, at least not without
+preprocessing. For example, the short time formatter for the United States will
+parse "9:32 AM" but not "9:32AM" or "9:32 am".
+CAUTION: Date formatters parse nonexistent dates, such as November 31, and
+adjust them to the last date in the given month.
+
+Sometimes, you need to display just the names of weekdays and months, for
+example, in a calendar application. Call the getDisplayName method of the DayOfWeek
+and Month enumerations.
+for (Month m : Month.values())
+System.out.println(m.getDisplayName(textStyle, locale) + " ");
+
+From the Library of Hristo Dimov Hristov
+
+7.4 Date and Time
+
+387
+
+Tables 7.5 shows the text styles. The STANDALONE versions are for display outside a
+formatted date. For example, in Finnish, January is “tammikuuta” inside a date,
+but “tammikuu” standalone.
+
+Table 7.5 Values of the java.time.format.TextStyle Enumeration
+Style
+
+Example
+
+FULL / FULL_STANDALONE
+
+January
+
+SHORT / SHORT_STANDALONE
+
+Jan
+
+NARROW / NARROW_STANDALONE
+
+J
+
+NOTE: The first day of the week can be Saturday, Sunday, or Monday, depending
+on the locale. You can obtain it like this:
+DayOfWeek first = WeekFields.of(locale).getFirstDayOfWeek();
+
+Listing 7.2 shows the DateFormat class in action. You can select a locale and see how
+the date and time are formatted in different places around the world.
+Figure 7.2 shows the program (after Chinese fonts were installed). As you can
+see, it correctly displays the output.
+
+Figure 7.2 The DateFormatTest program
+You can also experiment with parsing. Enter a date, time, or date/time and click
+the Parse button.
+We use a helper class EnumCombo to solve a technical problem (see Listing 7.3). We
+wanted to fill a combo with values such as Short, Medium, and Long and then automatically convert the user’s selection to values FormatStyle.SHORT, FormatStyle.MEDIUM, and
+FormatStyle.LONG. Instead of writing repetitive code, we use reflection: We convert
+the user’s choice to upper case, replace all spaces with underscores, and then
+find the value of the static field with that name. (See Volume I, Chapter 5 for more
+details about reflection.)
+
+From the Library of Hristo Dimov Hristov
+
+388
+
+Chapter 7
+
+Listing 7.2
+1
+
+Internationalization
+
+dateFormat/DateTimeFormatterTest.java
+
+package dateFormat;
+
+2
+3
+4
+5
+6
+7
+
+import java.awt.*;
+import java.awt.event.*;
+import java.time.*;
+import java.time.format.*;
+import java.util.*;
+
+8
+9
+
+import javax.swing.*;
+
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+
+/**
+* This program demonstrates formatting dates under various locales.
+* @version 1.00 2016-05-06
+* @author Cay Horstmann
+*/
+public class DateTimeFormatterTest
+{
+public static void main(String[] args)
+{
+EventQueue.invokeLater(() ->
+{
+JFrame frame = new DateTimeFormatterFrame();
+frame.setTitle("DateFormatTest");
+frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+frame.setVisible(true);
+});
+}
+}
+
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+
+/**
+* This frame contains combo boxes to pick a locale, date and time formats, text fields to display
+* formatted date and time, buttons to parse the text field contents, and a "lenient" check box.
+*/
+class DateTimeFormatterFrame extends JFrame
+{
+private Locale[] locales;
+private LocalDate currentDate;
+private LocalTime currentTime;
+private ZonedDateTime currentDateTime;
+private DateTimeFormatter currentDateFormat;
+private DateTimeFormatter currentTimeFormat;
+private DateTimeFormatter currentDateTimeFormat;
+private JComboBox<String> localeCombo = new JComboBox<>();
+private JButton dateParseButton = new JButton("Parse");
+private JButton timeParseButton = new JButton("Parse");
+private JButton dateTimeParseButton = new JButton("Parse");
+private JTextField dateText = new JTextField(30);
+private JTextField timeText = new JTextField(30);
+
+From the Library of Hristo Dimov Hristov
+
+7.4 Date and Time
+
+49
+50
+51
+52
+53
+54
+55
+
+389
+
+private JTextField dateTimeText = new JTextField(30);
+private EnumCombo<FormatStyle> dateStyleCombo = new EnumCombo<>(FormatStyle.class,
+"Short", "Medium", "Long", "Full");
+private EnumCombo<FormatStyle> timeStyleCombo = new EnumCombo<>(FormatStyle.class,
+"Short", "Medium");
+private EnumCombo<FormatStyle> dateTimeStyleCombo = new EnumCombo<>(FormatStyle.class,
+"Short", "Medium", "Long", "Full");
+
+56
+57
+58
+59
+60
+61
+
+public DateTimeFormatterFrame()
+{
+setLayout(new GridBagLayout());
+add(new JLabel("Locale"), new GBC(0, 0).setAnchor(GBC.EAST));
+add(localeCombo, new GBC(1, 0, 2, 1).setAnchor(GBC.WEST));
+
+62
+63
+64
+65
+66
+
+add(new JLabel("Date"), new GBC(0, 1).setAnchor(GBC.EAST));
+add(dateStyleCombo, new GBC(1, 1).setAnchor(GBC.WEST));
+add(dateText, new GBC(2, 1, 2, 1).setFill(GBC.HORIZONTAL));
+add(dateParseButton, new GBC(4, 1).setAnchor(GBC.WEST));
+
+67
+68
+69
+70
+71
+
+add(new JLabel("Time"), new GBC(0, 2).setAnchor(GBC.EAST));
+add(timeStyleCombo, new GBC(1, 2).setAnchor(GBC.WEST));
+add(timeText, new GBC(2, 2, 2, 1).setFill(GBC.HORIZONTAL));
+add(timeParseButton, new GBC(4, 2).setAnchor(GBC.WEST));
+
+72
+73
+74
+75
+76
+
+add(new JLabel("Date and time"), new GBC(0, 3).setAnchor(GBC.EAST));
+add(dateTimeStyleCombo, new GBC(1, 3).setAnchor(GBC.WEST));
+add(dateTimeText, new GBC(2, 3, 2, 1).setFill(GBC.HORIZONTAL));
+add(dateTimeParseButton, new GBC(4, 3).setAnchor(GBC.WEST));
+
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+
+locales = (Locale[]) Locale.getAvailableLocales().clone();
+Arrays.sort(locales, Comparator.comparing(Locale::getDisplayName));
+for (Locale loc : locales)
+localeCombo.addItem(loc.getDisplayName());
+localeCombo.setSelectedItem(Locale.getDefault().getDisplayName());
+currentDate = LocalDate.now();
+currentTime = LocalTime.now();
+currentDateTime = ZonedDateTime.now();
+updateDisplay();
+
+87
+88
+
+ActionListener listener = event -> updateDisplay();
+
+89
+90
+91
+92
+93
+
+localeCombo.addActionListener(listener);
+dateStyleCombo.addActionListener(listener);
+timeStyleCombo.addActionListener(listener);
+dateTimeStyleCombo.addActionListener(listener);
+
+94
+95
+96
+97
+
+dateParseButton.addActionListener(event ->
+{
+String d = dateText.getText().trim();
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+390
+
+Chapter 7
+
+Internationalization
+
+Listing 7.2 (Continued)
+try
+{
+currentDate = LocalDate.parse(d, currentDateFormat);
+updateDisplay();
+}
+catch (Exception e)
+{
+dateText.setText(e.getMessage());
+}
+});
+
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+
+timeParseButton.addActionListener(event ->
+{
+String t = timeText.getText().trim();
+try
+{
+currentTime = LocalTime.parse(t, currentTimeFormat);
+updateDisplay();
+}
+catch (Exception e)
+{
+timeText.setText(e.getMessage());
+}
+});
+
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+
+dateTimeParseButton.addActionListener(event ->
+{
+String t = dateTimeText.getText().trim();
+try
+{
+currentDateTime = ZonedDateTime.parse(t, currentDateTimeFormat);
+updateDisplay();
+}
+catch (Exception e)
+{
+dateTimeText.setText(e.getMessage());
+}
+});
+
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+
+pack();
+
+137
+138
+
+}
+
+139
+140
+141
+142
+
+/**
+* Updates the display and formats the date according to the user settings.
+*/
+
+From the Library of Hristo Dimov Hristov
+
+7.4 Date and Time
+
+public void updateDisplay()
+{
+Locale currentLocale = locales[localeCombo.getSelectedIndex()];
+FormatStyle dateStyle = dateStyleCombo.getValue();
+currentDateFormat = DateTimeFormatter.ofLocalizedDate(
+dateStyle).withLocale(currentLocale);
+dateText.setText(currentDateFormat.format(currentDate));
+FormatStyle timeStyle = timeStyleCombo.getValue();
+currentTimeFormat = DateTimeFormatter.ofLocalizedTime(
+timeStyle).withLocale(currentLocale);
+timeText.setText(currentTimeFormat.format(currentTime));
+FormatStyle dateTimeStyle = dateTimeStyleCombo.getValue();
+currentDateTimeFormat = DateTimeFormatter.ofLocalizedDateTime(
+dateTimeStyle).withLocale(currentLocale);
+dateTimeText.setText(currentDateTimeFormat.format(currentDateTime));
+}
+
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+
+}
+
+Listing 7.3
+1
+
+391
+
+dateFormat/EnumCombo.java
+
+package dateFormat;
+
+2
+3
+4
+
+import java.util.*;
+import javax.swing.*;
+
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+
+/**
+* A combo box that lets users choose from among static field
+* values whose names are given in the constructor.
+* @version 1.15 2016-05-06
+* @author Cay Horstmann
+*/
+public class EnumCombo<T> extends JComboBox<String>
+{
+private Map<String, T> table = new TreeMap<>();
+
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+
+/**
+* Constructs an EnumCombo yielding values of type T.
+* @param cl a class
+* @param labels an array of strings describing static field names
+* of cl that have type T
+*/
+public EnumCombo(Class<?> cl, String... labels)
+{
+for (String label : labels)
+{
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+
+392
+
+Chapter 7
+
+Internationalization
+
+Listing 7.3 (Continued)
+String name = label.toUpperCase().replace(' ', '_');
+try
+{
+java.lang.reflect.Field f = cl.getField(name);
+@SuppressWarnings("unchecked") T value = (T) f.get(cl);
+table.put(label, value);
+}
+catch (Exception e)
+{
+label = "(" + label + ")";
+table.put(label, null);
+}
+addItem(label);
+
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+
+}
+setSelectedItem(labels[0]);
+
+39
+40
+
+}
+
+41
+42
+
+/**
+* Returns the value of the field that the user selected.
+* @return the static field value
+*/
+public T getValue()
+{
+return table.get(getSelectedItem());
+}
+
+43
+44
+45
+46
+47
+48
+49
+50
+51
+
+}
+
+java.time.format.DateTimeFormatter 8
+
+•
+•
+•
+•
+
+static DateTimeFormatter ofLocalizedDate(FormatStyle dateStyle)
+static DateTimeFormatter ofLocalizedTime(FormatStyle dateStyle)
+static DateTimeFormatter ofLocalizedDateTime(FormatStyle dateTimeStyle)
+static DateTimeFormatter ofLocalizedDate(FormatStyle dateStyle, FormatStyle timeStyle)
+
+returns DateTimeFormatter instances that format dates, times, or dates and times with
+the specified styles.
+• DateTimeFormatter withLocale(Locale locale)
+returns a copy of this formatter with the given locale.
+• String format(TemporalAccessor temporal)
+returns the string resulting from formatting the given date/time.
+
+From the Library of Hristo Dimov Hristov
+

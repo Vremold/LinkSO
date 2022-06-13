@@ -1,0 +1,5 @@
+  Several keywords represent unconditional branching, which simply means that the branch happens without any test. These include return, break, continue, and a way to jump to a labeled statement which is similar to the goto in other languages. 
+  The return keyword has two purposes: It specifies what value a method will return (if it doesn’t have a void return value) and it causes the current method to exit, returning that value. The preceding test( ) method can be rewritten to take advantage of this: 
+  There’s no need for else, because the method will not continue after executing a return. 
+  If you do not have a return statement in a method that returns void, there’s an implicit return at the end of that method, so it’s not always necessary to include a return statement. However, if your method states it will return anything other than void, you must ensure every code path will return a value. 
+  Exercise 6: (2) Modify the two test( ) methods in the previous two programs so that they take two extra arguments, begin and end, and so that testval is tested to see if it is within the range between (and including) begin and end. 

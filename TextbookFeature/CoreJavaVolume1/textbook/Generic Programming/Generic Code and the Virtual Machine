@@ -1,0 +1,79 @@
+  The virtual machine does not have objects of generic types—all objects belong to ordinary classes. An earlier version of the generics implementation   was even able to compile a program that used generics into class files that executed on 1.0 virtual machines! In the following sections, you will see how the compiler "erases" type parameters, and what implication that process has for Java programmers. 
+8.5.1 Type Erasure
+  Whenever you define a generic type, a corresponding raw type is automatically provided. The name of the raw type is simply the name of the generic type, with the type parameters removed. The type variables are erased and replaced by their bounding types (or Object for variables without bounds). 
+  For example, the raw type for Pair<T> looks like this: public class Pair { private Object first; 
+  private Object second; 
+  public Pair(Object first, Object second) { this.first = first; 
+  this.second = second; 
+  } 
+  public Object getFirst() { return first; } 
+  public Object getSecond() { return second; } 
+  public void setFirst(Object newValue) { first = newValue; } 
+  public void setSecond(Object newValue) { second = newValue; } 
+  } 
+  Since T is an unbounded type variable, it is simply replaced by Object. 
+  The result is an ordinary class, just as you might have implemented it before generics were added to Java. 
+  Your programs may contain different kinds of Pair, such as Pair<String> or Pair<LocalDate>, but erasure turns them all into raw Pair types. 
+  In this regard, Java generics are very different from C++ templates. 
+  C++ produces different types for each template instantiation—a phenomenon called "template code bloat." Java does not suffer from this problem. 
+  The raw type replaces type variables with the first bound, or Object if no bounds are given. For example, the type variable in the class Pair<T> has no explicit bounds, hence the raw type replaces T with Object. Suppose we declare a slightly different type:   public class Interval<T extends Comparable & Serializable> implements Serializ { private T lower; 
+  private T upper; 
+  . . . 
+  public Interval(T first, T second) { if (first.compareTo(second) <= 0) { lower = first; upper = second; } 
+  else { lower = second; upper = first; } 
+  } 
+  } 
+  The raw type Interval looks like this: public class Interval implements Serializable { private Comparable lower; 
+  private Comparable upper; 
+  . . . 
+  public Interval(Comparable first, Comparable second) { . . . } 
+  } 
+  Note You may wonder what happens if you switch the bounds: class Interval<T extends Serializable & Comparable>. 
+  In that case, the raw type replaces T with Serializable, and the compiler inserts casts to Comparable when necessary. For efficiency, you should therefore put tagging interfaces (that is,   interfaces without methods) at the end of the bounds list. 
+8.5.2 Translating Generic Expressions
+  When you program a call to a generic method, the compiler inserts casts when the return type has been erased. For example, consider the sequence of statements Pair<Employee> buddies = . . .; 
+  Employee buddy = buddies.getFirst(); 
+  The erasure of getFirst has return type Object. The compiler automatically inserts the cast to Employee. That is, the compiler translates the method call into two virtual machine instructions: A call to the raw method Pair.getFirst A cast of the returned Object to the type Employee Casts are also inserted when you access a generic field. Suppose the first and second fields of the Pair class were public. (Not a good programming style, perhaps, but it is legal Java.) Then the expression Employee buddy = buddies.first; 
+  also has a cast inserted in the resulting bytecodes. 
+8.5.3 Translating Generic Methods
+  Type erasure also happens for generic methods. Programmers usually think of a generic method such as public static <T extends Comparable> T min(T[] a)   as a whole family of methods, but after erasure, only a single method is left: public static Comparable min(Comparable[] a)   Note that the type parameter T has been erased, leaving only its bounding   type Comparable. 
+  Erasure of methods brings up a couple of complexities. Consider this example: class DateInterval extends Pair<LocalDate> { public void setSecond(LocalDate second) { if (second.compareTo(getFirst()) >= 0) super.setSecond(second); 
+  } 
+  . . . 
+  } 
+  A date interval is a pair of LocalDate objects, and we’ll want to override the methods to ensure that the second value is never smaller than the first. 
+  This class is erased to class DateInterval extends Pair // after erasure { public void setSecond(LocalDate second) { . . . } 
+  . . . 
+  } 
+  Perhaps surprisingly, there is another setSecond method, inherited from Pair, namely public void setSecond(Object second)   This is clearly a different method because it has a parameter of a different type—Object instead of LocalDate. But it shouldn’t be different. 
+  Consider this sequence of statements: var interval = new DateInterval(. . .); 
+  Pair<LocalDate> pair = interval; // OK--assignment to superclass pair.setSecond(aDate); 
+  Our expectation is that the call to setSecond is polymorphic and that the appropriate method is called. Since pair refers to a DateInterval object, that should be DateInterval.setSecond. The problem is that   the type erasure interferes with polymorphism. To fix this problem, the compiler generates a bridge method in the DateInterval class: public void setSecond(Object second) { setSecond((LocalDate) second); } 
+  To see why this works, let us carefully follow the execution of the statement pair.setSecond(aDate)   The variable pair has declared type Pair<LocalDate>, and that type only has a single method called setSecond, namely setSecond(Object). The virtual machine calls that method on the object to which pair refers. That object is of type DateInterval. 
+  Therefore, the method DateInterval.setSecond(Object) is called. 
+  That method is the synthesized bridge method. It calls DateInterval.setSecond(LocalDate), which is what we want. 
+  Bridge methods can get even stranger. Suppose the DateInterval class also overrides the getSecond method: class DateInterval extends Pair<LocalDate> { public LocalDate getSecond() { return (LocalDate) super.getSecond(); } 
+  . . . 
+  } 
+  In the DateInterval class, there are two getSecond methods: LocalDate getSecond() // defined in DateInterval Object getSecond() // overrides the method defined in Pair to call the first method   You could not write Java code like that; it would be illegal to have two methods with the same parameter types—here, with no parameters. However, in the virtual machine, the parameter types and the return type specify a method. Therefore, the compiler can produce bytecodes for two methods that differ only in their return type, and the virtual machine will handle this situation correctly. 
+  Note Bridge methods are not limited to generic types. We already noted in Chapter 5 that it is legal for a method to specify a more restrictive return type when overriding another method. For example: public class Employee implements Cloneable { public Employee clone() throws CloneNotSupportedException { . . . } 
+  } 
+  The Object.clone and Employee.clone methods are said to have covariant return types. 
+  Actually, the Employee class has two clone methods: Employee clone() // defined above Object clone() // synthesized bridge method, overrides Object.clone   The synthesized bridge method calls the newly defined method. 
+  In summary, you need to remember these facts about translation of Java generics: There are no generics in the virtual machine, only ordinary classes and methods. 
+  All type parameters are replaced by their bounds. 
+  Bridge methods are synthesized to preserve polymorphism. 
+  Casts are inserted as necessary to preserve type safety. 
+8.5.4 Calling Legacy Code
+  When Java generics were designed, a major goal was to allow interoperability between generics and legacy code. Let us look at a concrete example of such legacy. The Swing user interface toolkit provides a JSlider class whose   "ticks" can be customized with labels that contain text or images. The labels are set with the call void setLabelTable(Dictionary table)   The Dictionary class maps integers to labels. Before Java 5, that class was implemented as a map of Object instances. Java 5 made Dictionary into a generic class, but JSlider was never updated. At this point, Dictionary without type parameters is a raw type. This is where compatibility comes in. 
+  When you populate the dictionary, you can use the generic type. 
+  Dictionary<Integer, Component> labelTable = new Hashtable<>(); 
+  labelTable.put(0, new JLabel(new ImageIcon("nine.gif"))); 
+  labelTable.put(20, new JLabel(new ImageIcon("ten.gif"))); 
+  . . . 
+  When you pass the Dictionary<Integer, Component> object to setLabelTable, the compiler issues a warning. 
+  slider.setLabelTable(labelTable); // warning   After all, the compiler has no assurance about what the setLabelTable might do to the Dictionary object. That method might replace all the keys with strings. That breaks the guarantee that the keys have type Integer, and future operations may cause bad cast exceptions. 
+  You should ponder it and ask what the JSlider is actually going to do with this Dictionary object. In our case, it is pretty clear that the JSlider only reads the information, so we can ignore the warning. 
+  Now consider the opposite case, in which you get an object of a raw type from a legacy class. You can assign it to a variable whose type uses generics, but of course you will get a warning. For example: Dictionary<Integer, Components> labelTable = slider.getLabelTable(); // warning   That’s OK—review the warning and make sure that the label table really contains Integer and Component objects. Of course, there never is an absolute guarantee. A malicious coder might have installed a different Dictionary in the slider. But again, the situation is no worse than it was before generics. In the worst case, your program will throw an exception. 
+  After you are done pondering the warning, you can use an annotation to make it disappear. You can annotate a local variable: @SuppressWarnings("unchecked") Dictionary<Integer, Components> labelTable = slider.getLabelTable(); // no warning   Or you can annotate an entire method, like this: @SuppressWarnings("unchecked") public void configureSlider() { . . . } 
+  This annotation turns off checking for all code inside the method. 

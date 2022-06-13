@@ -1,0 +1,475 @@
+  851   java.awt.image.ShortLookupTable 1.2   • ShortLookupTable(int offset, short[] data) • ShortLookupTable(int offset, short[][] data) constructs a lookup table for converting short values. The offset is subtracted from the input before the lookup. The values in the first constructor are applied to all color components but not the alpha component.When using the second constructor, you supply either the values for each color component, in which case the alpha component is unaffected, or the values for both alpha and color components. 
+  java.awt.image.ConvolveOp 1.2   • ConvolveOp(Kernel kernel) • ConvolveOp(Kernel kernel, int edgeCondition, RenderingHints hints) constructs a convolution operator. The edge condition specified is one of EDGE_NO_OP and EDGE_ZERO_FILL. Edge values need to be treated specially because they don’t have sufficient neighboring values to compute the convolution.The default is EDGE_ZERO_FILL. 
+  java.awt.image.Kernel 1.2   • Kernel(int width, int height, float[] matrixElements) constructs a kernel for the given matrix. 
+  11.12 Printing The original JDK had no support for printing at all. It was not possible to print from applets, and you had to get a third-party library if you wanted to print from an application. JDK 1.1 introduced very lightweight printing support, just enough to produce simple printouts, as long as you were not too particular about the print quality. The 1.1 printing model was designed to allow browser vendors to print the surface of an applet as it appears on a web page (which, however, the browser vendors have not embraced). 
+  Java SE 1.2 introduced the beginnings of a robust printing model that is fully integrated with 2D graphics. Java SE 1.4 added important enhancements, such as discovery of printer features and streaming print jobs for server-side print management. 
+  From the Library of Hristo Dimov Hristov   852   Chapter 11   Advanced AWT   In this section, we will show you how you can easily print a drawing on a single sheet of paper, how you can manage a multipage printout, and how you can benefit from the elegance of the Java 2D imaging model and easily generate a print preview dialog box. 
+11.12.1 Graphics Printing
+  In this section, we will tackle what is probably the most common printing situation: printing a 2D graphic. Of course, the graphic can contain text in various fonts or even consist entirely of text. 
+  To generate a printout, you have to take care of these two tasks: • Supply an object that implements the Printable interface • Start a print job The Printable interface has a single method: int print(Graphics g, PageFormat format, int page)   That method is called whenever the print engine needs to have a page formatted for printing. Your code draws the text and the images to be printed onto the graphics context. The page format tells you the paper size and the print margins. 
+  The page number tells you which page to render. 
+  To start a print job, use the PrinterJob class. First, call the static getPrinterJob method to get a print job object. Then set the Printable object that you want to print. 
+  Printable canvas = . . .; 
+  PrinterJob job = PrinterJob.getPrinterJob(); 
+  job.setPrintable(canvas); 
+  CAUTION: The class PrintJob handles JDK 1.1-style printing. That class is now obsolete. Do not confuse it with the PrinterJob class. 
+  Before starting the print job, you should call the printDialog method to display a print dialog box (see Figure 11.32). That dialog box gives the user a chance to select the printer to be used (in case multiple printers are available), the page range that should be printed, and various printer settings. 
+  Collect printer settings in an object of a class that implements the PrintRequestAttributeSet interface, such as the HashPrintRequestAttributeSet class. 
+  HashPrintRequestAttributeSet attributes = new HashPrintRequestAttributeSet(); 
+  Add attribute settings and pass the attributes object to the printDialog method. 
+  From the Library of Hristo Dimov Hristov   11.12 Printing   853   Figure 11.32 A cross-platform print dialog box The printDialog method returns true if the user clicked OK and false if the user canceled the dialog box. If the user accepted, call the print method of the PrinterJob class to start the printing process. The print method might throw a PrinterException. 
+  Here is the outline of the printing code: if (job.printDialog(attributes)) { try { job.print(attributes); 
+  } 
+  catch (PrinterException exception) { ... 
+  } 
+  } 
+  NOTE: Prior to JDK 1.4, the printing system used the native print and page setup dialog boxes of the host platform. To show a native print dialog box, call the printDialog method with no parameters. (There is no way to collect user settings in an attribute set.)   From the Library of Hristo Dimov Hristov   854   Chapter 11   Advanced AWT   During printing, the print method of the PrinterJob class makes repeated calls to the print method of the Printable object associated with the job. 
+  Since the job does not know how many pages you want to print, it simply keeps calling the print method. As long as the print method returns the value Printable.PAGE_EXISTS, the print job keeps producing pages. When the print method returns Printable.NO_SUCH_PAGE, the print job stops. 
+  CAUTION: The page numbers that the print job passes to the print method start with page 0. 
+  Therefore, the print job doesn’t have an accurate page count until after the printout is complete. For that reason, the print dialog box can’t display the correct page range—instead it displays “Pages 1 to 1.” You will see in the next section how to avoid this blemish by supplying a Book object to the print job. 
+  During the printing process, the print job repeatedly calls the print method of the Printable object. The print job is allowed to make multiple calls for the same page. 
+  You should therefore not count pages inside the print method but always rely on the page number parameter. There is a good reason why the print job might call the print method repeatedly for the same page. Some printers, in particular dot-matrix and inkjet printers, use banding. They print one band at a time, advance the paper, and then print the next band. The print job might use banding even for laser printers that print a full page at a time—it gives the print job a way of managing the size of the spool file. 
+  If the print job needs the Printable object to print a band, it sets the clip area of the graphics context to the requested band and calls the print method. Its drawing operations are clipped against the band rectangle, and only those drawing elements that show up in the band are rendered. Your print method need not be aware of that process, with one caveat: It should not interfere with the clip area. 
+  CAUTION: The Graphics object that your print method gets is also clipped against the page margins. If you replace the clip area, you can draw outside the margins. 
+  Especially in a printer graphics context, the clipping area must be respected. 
+  Call clip, not setClip, to further restrict the clipping area. If you must remove a clip area, make sure to call getClip at the beginning of your print method and restore that clip area. 
+  The PageFormat parameter of the print method contains information about the printed page. The methods getWidth and getHeight return the paper size, measured in points. 
+  From the Library of Hristo Dimov Hristov   11.12 Printing   855   One point is 1/72 of an inch. (An inch equals 25.4 millimeters.) For example, A4 paper is approximately 595 × 842 points, and US Letter paper is 612 × 792 points. 
+  Points are a common measurement in the printing trade in the United States. 
+  Much to the chagrin of the rest of the world, the printing package uses point units. 
+  There are two purposes for that: paper sizes and paper margins are measured in points, and points are the default unit for all print graphics contexts. You can verify that in the example program at the end of this section. The program prints two lines of text that are 72 units apart. Run the example program and measure the distance between the baselines; they are exactly 1 inch or 25.4 millimeters apart. 
+  The getWidth and getHeight methods of the PageFormat class give you the complete paper size. Not all of the paper area is printable. Users typically select margins, and even if they don’t, printers need to somehow grip the sheets of paper on which they print and therefore have a small unprintable area around the edges. 
+  The methods getImageableWidth and getImageableHeight tell you the dimensions of the area that you can actually fill. However, the margins need not be symmetrical, so you must also know the top left corner of the imageable area (see Figure 11.33), which you obtain by the methods getImageableX and getImageableY. 
+  Figure 11.33 Page format measurements   From the Library of Hristo Dimov Hristov   856   Chapter 11   Advanced AWT   TIP: The graphics context that you receive in the print method is clipped to exclude the margins, but the origin of the coordinate system is nevertheless the top left corner of the paper. It makes sense to translate the coordinate system to the top left corner of the imageable area. Simply start your print method with g.translate(pageFormat.getImageableX(), pageFormat.getImageableY()); 
+  If you want your users to choose the settings for the page margins or to switch between portrait and landscape orientation without setting other printing attributes, call the pageDialog method of the PrinterJob class: PageFormat format = job.pageDialog(attributes); 
+  NOTE: One of the tabs of the print dialog box contains the page setup dialog (see Figure 11.34). You might still want to give users an option to set the page format before printing, especially if your program presents a “what you see is what you get” display of the pages to be printed. The pageDialog method returns a PageFormat object with the user settings. 
+  Figure 11.34 A cross-platform page setup dialog   From the Library of Hristo Dimov Hristov   11.12 Printing   857   The program in Listings 11.10 and 11.11 shows how to render the same set of shapes on the screen and on the printed page. A subclass of JPanel implements the Printable interface. Both the paintComponent and the print methods call the same method to carry out the actual drawing. 
+  class PrintPanel extends JPanel implements Printable { public void paintComponent(Graphics g) { super.paintComponent(g); 
+  Graphics2D g2 = (Graphics2D) g; 
+  drawPage(g2); 
+  } 
+  public int print(Graphics g, PageFormat pf, int page) throws PrinterException { if (page >= 1) return Printable.NO_SUCH_PAGE; 
+  Graphics2D g2 = (Graphics2D) g; 
+  g2.translate(pf.getImageableX(), pf.getImageableY()); 
+  drawPage(g2); 
+  return Printable.PAGE_EXISTS; 
+  } 
+  public void drawPage(Graphics2D g2) { // shared drawing code goes here ... 
+  } 
+  ... 
+  } 
+  This example displays and prints the image shown in Figure 11.20 on p. 805—namely, the outline of the message “Hello, World” used as a clipping area for a pattern of lines. 
+  Click the Print button to start printing, or click the Page setup button to open the page setup dialog box. Listing 11.10 shows the code. 
+  NOTE: To show a native page setup dialog box, pass a default PageFormat object to the pageDialog method. The method clones that object, modifies it according to the user selections in the dialog box, and returns the cloned object. 
+  PageFormat defaultFormat = printJob.defaultPage(); 
+  PageFormat selectedFormat = printJob.pageDialog(defaultFormat); 
+  From the Library of Hristo Dimov Hristov   858   Chapter 11   Advanced AWT   Listing 11.10 1   print/PrintTestFrame.java   package print; 
+  2 3 4   import java.awt.*; 
+  import java.awt.print.*; 
+  5 6 7   import javax.print.attribute.*; 
+  import javax.swing.*; 
+  8 9 10 11 12 13 14 15 16   /** * This frame shows a panel with 2D graphics and buttons to print the graphics and to set up the * page format. 
+  */ public class PrintTestFrame extends JFrame { private PrintComponent canvas; 
+  private PrintRequestAttributeSet attributes; 
+  17 18 19 20 21   public PrintTestFrame() { canvas = new PrintComponent(); 
+  add(canvas, BorderLayout.CENTER); 
+  22 23   attributes = new HashPrintRequestAttributeSet(); 
+  24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40   JPanel buttonPanel = new JPanel(); 
+  JButton printButton = new JButton("Print"); 
+  buttonPanel.add(printButton); 
+  printButton.addActionListener(event -> { try { PrinterJob job = PrinterJob.getPrinterJob(); 
+  job.setPrintable(canvas); 
+  if (job.printDialog(attributes)) job.print(attributes); 
+  } 
+  catch (PrinterException ex) { JOptionPane.showMessageDialog(PrintTestFrame.this, ex); 
+  } 
+  }); 
+  41 42 43 44 45 46 47 48   JButton pageSetupButton = new JButton("Page setup"); 
+  buttonPanel.add(pageSetupButton); 
+  pageSetupButton.addActionListener(event -> { PrinterJob job = PrinterJob.getPrinterJob(); 
+  job.pageDialog(attributes); 
+  }); 
+  From the Library of Hristo Dimov Hristov   11.12 Printing   859   49   add(buttonPanel, BorderLayout.NORTH); 
+  pack(); 
+  50 51   } 
+  52 53   } 
+  Listing 11.11 1   print/PrintComponent.java   package print; 
+  2 3 4 5 6 7   import java.awt.*; 
+  import java.awt.font.*; 
+  import java.awt.geom.*; 
+  import java.awt.print.*; 
+  import javax.swing.*; 
+  8 9 10 11 12 13 14 15 16 17 18 19   /** * This component generates a 2D graphics image for screen display and printing. 
+  */ public class PrintComponent extends JComponent implements Printable { private static final Dimension PREFERRED_SIZE = new Dimension(300, 300); 
+  public void paintComponent(Graphics g) { Graphics2D g2 = (Graphics2D) g; 
+  drawPage(g2); 
+  } 
+  20 21 22 23 24 25 26   public int print(Graphics g, PageFormat pf, int page) throws PrinterException { if (page >= 1) return Printable.NO_SUCH_PAGE; 
+  Graphics2D g2 = (Graphics2D) g; 
+  g2.translate(pf.getImageableX(), pf.getImageableY()); 
+  g2.draw(new Rectangle2D.Double(0, 0, pf.getImageableWidth(), pf.getImageableHeight())); 
+  27   drawPage(g2); 
+  return Printable.PAGE_EXISTS; 
+  28 29 30   } 
+  31 32 33 34 35 36 37   /** * This method draws the page both on the screen and the printer graphics context. 
+  * @param g2 the graphics context */ public void drawPage(Graphics2D g2) { (Continues)   From the Library of Hristo Dimov Hristov   860   Chapter 11   Advanced AWT   Listing 11.11 (Continued) FontRenderContext context = g2.getFontRenderContext(); 
+  Font f = new Font("Serif", Font.PLAIN, 72); 
+  GeneralPath clipShape = new GeneralPath(); 
+  38 39 40 41   TextLayout layout = new TextLayout("Hello", f, context); 
+  AffineTransform transform = AffineTransform.getTranslateInstance(0, 72); 
+  Shape outline = layout.getOutline(transform); 
+  clipShape.append(outline, false); 
+  42 43 44 45 46   layout = new TextLayout("World", f, context); 
+  transform = AffineTransform.getTranslateInstance(0, 144); 
+  outline = layout.getOutline(transform); 
+  clipShape.append(outline, false); 
+  47 48 49 50 51   g2.draw(clipShape); 
+  g2.clip(clipShape); 
+  52 53 54   final int NLINES = 50; 
+  Point2D p = new Point2D.Double(0, 0); 
+  for (int i = 0; i < NLINES; i++) { double x = (2 * getWidth() * i) / NLINES; 
+  double y = (2 * getHeight() * (NLINES - 1 - i)) / NLINES; 
+  Point2D q = new Point2D.Double(x, y); 
+  g2.draw(new Line2D.Double(p, q)); 
+  } 
+  55 56 57 58 59 60 61 62 63   } 
+  64 65   public Dimension getPreferredSize() { return PREFERRED_SIZE; } 
+  66 67   } 
+  java.awt.print.Printable 1.2   • int print(Graphics g, PageFormat format, int pageNumber) renders a page and returns PAGE_EXISTS, or returns NO_SUCH_PAGE. 
+  Parameters:   g   The graphics context onto which the page is rendered   format   The format of the page to draw on   pageNumber   The number of the requested page   From the Library of Hristo Dimov Hristov   11.12 Printing   861   java.awt.print.PrinterJob 1.2   • static PrinterJob getPrinterJob() returns a printer job object. 
+  • PageFormat defaultPage() returns the default page format for this printer. 
+  • boolean printDialog(PrintRequestAttributeSet attributes) • boolean printDialog() opens a print dialog box to allow a user to select the pages to be printed and to change print settings. The first method displays a cross-platform dialog box, the second a native dialog box. The first method modifies the attributes object to reflect the user settings. Both methods return true if the user accepts the dialog box. 
+  • PageFormat pageDialog(PrintRequestAttributeSet attributes) • PageFormat pageDialog(PageFormat defaults) displays a page setup dialog box. The first method displays a cross-platform dialog box, the second a native dialog box. Both methods return a PageFormat object with the format that the user requested in the dialog box. The first method modifies the attributes object to reflect the user settings. The second method does not modify the defaults object. 
+  • void setPrintable(Printable p) • void setPrintable(Printable p, PageFormat format) sets the Printable of this print job and an optional page format. 
+  • void print() • void print(PrintRequestAttributeSet attributes) prints the current Printable by repeatedly calling its print method and sending the rendered pages to the printer, until no more pages are available. 
+  java.awt.print.PageFormat 1.2   • double getWidth() • double getHeight() returns the width and height of the page. 
+  • double getImageableWidth() • double getImageableHeight() returns the width and height of the imageable area of the page. 
+  (Continues)   From the Library of Hristo Dimov Hristov   862   Chapter 11   Advanced AWT   java.awt.print.PageFormat 1.2 (Continued)   • double getImageableX() • double getImageableY() returns the position of the top left corner of the imageable area. 
+  • int getOrientation() returns one of PORTRAIT, LANDSCAPE, or REVERSE_LANDSCAPE. Page orientation is transparent to programmers because the page format and graphics context settings automatically reflect the page orientation. 
+11.12.2 Multiple-Page Printing
+  In practice, you usually shouldn’t pass a raw Printable object to a print job. Instead, you should obtain an object of a class that implements the Pageable interface. The Java platform supplies one such class, called Book. A book is made up of sections, each of which is a Printable object. To make a book, add Printable objects and their page counts. 
+  Book book = new Book(); 
+  Printable coverPage = . . .; 
+  Printable bodyPages = . . .; 
+  book.append(coverPage, pageFormat); // append 1 page book.append(bodyPages, pageFormat, pageCount); 
+  Then, use the setPageable method to pass the Book object to the print job. 
+  printJob.setPageable(book); 
+  Now the print job knows exactly how many pages to print, so the print dialog box displays an accurate page range and the user can select the entire range or subranges. 
+  CAUTION: When the print job calls the print methods of the Printable sections, it passes the current page number of the book, and not of each section, as the current page number. That is a huge pain—each section must know the page counts of the preceding sections to make sense of the page number parameter. 
+  From your perspective as a programmer, the biggest challenge of using the Book class is that you must know how many pages each section will have when you print it. Your Printable class needs a layout algorithm that computes the layout of the material on the printed pages. Before printing starts, invoke that algorithm   From the Library of Hristo Dimov Hristov   11.12 Printing   863   to compute the page breaks and the page count. You can retain the layout information so you have it handy during the printing process. 
+  You must guard against the possibility that the user has changed the page format. 
+  If that happens, you must recompute the layout, even if the information that you want to print has not changed. 
+  Listing 11.13 shows how to produce a multipage printout. This program prints a message in very large characters on a number of pages (see Figure 11.35). You can then trim the margins and tape the pages together to form a banner. 
+  Figure 11.35 A banner The layoutPages method of the Banner class computes the layout. We first lay out the message string in a 72-point font. We then compute the height of the resulting string and compare it with the imageable height of the page. We derive a scale factor from these two measurements. When printing the string, we magnify it by that scale factor. 
+  CAUTION: To lay out your information precisely, you usually need access to the printer graphics context. Unfortunately, there is no way to obtain that graphics context before printing actually starts. In our example program, we make do with the screen graphics context and hope that the font metrics of the screen and printer match. 
+  The getPageCount method of the Banner class first calls the layout method. Then it scales up the width of the string and divides it by the imageable width of each page. 
+  The quotient, rounded up to the next integer, is the page count. 
+  It sounds like it might be difficult to print the banner because characters can be broken across multiple pages. However, thanks to the power of the Java 2D API, this turns out not to be a problem at all. When a particular page is requested, we simply use the translate method of the Graphics2D class to shift the top left corner of the string to the left. Then, we set a clip rectangle that equals the current page   From the Library of Hristo Dimov Hristov   864   Chapter 11   Advanced AWT   (see Figure 11.36). Finally, we scale the graphics context with the scale factor that the layout method computed. 
+  Figure 11.36 Printing a page of a banner This example shows the power of transformations. The drawing code is kept simple, and the transformation does all the work of placing the drawing in the appropriate place. Finally, the clip cuts away the part of the image that falls outside the page. In the next section, you will see another compelling use of transformations—to display a print preview. 
+11.12.3 Print Preview
+  Most professional programs have a print preview mechanism that lets you look at your pages on the screen so you won’t waste paper on a printout that you don’t like. The printing classes of the Java platform do not supply a standard “print preview” dialog box, but it is easy to design your own (see Figure 11.37). In this section, we’ll show you how. The PrintPreviewDialog class in Listing 11.14 is completely generic—you can reuse it to preview any kind of printout. 
+  To construct a PrintPreviewDialog, supply either a Printable or a Book, together with a PageFormat object. The dialog box contains a PrintPreviewCanvas (see Listing 11.15). As you use the Next and Previous buttons to flip through the pages, the paintComponent method calls the print method of the Printable object for the requested page. 
+  Normally, the print method draws the page context on a printer graphics context. 
+  However, we supply the screen graphics context, suitably scaled so that the entire printed page fits inside a small screen rectangle. 
+  From the Library of Hristo Dimov Hristov   11.12 Printing   865   Figure 11.37 The print preview dialog, showing a banner page float xoff = . . .; // left of page float yoff = . . .; // top of page float scale = . . .; // to fit printed page onto screen g2.translate(xoff, yoff); 
+  g2.scale(scale, scale); 
+  Printable printable = book.getPrintable(currentPage); 
+  printable.print(g2, pageFormat, currentPage); 
+  The print method never knows that it doesn’t actually produce printed pages. It simply draws onto the graphics context, producing a microscopic print preview on the screen. This is a compelling demonstration of the power of the Java 2D imaging model. 
+  Listing 11.12 contains the code for the banner printing program. Type “Hello, World!” into the text field and look at the print preview, then print the banner. 
+  Listing 11.12 1   book/BookTestFrame.java   package book; 
+  2 3 4   import java.awt.*; 
+  import java.awt.print.*; 
+  5 6   import javax.print.attribute.*; 
+  (Continues)   From the Library of Hristo Dimov Hristov   866   Chapter 11   Advanced AWT   Listing 11.12 (Continued) 7   import javax.swing.*; 
+  8 9 10 11 12 13 14 15 16 17   /** * This frame has a text field for the banner text and buttons for printing, page setup, and print * preview. 
+  */ public class BookTestFrame extends JFrame { private JTextField text; 
+  private PageFormat pageFormat; 
+  private PrintRequestAttributeSet attributes; 
+  18 19 20 21 22   public BookTestFrame() { text = new JTextField(); 
+  add(text, BorderLayout.NORTH); 
+  23 24   attributes = new HashPrintRequestAttributeSet(); 
+  25 26   JPanel buttonPanel = new JPanel(); 
+  27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45   JButton printButton = new JButton("Print"); 
+  buttonPanel.add(printButton); 
+  printButton.addActionListener(event -> { try { PrinterJob job = PrinterJob.getPrinterJob(); 
+  job.setPageable(makeBook()); 
+  if (job.printDialog(attributes)) { job.print(attributes); 
+  } 
+  } 
+  catch (PrinterException e) { JOptionPane.showMessageDialog(BookTestFrame.this, e); 
+  } 
+  }); 
+  46 47 48 49 50 51 52 53   JButton pageSetupButton = new JButton("Page setup"); 
+  buttonPanel.add(pageSetupButton); 
+  pageSetupButton.addActionListener(event -> { PrinterJob job = PrinterJob.getPrinterJob(); 
+  pageFormat = job.pageDialog(attributes); 
+  }); 
+  54   From the Library of Hristo Dimov Hristov   11.12 Printing   867   JButton printPreviewButton = new JButton("Print preview"); 
+  buttonPanel.add(printPreviewButton); 
+  printPreviewButton.addActionListener(event -> { PrintPreviewDialog dialog = new PrintPreviewDialog(makeBook()); 
+  dialog.setVisible(true); 
+  }); 
+  55 56 57 58 59 60 61 62   add(buttonPanel, BorderLayout.SOUTH); 
+  pack(); 
+  63 64   } 
+  65 66   /** * Makes a book that contains a cover page and the pages for the banner. 
+  */ public Book makeBook() { if (pageFormat == null) { PrinterJob job = PrinterJob.getPrinterJob(); 
+  pageFormat = job.defaultPage(); 
+  } 
+  Book book = new Book(); 
+  String message = text.getText(); 
+  Banner banner = new Banner(message); 
+  int pageCount = banner.getPageCount((Graphics2D) getGraphics(), pageFormat); 
+  book.append(new CoverPage(message + " (" + pageCount + " pages)"), pageFormat); 
+  book.append(banner, pageFormat, pageCount); 
+  return book; 
+  } 
+  67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85   } 
+  Listing 11.13 1   book/Banner.java   package book; 
+  2 3 4 5 6   import java.awt.*; 
+  import java.awt.font.*; 
+  import java.awt.geom.*; 
+  import java.awt.print.*; 
+  7 8 9 10 11 12 13 14   /** * A banner that prints a text string on multiple pages. 
+  */ public class Banner implements Printable { private String message; 
+  private double scale; 
+  (Continues)   From the Library of Hristo Dimov Hristov   868   Chapter 11   Advanced AWT   Listing 11.13 (Continued) 15 16 17 18 19 20 21 22 23   /** * Constructs a banner. 
+  * @param m the message string */ public Banner(String m) { message = m; 
+  } 
+  24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41   /** * Gets the page count of this section. 
+  * @param g2 the graphics context * @param pf the page format * @return the number of pages needed */ public int getPageCount(Graphics2D g2, PageFormat pf) { if (message.equals("")) return 0; 
+  FontRenderContext context = g2.getFontRenderContext(); 
+  Font f = new Font("Serif", Font.PLAIN, 72); 
+  Rectangle2D bounds = f.getStringBounds(message, context); 
+  scale = pf.getImageableHeight() / bounds.getHeight(); 
+  double width = scale * bounds.getWidth(); 
+  int pages = (int) Math.ceil(width / pf.getImageableWidth()); 
+  return pages; 
+  } 
+  42 43 44 45 46 47   public int print(Graphics g, PageFormat pf, int page) throws PrinterException { Graphics2D g2 = (Graphics2D) g; 
+  if (page > getPageCount(g2, pf)) return Printable.NO_SUCH_PAGE; 
+  g2.translate(pf.getImageableX(), pf.getImageableY()); 
+  48   drawPage(g2, pf, page); 
+  return Printable.PAGE_EXISTS; 
+  49 50 51   } 
+  52 53 54 55 56   public void drawPage(Graphics2D g2, PageFormat pf, int page) { if (message.equals("")) return; 
+  page--; // account for cover page   57 58 59 60 61 62   drawCropMarks(g2, pf); 
+  g2.clip(new Rectangle2D.Double(0, 0, pf.getImageableWidth(), pf.getImageableHeight())); 
+  g2.translate(-page * pf.getImageableWidth(), 0); 
+  g2.scale(scale, scale); 
+  FontRenderContext context = g2.getFontRenderContext(); 
+  From the Library of Hristo Dimov Hristov   11.12 Printing   869   Font f = new Font("Serif", Font.PLAIN, 72); 
+  TextLayout layout = new TextLayout(message, f, context); 
+  AffineTransform transform = AffineTransform.getTranslateInstance(0, layout.getAscent()); 
+  Shape outline = layout.getOutline(transform); 
+  g2.draw(outline); 
+  63 64 65 66 67   } 
+  68 69   /** * Draws 1/2" crop marks in the corners of the page. 
+  * @param g2 the graphics context * @param pf the page format */ public void drawCropMarks(Graphics2D g2, PageFormat pf) { final double C = 36; // crop mark length = 1/2 inch double w = pf.getImageableWidth(); 
+  double h = pf.getImageableHeight(); 
+  g2.draw(new Line2D.Double(0, 0, 0, C)); 
+  g2.draw(new Line2D.Double(0, 0, C, 0)); 
+  g2.draw(new Line2D.Double(w, 0, w, C)); 
+  g2.draw(new Line2D.Double(w, 0, w - C, 0)); 
+  g2.draw(new Line2D.Double(0, h, 0, h - C)); 
+  g2.draw(new Line2D.Double(0, h, C, h)); 
+  g2.draw(new Line2D.Double(w, h, w, h - C)); 
+  g2.draw(new Line2D.Double(w, h, w - C, h)); 
+  } 
+  70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89   } 
+  90 91 92 93 94 95 96   /** * This class prints a cover page with a title. 
+  */ class CoverPage implements Printable { private String title; 
+  97 98 99 100 101 102 103 104 105   /** * Constructs a cover page. 
+  * @param t the title */ public CoverPage(String t) { title = t; 
+  } 
+  106 107 108 109 110   public int print(Graphics g, PageFormat pf, int page) throws PrinterException { if (page >= 1) return Printable.NO_SUCH_PAGE; 
+  Graphics2D g2 = (Graphics2D) g; 
+  (Continues)   From the Library of Hristo Dimov Hristov   870   Chapter 11   Advanced AWT   Listing 11.13 (Continued) g2.setPaint(Color.black); 
+  g2.translate(pf.getImageableX(), pf.getImageableY()); 
+  FontRenderContext context = g2.getFontRenderContext(); 
+  Font f = g2.getFont(); 
+  TextLayout layout = new TextLayout(title, f, context); 
+  float ascent = layout.getAscent(); 
+  g2.drawString(title, 0, ascent); 
+  return Printable.PAGE_EXISTS; 
+  111 112 113 114 115 116 117 118   } 
+  119 120   } 
+  Listing 11.14 1   book/PrintPreviewDialog.java   package book; 
+  2 3 4   import java.awt.*; 
+  import java.awt.print.*; 
+  5 6   import javax.swing.*; 
+  7 8 9 10 11 12 13 14   /** * This class implements a generic print preview dialog. 
+  */ public class PrintPreviewDialog extends JDialog { private static final int DEFAULT_WIDTH = 300; 
+  private static final int DEFAULT_HEIGHT = 300; 
+  15 16   private PrintPreviewCanvas canvas; 
+  17 18 19 20 21 22 23 24 25 26 27 28 29   /** * Constructs a print preview dialog. 
+  * @param p a Printable * @param pf the page format * @param pages the number of pages in p */ public PrintPreviewDialog(Printable p, PageFormat pf, int pages) { Book book = new Book(); 
+  book.append(p, pf, pages); 
+  layoutUI(book); 
+  } 
+  30 31 32 33 34   /** * Constructs a print preview dialog. 
+  * @param b a Book */   From the Library of Hristo Dimov Hristov   11.12 Printing   871   public PrintPreviewDialog(Book b) { layoutUI(b); 
+  } 
+  35 36 37 38 39   /** * Lays out the UI of the dialog. 
+  * @param book the book to be previewed */ public void layoutUI(Book book) { setSize(DEFAULT_WIDTH, DEFAULT_HEIGHT); 
+  40 41 42 43 44 45 46 47   canvas = new PrintPreviewCanvas(book); 
+  add(canvas, BorderLayout.CENTER); 
+  48 49 50   JPanel buttonPanel = new JPanel(); 
+  51 52   JButton nextButton = new JButton("Next"); 
+  buttonPanel.add(nextButton); 
+  nextButton.addActionListener(event -> canvas.flipPage(1)); 
+  53 54 55 56   JButton previousButton = new JButton("Previous"); 
+  buttonPanel.add(previousButton); 
+  previousButton.addActionListener(event -> canvas.flipPage(-1)); 
+  57 58 59 60   JButton closeButton = new JButton("Close"); 
+  buttonPanel.add(closeButton); 
+  closeButton.addActionListener(event -> setVisible(false)); 
+  61 62 63 64   add(buttonPanel, BorderLayout.SOUTH); 
+  65   } 
+  66 67   } 
+  Listing 11.15 1   book/PrintPreviewCanvas.java   package book; 
+  2 3 4 5 6   import java.awt.*; 
+  import java.awt.geom.*; 
+  import java.awt.print.*; 
+  import javax.swing.*; 
+  7 8 9 10   /** * The canvas for displaying the print preview. 
+  */ (Continues)   From the Library of Hristo Dimov Hristov   872   Chapter 11   Advanced AWT   Listing 11.15 (Continued) 11 12 13 14   class PrintPreviewCanvas extends JComponent { private Book book; 
+  private int currentPage; 
+  15 16 17 18 19 20 21 22 23 24   /** * Constructs a print preview canvas. 
+  * @param b the book to be previewed */ public PrintPreviewCanvas(Book b) { book = b; 
+  currentPage = 0; 
+  } 
+  25 26 27 28 29   public void paintComponent(Graphics g) { Graphics2D g2 = (Graphics2D) g; 
+  PageFormat pageFormat = book.getPageFormat(currentPage); 
+  30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52   double xoff; // x offset of page start in window double yoff; // y offset of page start in window double scale; // scale factor to fit page in window double px = pageFormat.getWidth(); 
+  double py = pageFormat.getHeight(); 
+  double sx = getWidth() - 1; 
+  double sy = getHeight() - 1; 
+  if (px / py < sx / sy) // center horizontally { scale = sy / py; 
+  xoff = 0.5 * (sx - scale * px); 
+  yoff = 0; 
+  } 
+  else // center vertically { scale = sx / px; 
+  xoff = 0; 
+  yoff = 0.5 * (sy - scale * py); 
+  } 
+  g2.translate((float) xoff, (float) yoff); 
+  g2.scale((float) scale, (float) scale); 
+  53 54 55 56 57   // draw page outline (ignoring margins) Rectangle2D page = new Rectangle2D.Double(0, 0, px, py); 
+  g2.setPaint(Color.white); 
+  g2.fill(page); 
+  From the Library of Hristo Dimov Hristov   11.12 Printing   873   g2.setPaint(Color.black); 
+  g2.draw(page); 
+  58 59 60   Printable printable = book.getPrintable(currentPage); 
+  try { printable.print(g2, pageFormat, currentPage); 
+  } 
+  catch (PrinterException e) { g2.draw(new Line2D.Double(0, 0, px, py)); 
+  g2.draw(new Line2D.Double(px, 0, 0, py)); 
+  } 
+  61 62 63 64 65 66 67 68 69 70   } 
+  71 72   /** * Flip the book by the given number of pages. 
+  * @param by the number of pages to flip by. Negative values flip backward. 
+  */ public void flipPage(int by) { int newPage = currentPage + by; 
+  if (0 <= newPage && newPage < book.getNumberOfPages()) { currentPage = newPage; 
+  repaint(); 
+  } 
+  } 
+  73 74 75 76 77 78 79 80 81 82 83 84 85 86   } 
+  java.awt.print.PrinterJob 1.2   • void setPageable(Pageable p) sets a Pageable (such as a Book) to be printed. 
+  java.awt.print.Book 1.2   • void append(Printable p, PageFormat format) • void append(Printable p, PageFormat format, int pageCount) appends a section to this book. If the page count is not specified, the first page is added. 
+  • Printable getPrintable(int page) gets the printable for the specified page. 
+  From the Library of Hristo Dimov Hristov   874   Chapter 11   Advanced AWT 11.12.4 Print Services
+  So far, you have seen how to print 2D graphics. However, the printing API introduced in Java SE 1.4 affords far greater flexibility. The API defines a number of data types and lets you find print services that are able to print them. Among the data types are • • • •   Images in GIF, JPEG, or PNG format Documents in text, HTML, PostScript, or PDF format Raw printer code data Objects of a class that implements Printable, Pageable, or RenderableImage   The data themselves can be stored in a source of bytes or characters such as an input stream, a URL, or an array. A document flavor describes the combination of a data source and a data type. The DocFlavor class defines a number of inner classes for the various data sources. Each of the inner classes defines constants to specify the flavors. For example, the constant DocFlavor.INPUT_STREAM.GIF   describes a GIF image that is read from an input stream. Table 11.3 lists the combinations. 
+  Suppose you want to print a GIF image located in a file. First, find out whether there is a print service that is capable of handling the task. The static lookupPrintServices method of the PrintServiceLookup class returns an array of PrintService objects that can handle the given document flavor. 
+  DocFlavor flavor = DocFlavor.INPUT_STREAM.GIF; 
+  PrintService[] services = PrintServiceLookup.lookupPrintServices(flavor, null); 
+  The second parameter of the lookupPrintServices method is null to indicate that we don’t want to constrain the search by specifying printer attributes. We’ll cover attributes in the next section. 
+  If the lookup yields an array with more than one element, select from the listed print services. You can call the getName method of the PrintService class to get the printer names and let the user choose. 
+  Next, get a document print job from the service: DocPrintJob job = services[i].createPrintJob(); 
+  For printing, you need an object that implements the Doc interface. The Java library supplies a class SimpleDoc for that purpose. The SimpleDoc constructor requires the data source object, the document flavor, and an optional attribute set. For example,   From the Library of Hristo Dimov Hristov   11.12 Printing   875   Table 11.3 Document Flavors for Print Services Data Source   Data Type   MIME Type   INPUT_STREAM   GIF   image/gif   URL   JPEG   image/jpeg   BYTE_ARRAY   PNG   image/png   POSTSCRIPT   application/postscript   PDF   application/pdf   TEXT_HML_HOST   text/html (using host encoding)   TEXT_HTML_US_ASCII   text/html; charset=us-ascii   TEXT_HTML_UTF_8   text/html; charset=utf-8   TEXT_HTML_UTF_16   text/html; charset=utf-16   TEXT_HTML_UTF_16LE   text/html; charset=utf-16le (little-endian)   TEXT_HTML_UTF_16BE   text/html; charset=utf-16be (big-endian)   TEXT_PLAIN_HOST   text/plain (using host encoding)   TEXT_PLAIN_US_ASCII   text/plain; charset=us-ascii   TEXT_PLAIN_UTF_8   text/plain; charset=utf-8   TEXT_PLAIN_UTF_16   text/plain; charset=utf-16   TEXT_PLAIN_UTF_16LE   text/plain; charset=utf-16le (little-endian)   TEXT_PLAIN_UTF_16BE   text/plain; charset=utf-16be (big-endian)   PCL   application/vnd.hp-PCL (Hewlett Packard Printer Control Language)   AUTOSENSE   application/octet-stream (raw printer data)   READER   TEXT_HTML   text/html; charset=utf-16   STRING   TEXT_PLAIN   text/plain; charset=utf-16   PRINTABLE   N/A   PAGEABLE   N/A   RENDERABLE_IMAGE   N/A   CHAR_ARRAY SERVICE_FORMATTED   From the Library of Hristo Dimov Hristov   876   Chapter 11   Advanced AWT   InputStream in = new FileInputStream(fileName); 
+  Doc doc = new SimpleDoc(in, flavor, null); 
+  Finally, you are ready to print: job.print(doc, null); 
+  As before, the null parameter can be replaced by an attribute set. 
+  Note that this printing process is quite different from that of the preceding section. 
+  There is no user interaction through print dialog boxes. For example, you can implement a server-side printing mechanism in which users submit print jobs through a web form. 
+  The program in Listing 11.16 demonstrates how to use a print service to print an image file. 
+  Listing 11.16 1   printService/PrintServiceTest.java   package printService; 
+  2 3 4 5   import java.io.*; 
+  import java.nio.file.*; 
+  import javax.print.*; 
+  6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30   /** * This program demonstrates the use of print services. The program lets you print a GIF image to * any of the print services that support the GIF document flavor. 
+  * @version 1.10 2007-08-16 * @author Cay Horstmann */ public class PrintServiceTest { public static void main(String[] args) { DocFlavor flavor = DocFlavor.URL.GIF; 
+  PrintService[] services = PrintServiceLookup.lookupPrintServices(flavor, null); 
+  if (args.length == 0) { if (services.length == 0) System.out.println("No printer for flavor " + flavor); 
+  else { System.out.println("Specify a file of flavor " + flavor + "\nand optionally the number of the desired printer."); 
+  for (int i = 0; i < services.length; i++) System.out.println((i + 1) + ": " + services[i].getName()); 
+  } 
+  System.exit(0); 
+  } 
+  From the Library of Hristo Dimov Hristov   11.12 Printing   String fileName = args[0]; 
+  int p = 1; 
+  if (args.length > 1) p = Integer.parseInt(args[1]); 
+  if (fileName == null) return; 
+  try (InputStream in = Files.newInputStream(Paths.get(fileName))) { Doc doc = new SimpleDoc(in, flavor, null); 
+  DocPrintJob job = services[p - 1].createPrintJob(); 
+  job.print(doc, null); 
+  } 
+  catch (Exception ex) { ex.printStackTrace(); 
+  } 
+  31 32 33 34 35 36 37 38 39 40 41 42 43 44   } 
+  45 46   877   } 
+  javax.print.PrintServiceLookup 1.4   • PrintService[] lookupPrintServices(DocFlavor flavor, AttributeSet attributes) looks up the print services that can handle the given document flavor and attributes. 
+  Parameters:   flavor   The document flavor   attributes   The required printing attributes, or null if attributes should not be considered   javax.print.PrintService 1.4   • DocPrintJob createPrintJob() creates a print job for printing an object of a class that implements the Doc interface, such as a SimpleDoc. 
+  javax.print.DocPrintJob 1.4   • void print(Doc doc, PrintRequestAttributeSet attributes) prints the given document with the given attributes. 
+  Parameters:   doc   The Doc to be printed   attributes   The required printing attributes, or null if no printing attributes are required   From the Library of Hristo Dimov Hristov   878   Chapter 11   Advanced AWT   javax.print.SimpleDoc 1.4   • SimpleDoc(Object data, DocFlavor flavor, DocAttributeSet attributes) constructs a SimpleDoc object that can be printed with a DocPrintJob. 
+  Parameters:   data   The object with the print data, such as an input stream or a Printable   flavor   The document flavor of the print data   attributes   Document attributes, or null if attributes are not required 11.12.5 Stream Print Services
+  A print service sends print data to a printer. A stream print service generates the same print data but instead sends them to a stream, perhaps for delayed printing or because the print data format can be interpreted by other programs. In particular, if the print data format is PostScript, it may be useful to save the print data to a file because many programs can process PostScript files. The Java platform includes a stream print service that can produce PostScript output from images and 2D graphics. You can use that service on all systems, even if there are no local printers. 
+  Enumerating stream print services is a bit more tedious than locating regular print services. You need both the DocFlavor of the object to be printed and the MIME type of the stream output. You then get a StreamPrintServiceFactory array of factories. 
+  DocFlavor flavor = DocFlavor.SERVICE_FORMATTED.PRINTABLE; 
+  String mimeType = "application/postscript"; 
+  StreamPrintServiceFactory[] factories = StreamPrintServiceFactory.lookupStreamPrintServiceFactories(flavor, mimeType); 
+  The StreamPrintServiceFactory class has no methods that would help us distinguish any one factory from another, so we just take factories[0]. We call the getPrintService method with an output stream parameter to get a StreamPrintService object. 
+  OutputStream out = new FileOutputStream(fileName); 
+  StreamPrintService service = factories[0].getPrintService(out); 
+  The StreamPrintService class is a subclass of PrintService. To produce a printout, simply follow the steps of the preceding section. 
+  From the Library of Hristo Dimov Hristov   11.12 Printing   879   javax.print.StreamPrintServiceFactory 1.4   • StreamPrintServiceFactory[]lookupStreamPrintServiceFactories(DocFlavorflavor,StringmimeType) looks up the stream print service factories that can print the given document flavor and produce an output stream of the given MIME type. 
+  • StreamPrintService getPrintService(OutputStream out) gets a print service that sends the printing output to the given output stream. 
+11.12.6 Printing Attributes
+  The print service API contains a complex set of interfaces and classes to specify various kinds of attributes. There are four important groups of attributes. The first two specify requests to the printer. 
+  • Print request attributes request particular features for all doc objects in a print job, such as two-sided printing or the paper size. 
+  • Doc attributes are request attributes that apply only to a single doc object. 
+  The other two attributes contain information about the printer and job status. 
+  • Print service attributes give information about the print service, such as the printer make and model or whether the printer is currently accepting jobs. 
+  • Print job attributes give information about the status of a particular print job, such as whether the job is already completed. 
+  To describe the various attributes, there is an interface Attribute with subinterfaces: PrintRequestAttribute DocAttribute PrintServiceAttribute PrintJobAttribute SupportedValuesAttribute   Individual attribute classes implement one or more of these interfaces. For example, objects of the Copies class describe the number of copies of a printout. That class implements both the PrintRequestAttribute and the PrintJobAttribute interfaces. 
+  Clearly, a print request can contain a request for multiple copies. Conversely, an attribute of the print job might be how many of these copies were actually printed. 
+  That number might be lower, perhaps because of printer limitations or because the printer ran out of paper. 
+  The SupportedValuesAttribute interface indicates that an attribute value does not reflect actual request or status data but rather the capability of a service. For example,   From the Library of Hristo Dimov Hristov   880   Chapter 11   Advanced AWT   the CopiesSupported class implements the SupportedValuesAttribute interface. An object of that class might describe that a printer supports 1 through 99 copies of a printout. 
+  Figure 11.38 shows a class diagram of the attribute hierarchy. 
+  Figure 11.38 The attribute hierarchy In addition to the interfaces and classes for individual attributes, the print service API defines interfaces and classes for attribute sets. A superinterface, AttributeSet, has four subinterfaces: PrintRequestAttributeSet DocAttributeSet PrintServiceAttributeSet PrintJobAttributeSet   Each of these interfaces has an implementing class, yielding the five classes: HashAttributeSet HashPrintRequestAttributeSet HashDocAttributeSet HashPrintServiceAttributeSet HashPrintJobAttributeSet   Figure 11.39 shows a class diagram of the attribute set hierarchy. 
+  For example, you can construct a print request attribute set like this: PrintRequestAttributeSet attributes = new HashPrintRequestAttributeSet(); 
+  From the Library of Hristo Dimov Hristov   11.12 Printing   881   Figure 11.39 The attribute set hierarchy After constructing the set, you are freed from worrying about the Hash prefix. 
+  Why have all these interfaces? They make it possible to check for correct attribute usage. For example, a DocAttributeSet accepts only objects that implement the DocAttribute interface. Any attempt to add another attribute results in a runtime error. 
+  An attribute set is a specialized kind of map where the keys are of type Class and the values belong to a class that implements the Attribute interface. For example, if you insert an object new Copies(10)   into an attribute set, then its key is the Class object Copies.class. That key is called the category of the attribute. The Attribute interface declares a method Class getCategory()   that returns the category of an attribute. The Copies class defines the method to return the object Copies.class, but it isn’t a requirement that the category be the same as the class of the attribute. 
+  When an attribute is added to an attribute set, the category is extracted automatically. Just add the attribute value:   From the Library of Hristo Dimov Hristov   882   Chapter 11   Advanced AWT   attributes.add(new Copies(10)); 
+  If you subsequently add another attribute with the same category, it overwrites the first one. 
+  To retrieve an attribute, you need to use the category as the key, for example: AttributeSet attributes = job.getAttributes(); 
+  Copies copies = (Copies) attribute.get(Copies.class); 
+  Finally, attributes are organized by the values they can have. The Copies attribute can have any integer value. The Copies class extends the IntegerSyntax class that takes care of all integer-valued attributes. The getValue method returns the integer value of the attribute, for example: int n = copies.getValue(); 
+  The classes TextSyntax DateTimeSyntax URISyntax   encapsulate a string, a date and time value, or a URI. 
+  Finally, many attributes can take a finite number of values. For example, the PrintQuality attribute has three settings: draft, normal, and high. They are represented by three constants: PrintQuality.DRAFT PrintQuality.NORMAL PrintQuality.HIGH   Attribute classes with a finite number of values extend the EnumSyntax class, which provides a number of convenience methods to set up these enumerations in a typesafe manner. You need not worry about the mechanism when using such an attribute. Simply add the named values to attribute sets: attributes.add(PrintQuality.HIGH); 
+  Here is how you check the value of an attribute: if (attributes.get(PrintQuality.class) == PrintQuality.HIGH) ... 
+  Table 11.4 lists the printing attributes. The second column lists the superclass of the attribute class (for example, IntegerSyntax for the Copies attribute) or the set of enumeration values for the attributes with a finite set of values. The last four columns indicate whether the attribute class implements the DocAttribute (DA), PrintJobAttribute (PJA), PrintRequestAttribute (PRA), and PrintServiceAttribute (PSA) interfaces. 
+  From the Library of Hristo Dimov Hristov   11.12 Printing   883   Table 11.4 Printing Attributes Attribute   Superclass or Enumeration Constants   Chromaticity   MONOCHROME, COLOR   ColorSupported   SUPPORTED, NOT_SUPPORTED   Compression   COMPRESS, DEFLATE, GZIP, NONE   Copies   IntegerSyntax   DateTimeAtCompleted   DateTimeSyntax   DateTimeAtCreation   DateTimeSyntax   DateTimeAtProcessing   DateTimeSyntax   Destination   URISyntax   DocumentName   TextSyntax   Fidelity   FIDELITY_TRUE, FIDELITY_FALSE   Finishings   NONE, STAPLE, EDGE_STITCH, BIND, SADDLE_STITCH, COVER, . . . 
+  JobHoldUntil   DateTimeSyntax   JobImpressions   IntegerSyntax   JobImpressionsCompleted   IntegerSyntax   JobKOctets   IntegerSyntax   JobKOctetsProcessed   IntegerSyntax   JobMediaSheets   IntegerSyntax   JobMediaSheetsCompleted   IntegerSyntax   JobMessageFromOperator   TextSyntax   JobName   TextSyntax   JobOriginatingUserName   TextSyntax   JobPriority   IntegerSyntax   JobSheets   STANDARD, NONE   JobState   ABORTED, CANCELED, COMPLETED, PENDING, PENDING_HELD, PROCESSING, PROCESSING_STOPPED   DA   PJA   PRA   PSA   (Continues)   From the Library of Hristo Dimov Hristov   884   Chapter 11   Advanced AWT   Table 11.4 (Continued) Attribute   Superclass or Enumeration Constants   JobStateReason   ABORTED_BY_SYSTEM, DOCUMENT_FORMAT_ERROR, many others   JobStateReasons   HashSet   MediaName   ISO_A4_WHITE, ISO_A4_TRANSPARENT, NA_LETTER_WHITE, NA_LETTER_TRANSPARENT   MediaSize   ISO.A0–ISO.A10, ISO.B0–ISO.B10, ISO.C0–ISO.C10, NA.LETTER, NA.LEGAL,   DA   PJA   PRA   PSA   various other paper and envelope sizes MediaSizeName   ISO_A0–ISO_A10, ISO_B0–ISO_B10, ISO_C0–ISO_C10, NA_LETTER, NA_LEGAL,   various other paper and envelope size names MediaTray   TOP, MIDDLE, BOTTOM, SIDE, ENVELOPE, LARGE_CAPACITY, MAIN, MANUAL   MultipleDocumentHandling   SINGLE_DOCUMENT, SINGLE_DOCUMENT_NEW_SHEET, SEPARATE_DOCUMENTS_COLLATED_COPIES, SEPARATE_DOCUMENTS_UNCOLLATED_COPIES   NumberOfDocuments   IntegerSyntax   NumberOfInterveningJobs   IntegerSyntax   NumberUp   IntegerSyntax   OrientationRequested   PORTRAIT, LANDSCAPE, REVERSE_PORTRAIT, REVERSE_LANDSCAPE   OutputDeviceAssigned   TextSyntax   PageRanges   SetOfInteger   PagesPerMinute   IntegerSyntax   PagesPerMinuteColor   IntegerSyntax   PDLOverrideSupported   ATTEMPTED, NOT_ATTEMPTED   PresentationDirection   TORIGHT_TOBOTTOM, TORIGHT_TOTOP, TOBOTTOM_TORIGHT, TOBOTTOM_TOLEFT, TOLEFT_TOBOTTOM, TOLEFT_TOTOP, TOTOP_TORIGHT, TOTOP_TOLEFT (Continues)   From the Library of Hristo Dimov Hristov   11.12 Printing   885   Table 11.4 (Continued) Attribute   Superclass or Enumeration Constants   PrinterInfo   TextSyntax   PrinterIsAcceptingJobs   ACCEPTING_JOBS, NOT_ACCEPTING_JOBS   PrinterLocation   TextSyntax   PrinterMakeAndModel   TextSyntax   PrinterMessageFromOperator   TextSyntax   PrinterMoreInfo   URISyntax   PrinterMoreInfoManufacturer   URISyntax   PrinterName   TextSyntax   PrinterResolution   ResolutionSyntax   PrinterState   PROCESSING, IDLE, STOPPED, UNKNOWN   PrinterStateReason   COVER_OPEN, FUSER_OVER_TEMP, MEDIA_JAM,   DA   PJA   PRA   PSA   and many others PrinterStateReasons   HashMap   PrinterURI   URISyntax   PrintQuality   DRAFT, NORMAL, HIGH   QueuedJobCount   IntegerSyntax   ReferenceUriSchemesSupported FILE, FTP, GOPHER, HTTP, HTTPS, NEWS, NNTP, WAIS RequestingUserName   TextSyntax   Severity   ERROR, REPORT, WARNING   SheetCollate   COLLATED, UNCOLLATED   Sides   ONE_SIDED, DUPLEX (= TWO_SIDED_LONG_EDGE), TUMBLE (= TWO_SIDED_SHORT_EDGE)   NOTE: As you can see, there are lots of attributes, many of which are quite specialized. The source for most of the attributes is the Internet Printing Protocol 1.1 (RFC 2911). 
+  From the Library of Hristo Dimov Hristov   886   Chapter 11   Advanced AWT   NOTE: An earlier version of the printing API introduced the JobAttributes and PageAttributes classes, whose purpose was similar to the printing attributes covered in this section. These classes are now obsolete. 
+  javax.print.attribute.Attribute 1.4   • Class getCategory() gets the category of this attribute. 
+  • String getName() gets the name of this attribute. 
+  javax.print.attribute.AttributeSet 1.4   • boolean add(Attribute attr) adds an attribute to this set. If the set has another attribute with the same category, that attribute is replaced by the given attribute. Returns true if the set changed as a result of this operation. 
+  • Attribute get(Class category) retrieves the attribute with the given category key, or null if no such attribute exists. 
+  • boolean remove(Attribute attr) • boolean remove(Class category) removes the given attribute, or the attribute with the given category, from the set. 
+  Returns true if the set changed as a result of this operation. 
+  • Attribute[] toArray() returns an array with all attributes in this set. 
+  javax.print.PrintService 1.4   • PrintServiceAttributeSet getAttributes() gets the attributes of this print service. 
+  javax.print.DocPrintJob 1.4   • PrintJobAttributeSet getAttributes() gets the attributes of this print job. 

@@ -1,0 +1,46 @@
+  Without trying to be comprehensive or tedious, we want to end this chapter with some hints that will make your classes more acceptable in well-   mannered OOP circles. 
+  1. Always keep data private. 
+  This is first and foremost; doing anything else violates encapsulation. 
+  You may need to write an accessor or mutator method occasionally, but you are still better off keeping the instance fields private. Bitter experience shows that the data representation may change, but how this data are used will change much less frequently. When data are kept private, changes in their representation will not affect the users of the class, and bugs are easier to detect. 
+  2. Always initialize data. 
+  Java won’t initialize local variables for you, but it will initialize instance fields of objects. Don’t rely on the defaults, but initialize all variables explicitly, either by supplying a default or by setting defaults in all constructors. 
+  3. Don’t use too many basic types in a class. 
+  The idea is to replace multiple related uses of basic types with other classes. This keeps your classes easier to understand and to change. For example, replace the following instance fields in a Customer class: private private private private   String street; 
+  String city; 
+  String state; 
+  int zip; 
+  with a new class called Address. This way, you can easily cope with changes to addresses, such as the need to deal with international addresses. 
+  4. Not all fields need individual field accessors and mutators. 
+  You may need to get and set an employee’s salary. You certainly won’t need to change the hiring date once the object is constructed. And, quite often, objects have instance fields that you don’t want others to get or set, such as an array of state abbreviations in an Address class. 
+  5. Break up classes that have too many responsibilities. 
+  This hint is, of course, vague: "too many" is obviously in the eye of the beholder. However, if there is an obvious way to break one complicated class into two classes that are conceptually simpler, seize the opportunity. (On the other hand, don’t go overboard; ten classes, each with only one method, are usually an overkill.) Here is an example of a bad design: public class CardDeck // bad design { private int[] value; 
+  private int[] suit; 
+  public CardDeck() { . . . } 
+  public void shuffle() { . . . } 
+  public int getTopValue() { . . . } 
+  public int getTopSuit() { . . . } 
+  public void draw() { . . . } 
+  } 
+  This class really implements two separate concepts: a deck of cards, with its shuffle and draw methods, and a card, with the methods to inspect its value and suit. It makes sense to introduce a Card class that represents an individual card. Now you have two classes, each with its own responsibilities: public class CardDeck { private Card[] cards; 
+  public CardDeck() { . . . } 
+  public void shuffle() { . . . } 
+  public Card getTop() { . . . } 
+  public void draw() { . . . } 
+  } 
+  public class Card { private int value; 
+  private int suit; 
+  public Card(int aValue, int aSuit) { . . . } 
+  public int getValue() { . . . } 
+  public int getSuit() { . . . } 
+  } 
+  6. Make the names of your classes and methods reflect their responsibilities. 
+  Just as variables should have meaningful names that reflect what they represent, so should classes. (The standard library certainly contains some dubious examples, such as the Date class that describes time.) A good convention is that a class name should be a noun (Order), or a noun preceded by an adjective (RushOrder) or a gerund (an "-ing" 
+  word, as in BillingAddress). As for methods, follow the standard convention that accessor methods begin with a lowercase get (getSalary) and mutator methods use a lowercase set (setSalary). 
+  7. Prefer immutable classes. 
+  The LocalDate class, and other classes from the java.time package, are immutable—no method can modify the state of an object. 
+  Instead of mutating objects, methods such as plusDays return new objects with the modified state. 
+  The problem with mutation is that it can happen concurrently when multiple threads try to update an object at the same time. The results are unpredictable. When classes are immutable, it is safe to share their objects among multiple threads. 
+  Therefore, it is a good idea to make classes immutable when you can. 
+  This is particularly easy with classes that represent values, such as a string or a point in time. Computations can simply yield new values instead of updating existing ones. 
+  Of course, not all classes should be immutable. It would be strange to have the raiseSalary method return a new Employee object when an employee gets a raise. 
+  In this chapter, we covered the fundamentals of objects and classes that make Java an "object-based" language. In order to be truly object-oriented, a programming language must also support inheritance and polymorphism. The Java support for these features is the topic of the next chapter. 

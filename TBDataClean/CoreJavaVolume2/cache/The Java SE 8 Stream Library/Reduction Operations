@@ -1,0 +1,160 @@
+
+33
+
+Map<String, String> stateToCityNames = cities.collect(groupingBy(
+City::getState,
+reducing("", City::getName, (s, t) -> s.length() == 0 ? t : s
++ ", " + t)));
+
+88
+89
+90
+91
+92
+
+cities = readCities("cities.txt");
+stateToCityNames = cities.collect(groupingBy(City::getState,
+mapping(City::getName, joining(", "))));
+System.out.println("stateToCityNames: " + stateToCityNames);
+
+93
+94
+95
+96
+
+}
+
+97
+98
+
+}
+
+java.util.stream.Collectors 8
+
+• static <T> Collector<T,?,Long> counting()
+yields a collector that counts the collected elements.
+• static <T> Collector<T,?,Integer> summingInt(ToIntFunction<? super T> mapper)
+• static <T> Collector<T,?,Long> summingLong(ToLongFunction<? super T> mapper)
+• static <T> Collector<T,?,Double> summingDouble(ToDoubleFunction<? super T> mapper)
+yields a collector that computes the sum of the values of applying mapper to the
+collected elements.
+• static <T> Collector<T,?,Optional<T>> maxBy(Comparator<? super T> comparator)
+• static <T> Collector<T,?,Optional<T>> minBy(Comparator<? super T> comparator)
+yields a collector that computes the maximum or minimum of the collected elements,
+using the ordering specified by comparator.
+• static <T,U,A,R> Collector<T,?,R> mapping(Function<? super T,? extends U> mapper, Collector<?
+super U,A,R> downstream)
+
+yields a collector that produces a map whose keys are mapper applied to the collected
+elements, and whose values are the result of collecting the elements with the same
+key using the downstream collector.
+
+1.12 Reduction Operations
+The reduce method is a general mechanism for computing a value from a
+stream. The simplest form takes a binary function and keeps applying it, starting
+with the first two elements. It’s easy to explain this if the function is the sum:
+List<Integer> values = . . .;
+Optional<Integer> sum = values.stream().reduce((x, y) -> x + y);
+
+From the Library of Hristo Dimov Hristov
+
+34
+
+Chapter 1
+
+The Java SE 8 Stream Library
+
+In this case, the reduce method computes v0 + v1 + v2 + . . . , where the vi are the
+stream elements. The method returns an Optional because there is no valid result
+if the stream is empty.
+NOTE: In this case, you can write reduce(Integer::sum) instead of reduce((x, y) ->
+x + y).
+
+In general, if the reduce method has a reduction operation op, the reduction yields
+v0 op v1 op v2 op . . . , where we write vi op vi + 1 for the function call op(vi, vi + 1).
+The operation should be associative: It shouldn’t matter in which order you combine
+the elements. In math notation, (x op y) op z must be equal to x op (y op z). This
+allows efficient reduction with parallel streams.
+There are many associative operations that might be useful in practice, such as
+sum, product, string concatenation, maximum and minimum, set union and intersection. An example of an operation that is not associative is subtraction. For
+example, (6 − 3) − 2 ≠ 6 − (3 − 2).
+Often, there is an identity value e such that e op x = x, and you can use that element
+as the start of the computation. For example, 0 is the identity value for addition.
+Then call the second form of reduce:
+List<Integer> values = . . .;
+Integer sum = values.stream().reduce(0, (x, y) -> x + y)
+// Computes 0 + v0 + v1 + v2 + . . .
+
+The identity value is returned if the stream is empty, and you no longer need to
+deal with the Optional class.
+Now suppose you have a stream of objects and want to form the sum of some
+property, such as all lengths in a stream of strings. You can’t use the simple form
+of reduce. It requires a function (T, T) -> T, with the same types for the arguments
+and the result. But in this situation, you have two types: The stream elements have
+type String, and the accumulated result is an integer. There is a form of reduce that
+can deal with this situation.
+First, you supply an “accumulator” function (total, word) -> total + word.length(). That
+function is called repeatedly, forming the cumulative total. But when the computation is parallelized, there will be multiple computations of this kind, and you
+need to combine their results. You supply a second function for that purpose.
+The complete call is
+int result = words.reduce(0,
+(total, word) -> total + word.length(),
+(total1, total2) -> total1 + total2);
+
+From the Library of Hristo Dimov Hristov
+
+1.12 Reduction Operations
+
+35
+
+NOTE: In practice, you probably won’t use the reduce method a lot. It is usually
+easier to map to a stream of numbers and use one of its methods to compute
+sum, max, or min. (We discuss streams of numbers in Section 1.13, “Primitive
+Type Streams,” on p. 36.) In this particular example, you could have called
+words.mapToInt(String::length).sum(), which is both simpler and more efficient since
+it doesn’t involve boxing.
+
+NOTE: There are times when reduce is not general enough. For example, suppose
+you want to collect the results in a BitSet. If the collection is parallelized, you
+can’t put the elements directly into a single BitSet because a BitSet object is not
+threadsafe. For that reason, you can’t use reduce. Each segment needs to start
+out with its own empty set, and reduce only lets you supply one identity value.
+Instead, use collect. It takes three arguments:
+1.
+
+A supplier that makes new instances of the target type, for example a
+constructor for a hash set.
+
+2.
+
+An accumulator that adds an element to an instance, such as an add method.
+
+3.
+
+A combiner that merges two instances into one, such as addAll.
+
+Here is how the collect method works for a bit set:
+BitSet result = stream.collect(BitSet::new, BitSet::set, BitSet::or);
+
+java.util.Stream 8
+
+• Optional<T> reduce(BinaryOperator<T> accumulator)
+• T reduce(T identity, BinaryOperator<T> accumulator)
+• <U> U reduce(U identity, BiFunction<U,? super T,U> accumulator, BinaryOperator<U> combiner)
+forms a cumulative total of the stream elements with the given accumulator function.
+If identity is provided, then it is the first value to be accumulated. If combiner is
+provided, it can be used to combine totals of segments that are accumulated
+separately.
+• <R>Rcollect(Supplier<R>supplier,BiConsumer<R,?superT>accumulator,BiConsumer<R,R>combiner)
+collects elements in a result of type R. On each segment, supplier is called to provide
+an initial result, accumulator is called to mutably add elements to it, and combiner is
+called to combine two results.
+
+From the Library of Hristo Dimov Hristov
+
+36
+
+Chapter 1
+
+The Java SE 8 Stream Library
+

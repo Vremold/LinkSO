@@ -1,0 +1,213 @@
+When localizing an application, you’ll probably have a dauntingly large number
+of message strings, button labels, and so on, that all need to be translated. To
+make this task feasible, you’ll want to define the message strings in an external
+location, usually called a resource. The person carrying out the translation can
+then simply edit the resource files without having to touch the source code of the
+program.
+In Java, you can use property files to specify string resources, and you can
+implement classes for resources of other types.
+
+NOTE: Java technology resources are not the same as Windows or Macintosh
+resources. A Macintosh or Windows executable program stores resources, such
+as menus, dialog boxes, icons, and messages, in a section separate from the
+program code. A resource editor can inspect and update these resources without
+affecting the program code.
+
+NOTE: Volume I, Chapter 13 describes a concept of JAR file resources,
+whereby data files, sounds, and images can be placed in a JAR file. The
+getResource method of the class Class finds the file, opens it, and returns a URL
+to the resource. By placing the files into the JAR file, you leave the job of finding
+the files to the class loader, which already knows how to locate items in a JAR
+file. However, that mechanism has no locale support.
+
+From the Library of Hristo Dimov Hristov
+
+7.8 Resource Bundles
+
+409
+
+7.8.1 Locating Resource Bundles
+When localizing an application, you produce a set of resource bundles. Each bundle
+is a property file or a class that describes locale-specific items (such as messages,
+labels, and so on). For each bundle, you have to provide versions for all locales
+that you want to support.
+You need to use a specific naming convention for these bundles. For example,
+resources specific to Germany go into a file bundleName_de_DE, whereas those shared
+by all German-speaking countries go into bundleName_de. In general, use
+bundleName_language_country
+
+for all country-specific resources, and use
+bundleName_language
+
+for all language-specific resources. Finally, as a fallback, you can put defaults into
+a file without any suffix.
+To load a bundle, use the command
+ResourceBundle currentResources = ResourceBundle.getBundle(bundleName, currentLocale);
+
+The getBundle method attempts to load the bundle that matches the current locale
+by language and country. If it is not successful, the country and the language are
+dropped in turn. Then the same search is applied to the default locale, and finally,
+the default bundle file is consulted. If even that attempt fails, the method throws
+a MissingResourceException.
+That is, the getBundle method tries to load the following bundles:
+bundleName_currentLocaleLanguage_currentLocaleCountry
+bundleName_currentLocaleLanguage
+bundleName_currentLocaleLanguage_defaultLocaleCountry
+bundleName_defaultLocaleLanguage
+bundleName
+
+Once the getBundle method has located a bundle (say, bundleName_de_DE), it will still
+keep looking for bundleName_de and bundleName . If these bundles exist, they become
+the parents of the bundleName_de_DE bundle in a resource hierarchy. Later, when looking
+up a resource, the parents are searched if a lookup was not successful in the current
+bundle. That is, if a particular resource was not found in bundleName_de_DE, then the
+bundleName_de and bundleName will be queried as well.
+This is clearly a very useful service—and one that would be tedious to program
+by hand. The resource bundle mechanism of the Java programming language
+
+From the Library of Hristo Dimov Hristov
+
+410
+
+Chapter 7
+
+Internationalization
+
+automatically locates the items that are the best match for a given locale. It is easy
+to add more and more localizations to an existing program—all you have to do
+is create additional resource bundles.
+
+NOTE: We simplified the discussion of resource bundle lookup. If a locale has
+a script or variant, the lookup is quite a bit more complex. See the documentation
+of the method ResourceBundle.Control.getCandidateLocales for the gory details.
+
+TIP: You need not place all resources for your application into a single bundle.
+You could have one bundle for button labels, one for error messages, and so on.
+
+7.8.2 Property Files
+Internationalizing strings is quite straightforward. You place all your strings into
+a property file such as MyProgramStrings.properties. This is simply a text file with one
+key/value pair per line. A typical file would look like this:
+computeButton=Rechnen
+colorName=black
+defaultPaperSize=210×297
+
+Then you name your property files as described in the preceding section, for
+example:
+MyProgramStrings.properties
+MyProgramStrings_en.properties
+MyProgramStrings_de_DE.properties
+
+You can load the bundle simply as
+ResourceBundle bundle = ResourceBundle.getBundle("MyProgramStrings", locale);
+
+To look up a specific string, call
+String computeButtonLabel = bundle.getString("computeButton");
+
+CAUTION: Files for storing properties are always ASCII files. If you need to
+place a Unicode character into a property file, encode it using the \uxxxx encoding.
+For example, to specify "colorName=Grün", use
+colorName=Gr\u00FCn
+
+You can use the native2ascii tool to generate these files.
+
+From the Library of Hristo Dimov Hristov
+
+7.8 Resource Bundles
+
+411
+
+7.8.3 Bundle Classes
+To provide resources that are not strings, define classes that extend the ResourceBundle
+class. Use the standard naming convention to name your classes, for example
+MyProgramResources.java
+MyProgramResources_en.java
+MyProgramResources_de_DE.java
+
+Load the class with the same getBundle method that you use to load a property file:
+ResourceBundle bundle = ResourceBundle.getBundle("MyProgramResources", locale);
+
+CAUTION: When searching for bundles, a bundle in a class is given preference
+over a property file when the two bundles have the same base names.
+
+Each resource bundle class implements a lookup table. You need to provide a
+key string for each setting you want to localize, and use that key string to retrieve
+the setting. For example,
+Color backgroundColor = (Color) bundle.getObject("backgroundColor");
+double[] paperSize = (double[]) bundle.getObject("defaultPaperSize");
+
+The simplest way to implement resource bundle classes is to extend the
+ListResourceBundle class. The ListResourceBundle lets you place all your resources into an
+object array and then does the lookup for you. Follow this code outline:
+public class bundleName_language_country extends ListResourceBundle
+{
+private static final Object[][] contents =
+{
+{ key1, value2 },
+{ key2, value2 },
+...
+}
+public Object[][] getContents() { return contents; }
+}
+
+For example,
+public class ProgramResources_de extends ListResourceBundle
+{
+private static final Object[][] contents =
+{
+{ "backgroundColor", Color.black },
+{ "defaultPaperSize", new double[] { 210, 297 } }
+}
+public Object[][] getContents() { return contents; }
+}
+
+From the Library of Hristo Dimov Hristov
+
+412
+
+Chapter 7
+
+Internationalization
+
+public class ProgramResources_en_US extends ListResourceBundle
+{
+private static final Object[][] contents =
+{
+{ "backgroundColor", Color.blue },
+{ "defaultPaperSize", new double[] { 216, 279 } }
+}
+public Object[][] getContents() { return contents; }
+}
+
+NOTE: The paper sizes are given in millimeters. Everyone on the planet, with
+the exception of the United States and Canada, uses ISO 216 paper sizes. For
+more information, see www.cl.cam.ac.uk/~mgk25/iso-paper.html.
+
+Alternatively, your resource bundle classes can extend the ResourceBundle class. Then
+you need to implement two methods, to enumerate all keys and to look up the
+value for a given key:
+Enumeration<String> getKeys()
+Object handleGetObject(String key)
+
+The getObject method of the ResourceBundle class calls the handleGetObject method that
+you supply.
+java.util.ResourceBundle 1.1
+
+• static ResourceBundle getBundle(String baseName, Locale loc)
+• static ResourceBundle getBundle(String baseName)
+loads the resource bundle class with the given name, for the given locale or
+the default locale, and its parent classes. If the resource bundle classes are located
+in a package, the base name must contain the full package name, such
+as "intl.ProgramResources". The resource bundle classes must be public so that the
+getBundle method can access them.
+• Object getObject(String name)
+looks up an object from the resource bundle or its parents.
+• String getString(String name)
+looks up an object from the resource bundle or its parents and casts it as a string.
+• String[] getStringArray(String name)
+looks up an object from the resource bundle or its parents and casts it as a string
+array.
+(Continues)
+
+From the Library of Hristo Dimov Hristov
+

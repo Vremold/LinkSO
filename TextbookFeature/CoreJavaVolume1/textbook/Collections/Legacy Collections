@@ -1,0 +1,81 @@
+  A number of "legacy" container classes have been present since the first release of Java, before there was a collections framework. 
+  They have been integrated into the collections framework—see Figure 9.12. 
+  We briefly introduce them in the following sections. 
+  Figure 9.12 Legacy classes in the collections framework 9.7.1 The Hashtable Class
+  The classic Hashtable class serves the same purpose as the HashMap class and has essentially the same interface. Just like methods of the Vector class, the Hashtable methods are synchronized. If you do not require compatibility with legacy code, you should use a HashMap instead. If you   need concurrent access, use a ConcurrentHashMap—see Chapter 12. 
+9.7.2 Enumerations
+  The legacy collections use the Enumeration interface for traversing sequences of elements. The Enumeration interface has two methods, hasMoreElements and nextElement. These are entirely analogous to the hasNext and next methods of the Iterator interface. 
+  If you find this interface with legacy classes, you can use Collections.list to collect the elements in an ArrayList. For example, the LogManager class is only willing to reveal logger names as an Enumeration. Here is how you can get them all: ArrayList<String> loggerNames = Collections.list(LogManager.getLoggerNames()); 
+  Alternatively, as of Java 9, you can turn an enumeration into an iterator: LogManager.getLoggerNames().asIterator().forEachRemaining(n -> { . 
+  . . }); 
+  You will occasionally encounter a legacy method that expects an enumeration parameter. The static method Collections.enumeration yields an enumeration object that enumerates the elements in the collection. For example: List<InputStream> streams = . . .; 
+  var in = new SequenceInputStream(Collections.enumeration(streams)); 
+  // the SequenceInputStream constructor expects an enumeration   Note In C++, it is quite common to use iterators as parameters. 
+  Fortunately, on the Java platform, very few programmers use this idiom. It is much smarter to pass around the collection than to pass an iterator. The collection object is more useful. The recipients can   always obtain the iterator from the collection when they need to do so, plus they have all the collection methods at their disposal. 
+  However, you will find enumerations in some legacy code because they were the only available mechanism for generic collections until the collections framework appeared in Java 1.2. 
+  java.util.Enumeration<E> 1.0 boolean hasMoreElements() returns true if there are more elements yet to be inspected. 
+  E nextElement() returns the next element to be inspected. Do not call this method if hasMoreElements() returned false. 
+  default Iterator<E> asIterator() 9 yields an iterator that iterates over the enumerated elements. 
+  java.util.Collections 1.2 static <T> Enumeration<T> enumeration(Collection<T> c) returns an enumeration that enumerates the elements of c. 
+  public static <T> ArrayList<T> list(Enumeration<T> e) returns an array list containing the elements enumerated by e. 
+9.7.3 Property Maps
+  A property map is a map structure of a special type. It has three particular characteristics: The keys and values are strings. 
+  The map can easily be saved to a file and loaded from a file. 
+  There is a secondary table for default values. 
+  The Java platform class that implements a property map is called Properties. Property maps are useful in specifying configuration options for programs. For example: var settings = new Properties(); 
+  settings.setProperty("width", "600.0"); 
+  settings.setProperty("filename", "/home/cay/books/cj11/code/v1ch11/raven.html"); 
+  Use the store method to save map list of properties to a file. Here, we just save the property map in the file program.properties. The second argument is a comment that is included in the file. 
+  var out = new FileOutputStream("program.properties"); 
+  settings.store(out, "Program Properties"); 
+  The sample set gives the following output: #Program Properties #Sun Dec 31 12:54:19 PST 2017 top=227.0 left=1286.0 width=423.0 height=547.0 filename=/home/cay/books/cj11/code/v1ch11/raven.html   To load the properties from a file, use var in = new FileInputStream("program.properties"); 
+  settings.load(in); 
+  The System.getProperties method yields a Properties object to describe system information. For example, the home directory has the key "user.home". You can read it with the getProperties method that yields the key as a string:   String userDir = System.getProperty("user.home"); 
+  Caution For historical reasons, the Properties class implements Map<Object, Object>. Therefore, you can use the get and put methods of the Map interface. But the get method returns the type Object, and the put method allows you to insert any object. 
+  It is best to stick with the getProperty and setProperty methods that work with strings, not objects. 
+  To get the Java version of the virtual machine, look up the "java.version" property. You get a string such as "9.0.1" (or "1.8.0" for Java 8.)   Tip As you can see, the version numbering changed in Java 9. This seemingly small change broke a good number of tools that had relied on the old format. If you parse the version string, be sure to read JEP 322 at http://openjdk.java.net/jeps/322 to see how version strings will be formatted in the future—or at least, until the numbering scheme changes again. 
+  The Properties class has two mechanisms for providing defaults. First, whenever you look up the value of a string, you can specify a default that should be used automatically when the key is not present. 
+  String filename = settings.getProperty("filename", ""); 
+  If there is a "filename" property in the property map, filename is set to that string. Otherwise, filename is set to the empty string. 
+  If you find it too tedious to specify the default in every call to   getProperty, you can pack all the defaults into a secondary property map and supply that map in the constructor of your primary property map. 
+  var defaultSettings = new Properties(); 
+  defaultSettings.setProperty("width", "600"); 
+  defaultSettings.setProperty("height", "400"); 
+  defaultSettings.setProperty("filename", ""); 
+  . . . 
+  var settings = new Properties(defaultSettings); 
+  Yes, you can even specify defaults to defaults if you give another property map parameter to the defaultSettings constructor, but it is not something one would normally do. 
+  The companion code has a sample program that shows how you can use properties for storing and loading program state. The program uses the ImageViewer program from Chapter 2 and remembers the frame position, size, and last loaded file. Run the program, load a file, and move and resize the window. Then close the program and reopen it to see that it remembers your file and your favorite window placement. You can also manually edit the file .corejava/ImageViewer.properties in your home directory. 
+  Note Prior to Java 9, properties files used the 7-bit ASCII encoding. 
+  Nowadays, they use UTF-8. 
+  Properties are simple tables without a hierarchical structure. It is common to introduce a fake hierarchy with key names such as window.main.color, window.main.title, and so on. But the Properties class has no methods that help organize such a hierarchy. If you store complex configuration information, you should use the Preferences class instead —see Chapter 10. 
+  java.util.Properties 1.0   Properties() creates an empty property map. 
+  Properties(Properties defaults) creates an empty property map with a set of defaults. 
+  String getProperty(String key) gets a property. Returns the string associated with the key, or the string associated with the key in the default table if it wasn’t present in the table, or null if the key wasn’t present in the default table either. 
+  String getProperty(String key, String defaultValue) gets a property with a default value if the key is not found. Returns the string associated with the key, or the default string if it wasn’t present in the table. 
+  Object setProperty(String key, String value) sets a property. Returns the previously set value of the given key. 
+  void load(InputStream in) throws IOException loads a property map from an input stream. 
+  void store(OutputStream out, String header) 1.2 saves a property map to an output stream. The header in the first line of the stored file. 
+  java.lang.System 1.0 Properties getProperties() retrieves all system properties. The application must have permission to retrieve all properties, or a security exception is thrown. 
+  String getProperty(String key) retrieves the system property with the given key name. The application   must have permission to retrieve the property, or a security exception is thrown. The following properties can always be retrieved: java.version java.vendor java.vendor.url java.home java.class.path java.library.path java.class.version os.name os.version os.arch file.separator path.separator line.separator java.io.tempdir user.name user.home user.dir java.compiler java.specification.version java.specification.vendor java.specification.name java.vm.specification.version java.vm.specification.vendor java.vm.specification.name java.vm.version java.vm.vendor java.vm.name 9.7.4 Stacks
+  Since version 1.0, the standard library had a Stack class with the familiar push and pop methods. However, the Stack class extends the Vector class, which is not satisfactory from a theoretical perspective—you can apply such un-stack-like operations as insert and remove to insert and remove values anywhere, not just at the top of the stack. 
+  java.util.Stack<E> 1.0 E push(E item) pushes item onto the stack and returns item. 
+  E pop() pops and returns the top item of the stack. Don’t call this method if the stack is empty. 
+  E peek() returns the top of the stack without popping it. Don’t call this method if the stack is empty. 
+9.7.5 Bit Sets
+  The Java platform’s BitSet class stores a sequence of bits. (It is not a set in the mathematical sense—bit vector or bit array would have been more appropriate terms.) Use a bit set if you need to store a sequence of bits (for example, flags) efficiently. A bit set packs the bits into bytes, so it is far more efficient to use a bit set than an ArrayList of Boolean objects. 
+  The BitSet class gives you a convenient interface for reading, setting, and resetting individual bits. Using this interface avoids the masking and other bit-fiddling operations that are necessary if you store bits in int or long variables. 
+  For example, for a BitSet named bucketOfBits, bucketOfBits.get(i)   returns true if the ith bit is on, and false otherwise. Similarly, bucketOfBits.set(i)   turns the ith bit on. Finally, bucketOfBits.clear(i)   turns the ith bit off. 
+  platform BitSet. 
+  java.util.BitSet 1.0 BitSet(int initialCapacity) constructs a bit set. 
+  int length() returns the "logical length" of the bit set: 1 plus the index of the highest set bit. 
+  boolean get(int bit) gets a bit. 
+  void set(int bit) sets a bit. 
+  void clear(int bit) clears a bit. 
+  void and(BitSet set) logically ANDs this bit set with another. 
+  void or(BitSet set) logically ORs this bit set with another. 
+  void xor(BitSet set) logically XORs this bit set with another. 
+  void andNot(BitSet set) clears all bits in this bit set that are set in the other bit set. 
+  As an example of using bit sets, we want to show you an implementation of the "sieve of Eratosthenes" algorithm for finding prime numbers. (A prime number is a number like 2, 3, or 5 that is divisible only by itself and 1, and   the sieve of Eratosthenes was one of the first methods discovered to enumerate these fundamental building blocks.) This isn’t a terribly good algorithm for finding the primes, but for some reason it has become a popular benchmark for compiler performance. (It isn’t a good benchmark either, because it mainly tests bit operations.) Oh well, we bow to tradition and present an implementation. This program counts all prime numbers between 2 and 2,000,000. (There are 148,933 primes in this interval, so you probably don’t want to print them all out.) Without going into too many details of this program, the idea is to march through a bit set with 2 million bits. First, we turn on all the bits. After that, we turn off the bits that are multiples of numbers known to be prime. The positions of the bits that remain after this process are themselves prime numbers. Listing 9.8 lists this program in the Java programming language, and Listing 9.9 is the C++ code. 
+  Note Even though the sieve isn’t a good benchmark, we couldn’t resist timing the two implementations of the algorithm. Here are the timing results with a i7-8550U processor and 16 GB of RAM, running Ubuntu 17.10: C++ (g++ 7.2.0): 173 milliseconds Java (Java 9.0.1): 41 milliseconds We have run this test for ten editions of Core Java, and in the last six editions, Java easily beat C++. In all fairness, if one cranks up the optimization level in the C++ compiler, it beats Java with a time of 34 milliseconds. Java could only match that if the program ran long enough to trigger the Hotspot just-in-time compiler. 
+  This completes our tour through the Java collections framework. As you have seen, the Java library offers a wide variety of collection classes for your programming needs. In the next chapter, you will learn how to write graphical user interfaces. 

@@ -1,0 +1,11 @@
+  The LinkedList also implements the basic List interface like ArrayList does, but it performs certain operations (insertion and removal in the middle of the List) more efficiently than does ArrayList. Conversely, it is less efficient for random-access operations. 
+  LinkedList also adds methods that allow it to be used as a stack, a Queue or a double- ended queue (deque). 
+  Some of these methods are aliases or slight variations of each other, to produce names that are more familiar within the context of a particular usage (Queue, in particular). For example, getFirst( ) and element( ) are identical—they return the head (first element) of the list without removing it, and throw NoSuchElementException if the List is empty. peek( ) is a slight variation of those two that returns null if the list is empty. 
+  removeFirst( ) and remove( ) are also identical—they remove and return the head of the list, and throw NoSuchElementException for an empty list, and poll( ) is a slight variation that returns null if this list is empty. 
+  addFirst( ) inserts an element at the beginning of the list. 
+  offer( ) is the same as add( ) and addLast( ). They all add an element to the tail (end) of a list. 
+  removeLast( ) removes and returns the last element of the list. 
+  Here’s an example that shows the basic similarity and differences between these features. It doesn’t repeat the behavior that was shown in ListFeatures.java: 
+  The result of Pets.arrayList( ) is handed to the LinkedList constructor in order to populate it. If you look at the Queue interface, you’ll see the element( ), offer( ), peek( ), poll( ) and remove( ) methods that were added to LinkedList in order that it could be a Queue implementation. Full examples of Queues will be given later in this chapter. 
+  Exercise 13: (3) In the innerclasses/GreenhouseController.java example, the class Controller uses an ArrayList. Change the code to use a LinkedList instead, and use an Iterator to cycle through the set of events. 
+  Exercise 14: (3) Create an empty LinkedList<Integer>. Using a Listlterator, add Integers to the List by always inserting them in the middle of the List. 
