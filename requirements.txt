@@ -1,10 +1,10 @@
-bert_serving==0.0.1
+# bert_serving==0.0.1
 fuzzywuzzy==0.18.0
 gensim==4.2.0
 javalang==0.13.0
 keras==2.8.0
-matplotlib==3.5.1
-nltk==3.7
+# matplotlib==3.5.1
+# nltk==3.7
 numpy==1.22.2
 pymysql==1.0.2
 requests==2.26.0

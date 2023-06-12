@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="./popup.css">
+  <link rel="stylesheet" href="./libs/bootstrap-4.6.1-dist/css/bootstrap.min.css">
+  <script src="libs/jquery-3.5.1/jquery-3.5.1.min.js"></script>
+  <script src="libs/bootstrap-4.6.1-dist/js/bootstrap.min.js"></script>
+</head>
+
+<body>
+
+  <div class="popup">
+    <nav class="navbar navbar-light bg-light justify-content-between">
+      <span class="navbar-brand">Link<span style="color:coral">S</span><span style="color:cornflowerblue;">O</span></span>
+      <form class="form-inline">
+        <div class="form-group">
+          <select class="form-control">
+            <option>Choose Textbook</optionn>
+            <option>Core Java Volume1</option>
+            <option>Core Java Volume2</option>
+            <option>Think In Java</option>
+          </select>
+        </div>
+      </form>
+    </nav>
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Matched Chapters</h5>
+        <div class="list-group">
+          <button type="button" class="list-group-item list-group-item-action active" data-idx="1">1. Strings</button>
+          <button type="button" class="list-group-item list-group-item-action" data-idx="2">2. I/O</button>
+          <button type="button" class="list-group-item list-group-item-action" data-idx="3">3. Holding Your Objects</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Matched Sections</h5>
+        <ol class="list-group list-group-numbered">
+          <li class="list-group-item">1. Regular expressions</li>
+          <li class="list-group-item">2. Overloading ‘+’ vs. StringBuilder</li>
+          <li class="list-group-item">3. Formatting output</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+
+</html>

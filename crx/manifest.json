@@ -1,0 +1,39 @@
+{
+    "name": "LinkSO service",
+    "description": "Chrome Extension of Programming language learning service by linking Stack Overflow Q&A post to textbooks",
+    "version": "1.0",
+    "manifest_version": 3,
+    "background": {
+      "service_worker": "background.js"
+    },
+    "permissions": [
+      "storage",
+      "activeTab",
+      "scripting",
+      "tabs"
+    ],
+    "host_permissions": [
+      "http://162.105.16.46:3001/*",
+      "http://162.105.16.52/*"
+    ],
+    "action": {
+      "default_popup": "popup.html",
+      "default_icon": {
+        "16": "/images/icon.png",
+        "32": "/images/icon.png",
+        "48": "/images/icon.png",
+        "128": "/images/icon.png"
+      }
+    },
+    "content_scripts": [
+      {
+        "matches": [
+          "https://stackoverflow.com/questions*"
+        ],
+        "run_at": "document_idle",
+        "js": [
+          "content.js"
+        ]
+      }
+    ]
+  }

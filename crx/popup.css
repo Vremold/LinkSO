@@ -1,0 +1,29 @@
+div.popup {
+  width: 400px;
+  height:500;
+  padding-left: 10px;
+	font-size: medium;
+	font-family: Arial, Helvetica, sans-serif;
+	align-content: center;
+}
+
+.list-group {
+  margin-left: 20px !important;
+}
+.list-group-item {
+  padding: 0.4rem 1.25rem !important;
+}
+
+.card {
+  margin: 5px 10px 10px 10px !important;
+  padding: 0px 5px !important;
+  box-shadow: 5px 5px 3px lightgray;
+}
+
+.card-body {
+  padding: 0.25rem !important;
+}
+
+nav {
+  background-color:burlywood !important;
+}

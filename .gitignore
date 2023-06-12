@@ -13,7 +13,7 @@ word2vec_corpus
 # ignore specific dirs
 /教材
 /build/*/*
-/crx
+# /crx
 /Optimization
 /SOPostClassifier/pretrained/*
 /SOPostClassifier/log/*
@@ -25,3 +25,8 @@ so_posts_duplicate.csv
 /RawData
 
 # textbook_code
+
+# venv
+venv/
+FromTBToSO/cache
+plt.py
